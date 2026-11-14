@@ -120,7 +120,10 @@ public final class PowerPorts {
     @Nullable
     public static Object resolve(final String name) {
         final PowerResources.Ref ref = PowerResources.resolve(name);
-        return ref == null ? null : ref.fluid() ? fluid(ref.id) : item(ref.id);
+        if (ref != null) return ref.fluid() ? fluid(ref.id) : item(ref.id);
+        // TwistSpaceTechnology's Dyson Sphere items, which the website's map lacks (none in a game without TST).
+        final String tst = com.gtnhplanner.power.sources.TstDysonSphere.ITEMS.get(name);
+        return tst == null ? null : item(tst);
     }
 
     /** The machine item a source is drawn as, or null. */
@@ -145,6 +148,14 @@ public final class PowerPorts {
             return cpw.mods.fml.common.Loader.isModLoaded("TwistSpaceTechnology")
                 ? item(com.gtnhplanner.power.sources.TstGenerators.UNIVERSAL_GENERATOR_ITEM)
                 : null;
+        final String tstMegaController = com.gtnhplanner.power.sources.TstMegaGenerators.controllerItem(sourceId);
+        if (tstMegaController != null)
+            return cpw.mods.fml.common.Loader.isModLoaded("TwistSpaceTechnology") ? item(tstMegaController) : null;
+        final String tstSteam = com.gtnhplanner.power.sources.TstSteamGenerators.controller(sourceId);
+        if (tstSteam != null)
+            return cpw.mods.fml.common.Loader.isModLoaded("TwistSpaceTechnology") ? item(tstSteam) : null;
+        final String dyson = com.gtnhplanner.power.sources.TstDysonSphere.controller(sourceId);
+        if (dyson != null) return cpw.mods.fml.common.Loader.isModLoaded("TwistSpaceTechnology") ? item(dyson) : null;
         final PowerResources.Ref ref = PowerResources.machineIcon(sourceId);
         return ref == null ? null : item(ref.id);
     }

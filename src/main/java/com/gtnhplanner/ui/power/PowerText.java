@@ -118,6 +118,9 @@ public final class PowerText {
         new Shape("(.+) needs at least mark (.+)\\.", "power.warning_needs_mark", 0b1),
         new Shape("Intake is capped at (.+) L/s for this fluid\\.", "power.warning_intake_capped"),
         new Shape(
+            "The dynamos carry (.+) EU/t of the (.+) EU/t the strikes make; the rest is lost\\.",
+            "power.warning_dynamos_carry"),
+        new Shape(
             "Burns at most (.+) item per (.+) ticks, so it runs at (.+) EU/t, not (.+)\\.",
             "power.warning_item_capped"),
         new Shape(

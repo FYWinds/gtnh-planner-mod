@@ -1823,3 +1823,6 @@ gtnhplanner.ui.canvas.trunk_of_wires=§7Trunk of %d wires
 
 ## unigen
 gtnhplanner.ui.power.warning_under_a_tick=%s lasts under a tick at %s EU/t: each 1,000 L burns for no EU.
+
+## gen-steam
+gtnhplanner.ui.power.warning_dynamos_carry=The dynamos carry %s EU/t of the %s EU/t the strikes make; the rest is lost.

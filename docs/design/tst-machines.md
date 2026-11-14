@@ -70,7 +70,7 @@ own maps by their English name.
 | 19011 | Molecule Deconstructor | 分子解构器 | multielectro, multicentrifuge | done | sections |
 | 19012 | Crystalline Infinitier | 无限晶胞 | autoclave, chemicalbath; Crystalline Infinitier | done | glass, field (gate) |
 | 19013 | DSP Launch Site | — | — | not processing | launcher |
-| 19014, 19015 | Dyson Sphere Ray Receiving Station, Artificial Star | 戴森球射线接收站, 人造恒星 | — | generator not done | see Generators |
+| 19014, 19015 | Dyson Sphere Ray Receiving Station, Artificial Star | 戴森球射线接收站, 人造恒星 | — | done as power sources | see Generators |
 | 19016 | Miracle Door | 奇迹之门 | Stellar Forge maps | not done | always wireless: fixed 512/1280 t over a circuit, 100 batches, critical photons |
 | 19017 | General Ore Processing Factory TST | 通用矿物处理厂TST | — | not processing | own ore logic |
 | 19018, 19500 | ElvenWorkshop | 精灵工坊 | Rune Engraver; Mana Infuser | done | — |
@@ -81,7 +81,7 @@ own maps by their English name.
 | 19023 | Scavenger | 拾荒者 | sifter | done | — |
 | 19024 | CleanRoom | TST超净间 | — | not processing | cleanroom |
 | 19025 | Biosphere III | 生物圈III号 | brewer, fermenter | brewing/fermenting done | glass; bacterial vat modes scale fluids by hatch fill and Sievert (not a coefficient) |
-| 19026 | Tower of Abstraction (Mega Egg Generator) | 抽象之塔 | — | generator not done | see Generators |
+| 19026 | Tower of Abstraction (Mega Egg Generator) | 抽象之塔 | — | done as a power source | pieces, infinity, dragon and creeper eggs; see Generators |
 | 19027 | Advanced Mega Oil Cracker | 进阶巨型石油裂化机 | craker | done | coil |
 | 19028 | Indistinct Tentacle | 不可视之触 | Mega Assembly Line, componentassemblyline, assembler, precise_assembler | done on hatches | component casing (gates); wireless (UMV glass and casing, no hatches): fixed 512 t × 100 batches |
 | 19029 | Astral Computing Array | 星规阵列 | — | not processing | computation |
@@ -102,7 +102,7 @@ own maps by their English name.
 | 19049 | MegaArray (Big Bro Array) | 大哥阵列 | inserted machine's map | not done | map and voltage gate come from the inserted machine item |
 | 19050 | Industrial Magnetar Separator | 工业电磁离析机 | electromagneticseparator | done | — |
 | 19051, 19052 | Eco-Sphere Simulator, Extreme Crafting Center | 拟似生态圈, 梦魇工业合成中心 | — | not processing | own simulation, AE2 crafting |
-| 19053 | Lightning Spire | 闪电尖塔 | — | generator not done | see Generators |
+| 19053 | Lightning Spire | 闪电尖塔 | — | done as a power source | rods, dynamo tier and amps; see Generators |
 | 19054 | DTPF Prototype MK-II | 超维度物质等离子锻炉原型机MK-II | plasmaforge | not done | execution cores share EU and split parallels, spare EU boosts, catalyst discount over run time |
 | 19055 | Large Neutron Oscillator | 大型中子振荡器 | NeutronActivatorWithEU | not done | execution cores (as above) |
 | 19056 | Indistinct Tentacle Prototype MK-II | 不可视之触原型机MK-II | as 19028 | not done | always wireless: 20 t per batch, lump-sum network EU |
@@ -120,11 +120,11 @@ own maps by their English name.
 | 19068, 19298 | Swelegfyr Blast Furnace | 熯焱高炉 | blastfurnace | not done | EU discount and heat overclocks follow a heat that rises and decays over time |
 | 19069 | Hyper Thermal Convector | 高能态热对流器 | Rapid Heat Exchange, Rapid Cooling | not done | fixed 20 t, up to 128 or 16 batches of unlimited parallels, no EU |
 | 19070–19072, 19075, 19077, 19078 | Primordial Disjunctus, Skypiercer Tower, Laser Meteor Miner, Infusion Material Dispenser, Nether Interface, Super Water Purifier | — | — | not processing | own logic |
-| 19073, 19076 | Basic Steam Generator, Large Solar Boiler | 基础蒸汽发电机, 大型太阳能锅炉 | — | generator not done | see Generators |
+| 19073, 19076 | Basic Steam Generator, Large Solar Boiler | 基础蒸汽发电机, 大型太阳能锅炉 | — | done as power sources | dynamo; boiler, water, heat, calcification; see Generators |
 | 19074 | Universal Generator | 通用发电机 | — (gasTurbineFuels, dieselFuels) | done as a power source | see Generators |
 | 19079 | Integrated Assembly Matrix | 集成装配矩阵 | Mega Assembly Line | done | nanites; data-stick whitelist and highest-hatch voltage cap not modelled |
 | 19080 | Mega Solar Panel Factory | 巨型太阳能板工厂 | Mega Solar Panel Factory | done | component casing |
-| 19081 | Mega Naquadah Reactor | 巨型硅岩反应堆 | — | generator not done | new in 0.8.1; see Generators |
+| 19081 | Mega Naquadah Reactor | 巨型硅岩反应堆 | — (gg.recipe.naquadah_reactor) | done as a power source | new in 0.8.1; fuel, coolant, excited fluid, parallels, running time; see Generators |
 
 Not registered in 0.8.0: `TST_TombOfTheDragon`, `TST_PatternMachineClass`, `GTCM_TestMultiMachine`.
 
@@ -168,17 +168,162 @@ fuel's (the card shows it, the game burns nothing from the other map); several f
 the first it finds each run); EU the dynamos cannot pass on is lost, and the under-a-tick case burns 1,000 L on every
 recipe check, which are driven by hatch events, not a rate. TST has no maintenance, pollution or lubricant on it.
 
-### Not done
+### Tower of Abstraction and Mega Naquadah Reactor
 
-Each is its own model, none a fuel-map burner:
+Both in `power/sources/TstMegaGenerators`, pinned by `TstMegaGeneratorsTest`; the pack's TwistSpaceTechnology.cfg and
+GoodGenerator.cfg keep the defaults of everything they read.
 
-- 19014 Dyson Sphere Ray Receiving Station and 19015 Artificial Star (the Dyson Sphere Program; the star burns its
-  own recipe map).
-- 19026 Tower of Abstraction (`GT_TileEntity_MegaEggGenerator`).
-- 19053 Lightning Spire (`GTCM_LightningSpire`).
-- 19073 Basic Steam Generator (`TST_SteamBasicGenerator`, steam to EU).
-- 19076 Large Solar Boiler (`TST_LargeSolarBoiler`, steam from the sun).
-- 19081 Mega Naquadah Reactor (`TST_MegaNqReactor`, new in 0.8.1).
+**Tower of Abstraction** (19026, `tst-tower-of-abstraction`, `GT_TileEntity_MegaEggGenerator`). In the picker's Solar
+column, the passive one (it takes nothing; unlock LuV: `GTCMMachineRecipes` assembles the controller at
+`RECIPE_LuV`). Settings: Pieces, Infinity eggs, Dragon eggs, Creeper eggs; the egg positions left over are empty.
+
+- **Structure.** `checkAllPieces`: the controller's base layer, then middle pieces of two layers stacked upward as
+  long as they form (at least one), then the top block. A middle piece's upper layer has 16 egg positions (`'K'`), each
+  air, a Galacticraft creeper egg, a dragon egg or Witchery's infinity egg, counted by `onElementPass` (a failing piece
+  above the tower fails on a casing before it reaches one, so it counts none). Pieces run 1 to 127, as many as a world
+  256 blocks tall holds. More infinity eggs than pieces is a structure error (`checkInfinityEgg`), as are more eggs than
+  positions: the card makes nothing and says why. One dynamo hatch of any amperage (`MEG_Dynamo_Limit` 1), a laser only
+  from 16 pieces (`checkLaser`, `MEG_Laser_Pieces`); the Dynamo reading says which.
+- **Output.** `checkProcessing` runs 20 ticks at `lEUt` = `getOutputEUt`: 512 EU/t a creeper egg, 2,048 a dragon egg,
+  16,384 an infinity egg (`MEG_*_Gen`, times `MEG_Overall_Multiply` 1.0 cast to long), and
+  `MTEExtendedPowerMultiBlockBase.onRunningTick` sends `lEUt x mEfficiency / 10,000` (long division) every tick.
+  `getMaxEfficiency` is 10,000 + 200 x `(int) (log(pieces) / log(2))` + 100 an infinity egg - 500 an empty position,
+  at least 0, and may pass 10,000: 16 pieces filled with an infinity egg each and dragon eggs run at 124%, 934,543 EU/t
+  from eggs worth 753,664. The card is the steady state at that maximum.
+- **Warm-up.** Each run's end adds `updateEfficiencyIncrement` to `mEfficiency`, up to the maximum: 20, plus 100 an
+  infinity egg, plus one a pair of dragon eggs (50 from 100 eggs on). The tooltip's 0.01% a second is stale: the base is
+  0.2% a second, 500 s from cold on creeper eggs alone. The Warm-up reading is ceil(maximum / increment) seconds. The
+  machine never stops once formed (no input, no maintenance), so the steady state is where it stays.
+
+**Mega Naquadah Reactor** (19081, `tst-mega-naquadah-reactor`, `TST_MegaNqReactor`). In the Endgame column (unlock
+UIV: an assembly line recipe at `RECIPE_UIV`). Settings: Fuel, Coolant, Booster (the excited fluid, the Large Naquadah
+Reactor's word), Parallels, Running time.
+
+- **Fluids.** The fuels are GoodGenerator's `naquadahReactorFuels` (`FuelRecipeLoader` at `GGConfigLoader`'s values):
+  1 L of fuel to 1 L of its depleted form, the basic output (`mSpecialValue`) and duration of each, the Large Naquadah
+  Reactor's table. Coolants (`getCoolantTiers`: Tachyon Rich Temporal Fluid 500% at 20 L; Gelid Cryotheum 275%, Super
+  Coolant 150%, IC2 Coolant 105% at 1,000 L) and excited fluids (`getExcitedTiers`: Spatially Enlarged Fluid x64,
+  Molten Atomic Separation Catalyst x16, Molten Naquadah x4 at 20 L; Molten Uranium-235 x3, Molten Caesium x2 at 180 L)
+  are TST's own constants, equal to GoodGenerator's, in litres a parallel a second. With several in the hatches a run
+  takes the first of each list in that order; the card takes one of each.
+- **A run** (`checkProcessing`) runs `min(Parallel_MegaNqReactor 1,000, stored fuel / (1 L x coefficient))`
+  parallels. At its start it pays the fuel's 1 L x coefficient a parallel, and for each parallel and each second it
+  starts (`recipeSecondsFromDurationTicks`, the duration rounded up: Mk-II's 70 ticks pay 4 seconds) 2,400 L of liquid
+  air (always required), the coolant's and the excited fluid's litres; it returns the depleted fuel litre for litre.
+  EU/t is `(long) (basic x coolant / 100d x coefficient x parallels x getRuntimeBonus())` in the game's double order:
+  half an hour of uranium at 1,000 parallels is 13,505,624, not 13,505,625. The next run starts on the tick the last
+  ends, so the rates are per-run amounts over the duration.
+- **Running time.** `getRuntimeBonus` is (1 + min(0.5, `runTimeTicks` / 24 h))², 2.25x from 12 hours on (the tooltip's
+  24 hours is where `runTimeTicks` stops counting). Each run adds its duration, each idle tick takes 20 off, so a
+  reactor fed without a gap keeps it. The setting is the GUI's Running Time, 0 to 24 hours, 24 by default.
+- **Parallels** is a setting because the game reads it from the hatch at each run's start: 1,000 by default, the most
+  when 1,000 x coefficient L of fuel are stored.
+- Without a dynamo hatch a run's EU goes to the owner's wireless network at its start (`currentEUt` x duration), the
+  same average; with dynamos, too little room stops the reactor (`INSUFFICIENT_DYNAMO`). The structure has no tiers
+  (any glass).
+### Steam generators, solar boiler, lightning spire
+`power/sources/TstSteamGenerators`, pinned by `TstSteamGeneratorsTest`, registered right after the Universal
+Generator: the steam generator and the boiler come first in their columns, the spire after the Universal Generator.
+Like it, none has maintenance or pollution, and a finished run starts the next on the same tick.
+**Basic Steam Generator (19073, `tst-basic-steam-generator`).** In the Turbines column (unlock LV: an LV hull, LV
+steam turbines and an LV input hatch, `GTCMMachineRecipes`). Settings: Dynamo (LV, 1 to 8 hatches; MV, one 1 A
+hatch; HV, one 1 A hatch; default HV) and Dynamo amps (LV only).
+- **Dynamos.** `hasValidDynamos`: every hatch LV (`setDynamoTier(1, true)`, 1 to 8 by `checkHatchMin`/`Max`), or
+  exactly one MV or HV hatch with `maxAmperesOut` 1. GregTech's Dynamo element takes hatches of at most 4 A (the 1 A
+  hatch, GT++'s 4 A LV buffer dynamo), so LV runs 1 to 32 A (32 to 1,024 EU/t); MV is 128 EU/t, HV 512.
+- **Output.** `checkProcessing`: EU/t is every hatch's voltage x amps summed (`getDynamoOutputEUt`) at efficiency
+  10,000; each 20-tick run drains `eut * 225 / 8` L of plain Steam (`MiscHelper.steam`, in longs; every EU/t the
+  structure allows is a multiple of 32, so the division is exact): 900 L/s an LV amp, 3,600 at MV, 14,400 at HV,
+  28,800 at 32 A of LV. That is 0.711 EU a litre, the tooltip's 142% of steam's 0.5 (`MTELargeTurbineSteam`). The
+  whole second's steam must be in the hatches when a run starts (the Burn reading). It runs while the dynamos are not
+  full (`getAllMaxDynamoBuffer() != getAllDynamoBuffer()`), so the card is the machine at full load.
+**Large Solar Boiler (19076, `tst-large-solar-boiler`).** In the Boilers and exchangers column (unlock ULV: a Simple
+Solar Boiler, reinforced glass from the alloy smelter at 4 EU/t, bronze parts). Settings: Boiler (bronze 4,800 L/s,
+steel 14,400 L/s: `machineTier`, every casing of one set; default bronze, the game's), Water supply (default Water),
+Heat (%, default 100) and Calcification (%, plain water only, default 0).
+- **Steam.** `checkProcessing`: each 20-tick run boils
+  `(int) (min(hatch, production / 160) * heat / (calcification * 2 + 1))` L of plain or distilled water into 160 L of
+  Steam a litre: 30 or 90 L a run at full heat. It does not look at the sky itself: by day or night only the heat
+  scales it.
+- **Heat.** `onPostTick` adds 0.001 every sunny second (clear weather or a dry biome, open sky over the controller,
+  daytime) up to 1, and takes 0.0001 every other second. The card reads Heat as the value a cold boiler reaches after
+  that many sunny 0.1% steps, summed in doubles as the game does (500 steps are 0.5000000000000003). A clear night
+  costs 0.01% a second of night, won back ten times as fast after dawn; the default 100% is the boiler in the sun.
+- **Calcification.** On plain water only, one 0.01 step every 1,296 runs (seconds of run time) once 24 hours of runs
+  have passed: the first step ends run 86,832, the hundredth run 215,136, and full calcification divides the water by
+  3. The card counts whole steps summed as the game sums them (50 steps are 0.5000000000000002: a steel boiler boils
+  44 L, not 45). The warning gives the hours: full output for 24.12 hours of run time, the least from 59.76. The GUI
+  button clears it (Calcification 0).
+- **Explosion.** A check that finds no water (or under a litre's boil) at 50% heat or more arms `shouldExplode`; the
+  next water blows up the input hatches. The card says so in a reading (Dry hatch).
+**Lightning Spire (19053, `tst-lightning-spire`).** In the Engines column after the Universal Generator (unlock IV:
+its assembler recipe). Settings: Lightning rods (1 to 512, default 512), Dynamo tier (ULV to UXV, default UV) and
+Dynamo amps (every hatch's summed, default 256: a UV laser source).
+- **Strikes.** `checkInputRods` keeps up to 512 HV Lightning Rods (`MAXRODS`; given back, not used up). Each strike
+  (`checkProcessing`, `mMaxProgresstime` 256) needs the hatches to hold exactly 128 L of Cryotheum and 72 L of Molten
+  Iron a rod (more or less stops the machine), drains them and adds rods x 28,000,000 EU to a store of
+  rods x 280,000,000 (`MoreSafetyPowerGeneration_LightningSpire` is false in the pack: at the strike). So 109,375 EU/t
+  a rod (56,000,000 with 512), 10 L/s of Cryotheum and 5.625 L/s of Molten Iron a rod.
+- **Dynamos.** `onRunningTick` tops every dynamo up from the store each tick; `TST_GeneratorBase.addDynamoToMachineList`
+  takes any `MTEHatchDynamo` (multi-amp and laser source hatches go with the exotic ones). EU/t is the lesser of the
+  strikes' and the dynamos' voltage x amps. Under the strikes' rate the store fills and the rest of each strike is
+  lost while the fluids are still burned: the card warns. Over it, the dynamos empty the store in bursts at their
+  full rate; the card gives the average.
+What the power model cannot express: the spire's exact refills every 12.8 s and its bursts; the boiler's heat over a
+day and its explosion (a setting and a reading); GregTech's dynamo output loss (each amp drains voltage +
+2^(tier - 1) from the hatch, `BaseMetaTileEntity.handleEUOutput`), left out as on every multiblock card.
+### Dyson Sphere Program (19014 `tst-dsp-receiver`, 19015 `tst-artificial-star`)
+`power/sources/TstDysonSphere`, in the picker's Endgame column (unlock UIV and UXV: the controllers are assembly line
+recipes at those tiers, `DSPRecipePool`). Both put their EU straight into the owner's wireless network
+(`addEUToGlobalEnergyMap`). The planner has no wireless ledger: it is the card's EU as any generator's, and its Output
+reading says "Wireless EU network". The pack's DSP config values are TST 0.8.1's defaults. Pinned by
+`TstDysonSphereTest`.
+**Dyson Sphere Ray Receiving Station.** Settings: Mode, Planet, Solar sails, Dyson sphere nodes, Held by other
+receivers, Controller slot (with Circuit number and Circuit stack size, or Astral Array Fabricators), Gravitational Lens
+intensify.
+- **Output.** `checkMachine` always sets `wirelessMode` (the structure has no dynamo), so `onRunningTick` banks
+  `generateTickEU()` every tick and `checkProcessing` hands the bank over at the end of each 128-tick run: EU/t is
+  `(long) (planet x stellar coefficient x lens x used power points)`. The coefficients are `DSP_Planet`'s and
+  `DSP_Galaxy`'s: the Planet setting lists TST's 39 planets (their dimension ids match the pack's Galacticraft,
+  GalaxySpace, AmunRa, bartworks and Twilight Forest configs), a dimension from 180 up but 227 (the tooltip's personal
+  dimension) is the Overworld, and any other dimension has 0 and receives nothing. The lens is 4 while intensify mode
+  lasts: each Gravitational Lens gives 600 s, so the card takes one every 600 s.
+- **Power points.** A team has one sphere per star system (`DSP_DataCell`): `(long) (524,288 x sails x (nodes +
+  1)^0.8)`, and once that would pass a long (`shouldUseBigInteger`) `sails x 524,288 x ceil((nodes + 1)^0.8)` in
+  BigInteger, read back at most Long.MAX_VALUE. A receiver takes (`getPowerPoint`, from what the sphere has left) at most
+  1,024 x Integer.MAX_VALUE (2,199,023,254,528); a Programmed Circuit in the controller asks for meta / stack size of the
+  whole sphere (at most all of it); Astral Array Fabricators (a stack, 1 to 64) raise the cap to their number squared x
+  2 times it.
+- **Other receivers.** Receivers on one sphere share it: the points the others hold are a setting, in percent of the
+  sphere. A card counts each of its machines at its own rate, so a card of several receivers on one sphere needs the
+  share set to what the rest hold (or one card per receiver).
+- **Photon collection** (mode 1) makes no EU: each run turns the bank into Critical Photons, `storageEU /
+  EUPerCriticalPhoton` (the rest stays banked) plus `storageEUMAX x (Integer.MAX_VALUE / EUPerCriticalPhoton)`: 20 x
+  EU/t / 2,147,483,647 a second.
+- **Sails.** Past 2,048 + 256 a node they may decay (`DSP_SolarSailDecreaser`: every 30 minutes a 1 in 5,000 roll, then
+  1 in 4 a sphere, takes half the excess). The card counts the sails set and warns.
+- Not modelled: the first run (the bank is handed over as each run ends); a sphere that once went BigInteger stays so
+  (`useBigInteger` is saved), which only shows far above any receiver's cap.
+**Artificial Star.** Settings: Antimatter, Antimatter Fuel Rods and Strange Annihilation Fuel Rods each run; Dimension,
+Time and Stabilisation field (tier 1 the base block: Dimensional Bridge, Ultimate Containment Field Generator,
+Spacetime Altering Casing; tiers 2 to 10 the TecTech Spacetime Compression, Time Dilation and Stabilisation Field
+Generators, Crude to Gallifreyan); Continuous-run bonus.
+- **Output.** It has no recipe map of its own to run: `checkProcessing` takes everything in its one input bus each run
+  and adds `(long) (units x output multiplier x (100 + bonus) / 100) x Integer.MAX_VALUE` EU at once, a fuel's units
+  being `Config.EUEvery... / Integer.MAX_VALUE` (Antimatter 3, Antimatter Fuel Rod 1,024, Strange Annihilation Fuel Rod
+  32,768), the run's fuels summed before the cut. The multiplier is `(tTime x tDim)^0.25 x 1.588186^(tStab - 2)`: 0.63
+  with the base blocks, 128 with Gallifreyan generators. A run is `(int) (20 x 6.4)` = 128 ticks and the next starts on
+  the tick it ends, so the card is EU per run / 128 EU/t on fuel per run every 6.4 s.
+- **Bonus.** `rewardContinuous` climbs 1% a run with fuel up to 50 and drops to 0 on a run without; the card defaults
+  to the steady 150% (from the 51st run, 5 min 20 s in).
+- **Recovery.** A run with fuel rods gives one Stellar Construction Frame Material per rod on a tDim x tTime x tStab in
+  1,000 roll (certain at all 10); the card makes the expected rate.
+- **Big numbers.** One run can pass Long.MAX_VALUE EU (1,000 strange rods with Gallifreyan generators: 1.35 x 10^19);
+  the game adds it as a BigInteger and the card works it out as one, then hands EU/t to the ledger as a double, the
+  planner's EU everywhere (no overflow; about 16 significant digits).
+TST's items are not in the website's resource map: `PowerPorts.resolve` falls back to `TstDysonSphere.ITEMS` (TST's
+MetaItem01 metas), so the fuels, the Gravitational Lens, Critical Photons and the frame material are ports in a game
+with TST, readings without it.
 
 ## Other mods in the pack
 
