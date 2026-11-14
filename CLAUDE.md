@@ -85,10 +85,14 @@ scripts. The remotes and release steps below describe upstream's own setup.
   the website's 20 px grid (importer, `PlanExport.edge`, `cloud/map` with the game's own to the pixel).
 - Wires leaving one port (a card output, or a drawer that gives) share a trunk: `WireRouter.Wire.trunk` keys them,
   the router plans one place on the box and routes them in turn, nearest box first, each next one off the routes
-  before it (`WireRouter.trunkStarts`), and keeps and re-routes them as one. `layout/WireTrunks` reads the tree back
-  from the routes; `WireLayer.strands` draws each stretch once, as wide as the sum it carries, with a dot at each
-  branch, and `RouteMetrics` measures it as drawn. The settings' "Shared wire trunks" (`PlannerSettings.sharedTrunks`,
-  on by default) turns it off. Only routes change: nothing of it is saved or exported.
+  before it (`WireRouter.trunkStarts`), and keeps and re-routes them as one. Wires coming into one port (a card input,
+  or a drawer that takes) share one the same way round: `WireRouter.Wire.merge` keys them, each next one routed onto
+  the routes before it (`WireRouter.trunkEnds`, `JOIN` arrivals). A wire on both leaves the one and joins the other;
+  the wires trunks tie together (`WireRouter.bundles`) route and are kept as one. `layout/WireTrunks` reads it back
+  from the routes (`tree`, `treeIn`, `shares`, `stretches`); `WireLayer.strands` draws each stretch once, as wide as
+  the sum it carries, with a dot at each branch and join, and `RouteMetrics` measures it as drawn. The settings'
+  "Shared wire trunks" (`PlannerSettings.sharedTrunks`, on by default) turns both off. Only routes change: nothing of
+  it is saved or exported.
 - `importer/` converts Factory Flow plans (JSON, plan codes, links) to graphs: a pure core plus `importer/game/`,
   the NEI and GregTech side. The "+" plan tab pastes one from the clipboard; `call 'importff?file=<path>'` does it
   from the harness. Fixtures are in `src/test/resources/factory-flow/`. A card's machine is found by the website's

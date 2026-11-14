@@ -112,8 +112,7 @@ A player can pin dots on a wire that its route must pass through, in order: the 
 
 One card's output feeding five cards used to leave its port as five parallel wires of one colour. Wires that leave
 one port with one resource now share a trunk: one line out of the port, each wire branching off near its own card.
-Only the fan-out at a source: wires of one resource from different ports stay apart, and wires meeting at an input
-stay as they were.
+Wires of one resource from different ports stay apart.
 
 - **Keyed** by `WireRouter.Wire.trunk` (the board's `WireLayer.Source`: a card's output port, or a drawer that
   gives); wires from one box with equal keys, two or more, are a trunk (`WireRouter.trunks`). A wire back into its
@@ -154,6 +153,46 @@ stay as they were.
   board routes and draws exactly as before (the corpus measures the same with `-Prouter.trunks=false`). Nothing is
   saved: routes are the board's own and steering dots are what plans, posts and shared plans carry, as before.
   Arrange still judges its candidates without trunks.
+
+#### Into one port (2026-11-13)
+
+The mirror case: four cards making hydrogen sulfide for one card's input came in as four wires side by side. Wires
+that come into one port with one resource now share a trunk too: each leaves its own card, joins the others near it,
+and they come into the port as one line. The same setting turns both on and off.
+
+- **Keyed** by `WireRouter.Wire.merge` (the board's `WireLayer.Target`: a card's input port, or a drawer that takes);
+  wires into one box with equal keys, two or more, are a trunk into it (`WireRouter.merges`).
+- **Planned once** at the box it comes into: one place, planned for the wire that routes first on it.
+- **Routed in turn**, the same order (nearest boxes first), the first as any wire. Each next one is searched to every
+  cell of the routes before it (near its two boxes, `trunkEnds`): such an arrival (`JOIN`) is made on any heading that
+  may turn onto the way the trunk runs on from that cell, the turn paid, and entering the trunk's cell pays a crossing,
+  which stands in for the junction a branch pays leaving a trunk. The search finds the cheapest way from its box to
+  the trunk, so it joins it where it comes near it, near its own card. Arriving at its box on its own costs `ALONE`
+  more, and joining where another already joins is `FORK` cheaper, as for branches. The search's turning estimate is
+  left out when any arrival may be made on more than one heading (as for a steering dot), so it stays exact.
+- **On the board once**: a route remembers how many of its last cells are the trunk's (`Route.joined`); the cell it
+  joins at keeps the heading it came in on, so its corners are right, and only its own cells are on the board.
+- **A wire on both** (its output feeds several cards and its input is fed by several, like a producer that also
+  feeds a second consumer): it is one wire with three parts, its head on the trunk out of its port, its own stretch,
+  and its tail on the trunk into the other port. It routes after the wires before it on either trunk, in one search
+  from the one trunk to the other (`branch`, grafted at both ends). The trunks such wires tie together, and through
+  them every wire tied to those, are a bundle (`WireRouter.bundles`): planned, routed, kept and re-routed as one unit,
+  as one trunk was before, and the bundle's stretches never hop each other.
+- **Read back** (`WireTrunks.treeIn`): two paths into one point run together from where they meet; each wire joins
+  the one before it in the list it runs along longest to the end. `WireTrunks.shares` gives each wire its head (on the
+  trunk out of its port) and its tail (on the one into the other); `WireTrunks.stretches` hands whatever runs along a
+  wire's head and tail to the wire it shares them with, until it lands on someone's own stretch, and cuts each own
+  stretch wherever what runs along it changes. Every point of every wire is then drawn exactly once: on its own
+  stretch, or on the stretch of the wire it shares that part with. Where a wire's head and tail would hold the same
+  stretch (it runs off the one trunk straight onto the other), the head has it, so nothing is drawn or counted twice.
+- **Drawn and measured** the same way as branches: each stretch as wide as the sum of the wires along it (a trunk into
+  a port grows toward the port, as a trunk out of one narrows away from it), arrows along each stretch toward the
+  port, a dot where each wire joins, in the colour of the widest stretch meeting there. Hover, selection, the tip
+  and the click work on stretches and needed nothing new: a stretch of a trunk into a port means the wire it is a
+  stretch of, and lights with every wire along it. `RouteMetrics` takes each wire's merge too: the trunk into a port
+  once, the turn onto it a bend, coming into the port as one not a shared end, and excess still the whole wire.
+- **Bench**: `BenchRun.merge` keys the corpus the same way; `TrunkPictures` draws a column feeding one card
+  (`E-column-in`) and two ports fed by alternate cards (`F-two-ports-in`).
 
 ### Where it stands (2026-10-08, `build/bench/router-v1`)
 

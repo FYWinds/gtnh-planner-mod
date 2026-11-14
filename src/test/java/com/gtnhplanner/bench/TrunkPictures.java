@@ -16,24 +16,28 @@ import com.gtnhplanner.layout.RouteMetrics;
 import com.gtnhplanner.layout.WireRouter;
 
 /**
- * Fan-outs drawn with their wires apart and on a trunk, side by side ({@code build/bench/<label>/trunk-*.png}): one
- * card feeding a column of six, the card above the column, cards all round it, and two ports of one card feeding
- * alternate cards. {@code -Pbench=<label> --tests '*TrunkPictures*'}; left out of the normal run.
+ * Fan-outs and fan-ins drawn with their wires apart and on a trunk, side by side
+ * ({@code build/bench/<label>/trunk-*.png}): one card feeding a column of six, the card above the column, cards all
+ * round it, two ports of one card feeding alternate cards; a column of six feeding one card, and two ports of one card
+ * fed by alternate cards. {@code -Pbench=<label> --tests '*TrunkPictures*'}; left out of the normal run.
  */
 @Tag("bench")
 class TrunkPictures {
 
     @Test
     void pictures() throws IOException {
-        draw("A-column", board(new int[] { 0, 300 }, column(900, -150, 6, 230), 1));
-        draw("B-above", board(new int[] { 0, -400 }, column(900, -150, 5, 230), 1));
+        draw("A-column", board(new int[] { 0, 300 }, column(900, -150, 6, 230), 1, false));
+        draw("B-above", board(new int[] { 0, -400 }, column(900, -150, 5, 230), 1, false));
         draw(
             "C-spread",
             board(
                 new int[] { 600, 300 },
                 new int[][] { { 1300, 100 }, { 1300, 500 }, { 500, 900 }, { 1000, 900 }, { -200, 300 } },
-                1));
-        draw("D-two-ports", board(new int[] { 0, 300 }, column(900, -150, 6, 230), 2));
+                1,
+                false));
+        draw("D-two-ports", board(new int[] { 0, 300 }, column(900, -150, 6, 230), 2, false));
+        draw("E-column-in", board(new int[] { 900, 300 }, column(0, -150, 6, 230), 1, true));
+        draw("F-two-ports-in", board(new int[] { 900, 300 }, column(0, -150, 6, 230), 2, true));
     }
 
     private static int[][] column(final int x, final int y0, final int n, final int step) {
@@ -42,17 +46,22 @@ class TrunkPictures {
         return out;
     }
 
-    /** A card at {@code source} and one at each target, the n-th fed from port n mod {@code ports}. */
-    private static BenchBoard board(final int[] source, final int[][] targets, final int ports) {
+    /**
+     * A card at {@code card} and one at each of {@code others}, the n-th wired to port n mod {@code ports} of the card:
+     * fed from it, or feeding it ({@code into}).
+     */
+    private static BenchBoard board(final int[] card, final int[][] others, final int ports, final boolean into) {
         final List<BenchBoard.Item> items = new ArrayList<>();
         final List<BenchBoard.Link> links = new ArrayList<>();
-        final BenchBoard.Item from = item("source", source);
-        items.add(from);
-        for (int t = 0; t < targets.length; t++) {
-            final BenchBoard.Item to = item("target" + t, targets[t]);
-            items.add(to);
+        final BenchBoard.Item one = item("card", card);
+        items.add(one);
+        for (int t = 0; t < others.length; t++) {
+            final BenchBoard.Item other = item("other" + t, others[t]);
+            items.add(other);
             final int port = t % ports;
-            links.add(new BenchBoard.Link(uuid("link" + t), from.id(), port, to.id(), 0, "res" + port));
+            links.add(
+                into ? new BenchBoard.Link(uuid("link" + t), other.id(), 0, one.id(), port, "res" + port)
+                    : new BenchBoard.Link(uuid("link" + t), one.id(), port, other.id(), 0, "res" + port));
         }
         return new BenchBoard("trunks", items, links);
     }
@@ -80,7 +89,8 @@ class TrunkPictures {
                     WireRouter.ANY,
                     0,
                     List.of(),
-                    on ? BenchRun.trunk(l) : null));
+                    on ? BenchRun.trunk(l) : null,
+                    on ? BenchRun.merge(l) : null));
             final List<UUID> fellBack = new ArrayList<>();
             final Map<UUID, List<int[]>> routes = new WireRouter().route(boxes, wires, fellBack, true);
             final List<RouteMetrics.Box> mboxes = new ArrayList<>();
@@ -90,7 +100,8 @@ class TrunkPictures {
                     index.get(l.from()),
                     index.get(l.to()),
                     routes.get(l.id()),
-                    on ? BenchRun.trunk(l) : null));
+                    on ? BenchRun.trunk(l) : null,
+                    on ? BenchRun.merge(l) : null));
             final BenchRun.Routed r = new BenchRun.Routed(
                 b,
                 routes,

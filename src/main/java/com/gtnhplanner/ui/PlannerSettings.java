@@ -108,7 +108,8 @@ public final class PlannerSettings {
 
     /**
      * "Shared trunks": wires that leave one port for several cards leave it as one line and branch off near each card,
-     * the line as wide as all it carries. On by default; off, each wire is routed and drawn on its own.
+     * and wires from several cards into one port join near those cards and come in as one line, the line as wide as
+     * all it carries. On by default; off, each wire is routed and drawn on its own.
      */
     public static boolean sharedTrunks() {
         return bool("board.sharedTrunks", true);

@@ -20,8 +20,9 @@ package and the save format are upstream's, so plans and the gtnhplanner.com acc
 - **Text input.** The planner's own editors (rate and count boxes, notes, text areas, the password box) turn the
   game's text input on while they are written in (`ui/TextInput`), so the numpad and an IME type into them under
   lwjgl3ify.
-- **Wire trunks.** Wires from one output port to several cards leave as one line and fork near the cards
-  (`layout/WireTrunks`, `docs/design/routing-and-arrange.md`); Settings, Board, "Shared wire trunks" turns it off.
+- **Wire trunks.** Wires from one output port to several cards leave as one line and fork near the cards; wires from
+  several cards into one input port join near those cards and come in as one line (`layout/WireTrunks`,
+  `docs/design/routing-and-arrange.md`); Settings, Board, "Shared wire trunks" turns both off.
 - **TwistSpaceTechnology machines.** 38 TST 0.8.0 multiblocks compute their own speed, power, parallels and
   overclocks on cards (`machines/eto/`, `assets/gtnhplanner/machines/eto-tst.json`, `docs/design/tst-machines.md`);
   TST 0.8.1's Universal Generator is a power source (`power/sources/TstGenerators`).

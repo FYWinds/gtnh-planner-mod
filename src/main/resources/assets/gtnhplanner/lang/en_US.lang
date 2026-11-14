@@ -1818,7 +1818,7 @@ gtnhplanner.ui.taskthings.way_south_east=south-east
 
 ## wires
 gtnhplanner.ui.settings.shared_trunks=Shared wire trunks
-gtnhplanner.ui.settings.shared_trunks_tip=Wires from one port to several cards leave as one line and branch off near each card.
+gtnhplanner.ui.settings.shared_trunks_tip=Wires from one port to several cards leave as one line and branch off near each card. Wires from several cards into one port join near those cards and come in as one line.
 gtnhplanner.ui.canvas.trunk_of_wires=§7Trunk of %d wires
 
 ## unigen

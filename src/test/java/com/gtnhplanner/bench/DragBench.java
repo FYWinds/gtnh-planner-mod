@@ -150,7 +150,8 @@ class DragBench {
                         WireRouter.ANY,
                         0,
                         List.of(),
-                        BenchRun.trunk(l)));
+                        BenchRun.trunk(l),
+                        BenchRun.merge(l)));
         }
         return wires;
     }

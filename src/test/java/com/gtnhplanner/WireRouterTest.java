@@ -256,7 +256,7 @@ class WireRouterTest {
 
     // endregion
 
-    // region Trunks: wires from one port share one
+    // region Trunks: wires from one port share one, and so do wires into one
 
     @Test
     void wiresFromOnePortShareATrunkAndBranchNearTheirBoxes() {
@@ -321,11 +321,11 @@ class WireRouterTest {
 
     @Test
     void withoutTrunksTheBoardRoutesAsItDid() {
-        // The grid board with every wire given a trunk of its own routes exactly as with none; the fan-out with none
-        // leaves its box at five places, as before trunks.
+        // The grid board with every wire given a trunk and a merge of its own routes exactly as with none; the fan-out
+        // with none leaves its box at five places, as before trunks.
         final List<Box> boxes = grid();
         final List<Wire> plain = wiresOf(boxes.size()), keyed = new ArrayList<>();
-        for (final Wire w : plain) keyed.add(withTrunk(w, w.key()));
+        for (final Wire w : plain) keyed.add(withKeys(w, w.key(), w.key()));
         final Map<UUID, List<int[]>> a = new WireRouter().route(boxes, plain), b = new WireRouter().route(boxes, keyed);
         for (final Wire w : plain) assertEquals(describe(a.get(w.key())), describe(b.get(w.key())));
 
@@ -406,6 +406,165 @@ class WireRouterTest {
         for (final Wire w : wires) assertEquals(describe(a.get(w.key())), describe(b.get(w.key())));
     }
 
+    // Merges: wires into one port share one too.
+
+    @Test
+    void wiresIntoOnePortShareATrunkAndJoinNearTheirBoxes() {
+        final List<Box> boxes = fanOut();
+        final List<Wire> wires = mergeWires(boxes.size(), i -> "port");
+        final Set<UUID> fellBack = new HashSet<>();
+        final Map<UUID, List<int[]>> routes = new WireRouter().route(boxes, null, wires, fellBack, true);
+        assertTrue(fellBack.isEmpty());
+        final List<List<int[]>> paths = new ArrayList<>();
+        for (final Wire w : wires) paths.add(routes.get(w.key()));
+        final String all = describeAll(paths);
+        // One place on the port's box, for all of them.
+        for (final List<int[]> p : paths) {
+            assertTrue(
+                Arrays.equals(
+                    paths.getFirst()
+                        .getLast(),
+                    p.getLast()),
+                () -> "splayed at the port: " + all);
+            assertTrue(octilinear(p), all);
+            assertTrue(clear(p, boxes), () -> "through a box: " + all);
+        }
+        // Each joins the trunk past half way across, near its own box.
+        final WireTrunks.Branch[] tree = WireTrunks.treeIn(paths);
+        for (int k = 0; k < tree.length; k++) {
+            if (tree[k].parent() < 0) continue;
+            final int x = tree[k].at()[0];
+            assertTrue(x >= 560, () -> "joins near the port: " + all);
+        }
+        // Drawn once, the trunk saves most of what five wires side by side would take.
+        double whole = 0, drawn = 0;
+        for (int k = 0; k < paths.size(); k++) {
+            whole += WireTrunks.length(paths.get(k));
+            drawn += WireTrunks.length(paths.get(k)) - tree[k].length();
+        }
+        final double saved = 1 - drawn / whole;
+        assertTrue(saved > 0.3, () -> "saves only " + saved + ": " + all);
+    }
+
+    @Test
+    void aWireOnBothTrunksLeavesTheOneAndJoinsTheOther() {
+        // A card feeding one far to its right and one below that, which a card level with it feeds too.
+        final List<Box> boxes = List.of(
+            new Box(0, 0, 320, 200),
+            new Box(1600, 0, 320, 200),
+            new Box(1600, 700, 320, 200),
+            new Box(0, 700, 320, 200));
+        final Wire across = new Wire(id("across"), 0, 1, WireRouter.ANY, WireRouter.ANY, 1, List.of(), "out", null);
+        final Wire level = new Wire(id("level"), 3, 2, WireRouter.ANY, WireRouter.ANY, 1, List.of(), null, "in");
+        final Wire both = new Wire(id("both"), 0, 2, WireRouter.ANY, WireRouter.ANY, 1, List.of(), "out", "in");
+        final List<Wire> wires = List.of(across, level, both);
+        final Set<UUID> fellBack = new HashSet<>();
+        final Map<UUID, List<int[]>> routes = new WireRouter().route(boxes, null, wires, fellBack, true);
+        assertTrue(fellBack.isEmpty());
+        final List<List<int[]>> paths = new ArrayList<>();
+        for (final Wire w : wires) paths.add(routes.get(w.key()));
+        final String all = describeAll(paths);
+        for (final List<int[]> p : paths) {
+            assertTrue(octilinear(p), all);
+            assertTrue(clear(p, boxes), () -> "through a box: " + all);
+        }
+        // It leaves its port with the first wire and comes into the other port with the second.
+        assertTrue(
+            Arrays.equals(
+                paths.get(0)
+                    .getFirst(),
+                paths.get(2)
+                    .getFirst()),
+            all);
+        assertTrue(
+            Arrays.equals(
+                paths.get(1)
+                    .getLast(),
+                paths.get(2)
+                    .getLast()),
+            all);
+        final WireTrunks.Share[] shares = WireTrunks
+            .shares(paths, Arrays.asList("out", null, "out"), Arrays.asList(null, "in", "in"));
+        assertEquals(
+            0,
+            shares[2].head()
+                .parent(),
+            all);
+        assertEquals(
+            1,
+            shares[2].tail()
+                .parent(),
+            all);
+        assertTrue(
+            shares[2].head()
+                .length()
+                + shares[2].tail()
+                    .length()
+                < WireTrunks.length(paths.get(2)),
+            () -> "nothing of its own between the trunks: " + all);
+        // Drawn once: the stretches carrying each wire are exactly as long as it.
+        final List<WireTrunks.Stretch> drawn = WireTrunks.stretches(paths, shares);
+        for (int i = 0; i < paths.size(); i++) {
+            double carried = 0;
+            for (final WireTrunks.Stretch s : drawn) {
+                final int wire = i;
+                if (Arrays.stream(s.along())
+                    .anyMatch(k -> k == wire)) carried += WireTrunks.length(s.path());
+            }
+            assertEquals(WireTrunks.length(paths.get(i)), carried, 1e-6, all);
+        }
+    }
+
+    @Test
+    void movingAProducerKeepsTheMergeAndLeavesOtherWiresAlone() {
+        final List<Box> boxes = new ArrayList<>(fanOut());
+        // A wire elsewhere, far from the fan-in.
+        boxes.add(new Box(0, 1400, 320, 200));
+        boxes.add(new Box(800, 1400, 320, 200));
+        final List<Wire> wires = new ArrayList<>(mergeWires(6, i -> "port"));
+        final Wire far = wire("far", 6, 7);
+        wires.add(far);
+        final WireRouter router = new WireRouter();
+        final Map<UUID, List<int[]>> before = router.route(boxes, wires);
+        final List<Box> moved = new ArrayList<>(boxes);
+        final Box last = boxes.get(5);
+        moved.set(5, new Box(last.x() + 40, last.y() + 30, last.w(), last.h()));
+        final Map<UUID, List<int[]>> after = router.reroute(moved, wires, null, true);
+        assertSame(before.get(far.key()), after.get(far.key()));
+        final List<List<int[]>> paths = new ArrayList<>();
+        for (final Wire w : wires.subList(0, 5)) paths.add(after.get(w.key()));
+        for (final List<int[]> p : paths) {
+            assertTrue(
+                Arrays.equals(
+                    paths.getFirst()
+                        .getLast(),
+                    p.getLast()),
+                describeAll(paths));
+            assertTrue(clear(p, moved), describeAll(paths));
+        }
+        assertTrue(
+            onEdge(
+                paths.getLast()
+                    .getFirst(),
+                moved.get(5)),
+            describeAll(paths));
+        // As routing the moved board afresh would.
+        final Map<UUID, List<int[]>> fresh = new WireRouter().route(moved, wires);
+        for (final Wire w : wires.subList(0, 5))
+            assertEquals(describe(fresh.get(w.key())), describe(after.get(w.key())));
+    }
+
+    @Test
+    void aMergeRoutesTheSameEveryTime() {
+        final List<Box> boxes = fanOut();
+        final List<Wire> wires = mergeWires(boxes.size(), i -> "port");
+        final List<Wire> reversed = new ArrayList<>(wires);
+        java.util.Collections.reverse(reversed);
+        final Map<UUID, List<int[]>> a = new WireRouter().route(boxes, wires),
+            b = new WireRouter().route(boxes, reversed);
+        for (final Wire w : wires) assertEquals(describe(a.get(w.key())), describe(b.get(w.key())));
+    }
+
     /** A card and a column of five to its right, the middle one level with it. */
     private static List<Box> fanOut() {
         final List<Box> out = new ArrayList<>();
@@ -422,8 +581,16 @@ class WireRouterTest {
         return out;
     }
 
-    private static Wire withTrunk(final Wire w, final Object trunk) {
-        return new Wire(w.key(), w.from(), w.to(), w.fromSides(), w.toSides(), w.weight(), w.stops(), trunk);
+    /** A wire from each other box into box 0, with the merge key given for each. */
+    private static List<Wire> mergeWires(final int n, final java.util.function.IntFunction<Object> merge) {
+        final List<Wire> out = new ArrayList<>();
+        for (int i = 1; i < n; i++)
+            out.add(new Wire(id("into" + i), i, 0, WireRouter.ANY, WireRouter.ANY, 1, List.of(), null, merge.apply(i)));
+        return out;
+    }
+
+    private static Wire withKeys(final Wire w, final Object trunk, final Object merge) {
+        return new Wire(w.key(), w.from(), w.to(), w.fromSides(), w.toSides(), w.weight(), w.stops(), trunk, merge);
     }
 
     private static String describeAll(final List<List<int[]>> paths) {
@@ -434,7 +601,16 @@ class WireRouterTest {
     }
 
     private static Wire withStops(final Wire w, final int[]... stops) {
-        return new Wire(w.key(), w.from(), w.to(), w.fromSides(), w.toSides(), w.weight(), List.of(stops), w.trunk());
+        return new Wire(
+            w.key(),
+            w.from(),
+            w.to(),
+            w.fromSides(),
+            w.toSides(),
+            w.weight(),
+            List.of(stops),
+            w.trunk(),
+            w.merge());
     }
 
     /** How far along the path the point is, or -1 when the path does not pass through it. */

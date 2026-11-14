@@ -30,9 +30,9 @@ import com.gtnhplanner.ui.theme.Hyb;
 /**
  * The board's wires, Factory Flow style: one per resource between two objects, routed around cards and drawers
  * ({@link WireRouter}), drawn in the resource's colour, thicker with more flow, with arrowheads along the run. Wires
- * leaving one port for several cards share a trunk (the setting's default): drawn once, as thick as all it carries,
- * with a dot where each branch leaves it. Everything is in world space; the canvas draws this under the cards with
- * its pan and zoom applied.
+ * leaving one port for several cards share a trunk, and so do wires from several cards coming into one port (the
+ * setting's default): drawn once, as thick as all it carries, with a dot where each branch leaves it or joins it.
+ * Everything is in world space; the canvas draws this under the cards with its pan and zoom applied.
  */
 final class WireLayer {
 
@@ -48,15 +48,21 @@ final class WireLayer {
 
     /**
      * A wire on the board: an edge, or a drawer's link; its route ({@code path}) and the dots steering it
-     * ({@code stops}, the website's waypoints: the plan's, or those of a dot being dragged on it); and the port it
-     * leaves ({@code trunk}, a {@link Source}): wires leaving one port share a trunk, null when trunks are off.
+     * ({@code stops}, the website's waypoints: the plan's, or those of a dot being dragged on it); the port it leaves
+     * ({@code trunk}, a {@link Source}) and the port it comes into ({@code merge}, a {@link Target}): wires leaving one
+     * port share a trunk, and so do wires coming into one; both null when trunks are off.
      */
     record Wire(UUID key, Kind kind, @Nullable Edge edge, @Nullable Drawer drawer, @Nullable Drawer.Link link,
         int color, float width, double perSecond, List<int[]> path, String resource, List<int[]> stops,
-        @Nullable Object trunk) {}
+        @Nullable Object trunk, @Nullable Object merge) {}
 
     /** The port a wire leaves: a card's output ({@code index} its place), or a drawer that gives ({@code index} -1). */
     private record Source(UUID owner, int index) {}
+
+    /**
+     * The port a wire comes into: a card's input ({@code index} its place), or a drawer that takes ({@code index} -1).
+     */
+    private record Target(UUID owner, int index) {}
 
     private final BoardSession session;
     private List<Wire> wires = List.of();
@@ -435,7 +441,8 @@ final class WireLayer {
                     null,
                     Resources.key(port),
                     stopsOf(e.id, e.waypoints),
-                    trunks ? new Source(src.id, e.sourceOutputIndex) : null));
+                    trunks ? new Source(src.id, e.sourceOutputIndex) : null,
+                    trunks ? new Target(dst.id, e.targetInputIndex) : null));
         }
         for (final Drawer d : drawerList) {
             Integer drawerAt = drawerBox.get(d.getId());
@@ -473,7 +480,8 @@ final class WireLayer {
                         null,
                         Resources.key(port),
                         stopsOf(key, link.waypoints()),
-                        !trunks ? null : source ? new Source(d.getId(), -1) : new Source(n.id, link.portIndex())));
+                        !trunks ? null : source ? new Source(d.getId(), -1) : new Source(n.id, link.portIndex()),
+                        !trunks ? null : source ? new Target(n.id, link.portIndex()) : new Target(d.getId(), -1)));
             }
         }
 
@@ -486,7 +494,8 @@ final class WireLayer {
         for (int i = 0; i < sized.size(); i++) {
             final int a = between.get(i)[0], b = between.get(i)[1];
             final Wire w = sized.get(i);
-            // Steered through its dots, when it has any (the website's waypoints); wires leaving one port on a trunk.
+            // Steered through its dots, when it has any (the website's waypoints); wires leaving one port on a trunk,
+            // and wires coming into one on another.
             requests.add(
                 a == b ? new WireRouter.Wire(w.key(), a, b, WireRouter.RIGHT, WireRouter.LEFT, w.width(), w.stops())
                     : new WireRouter.Wire(
@@ -497,7 +506,8 @@ final class WireLayer {
                         WireRouter.ANY,
                         w.width(),
                         w.stops(),
-                        w.trunk()));
+                        w.trunk(),
+                        w.merge()));
             final WireRouter.Box from = boxes.get(a), to = boxes.get(b);
             ends.add(new int[] { from.x(), from.y(), from.w(), from.h(), to.x(), to.y(), to.w(), to.h() });
         }
@@ -532,7 +542,8 @@ final class WireLayer {
                     path,
                     w.resource(),
                     w.stops(),
-                    w.trunk()));
+                    w.trunk(),
+                    w.merge()));
         }
         return withWidths(built);
     }
@@ -643,7 +654,8 @@ final class WireLayer {
                     w.path(),
                     w.resource(),
                     w.stops(),
-                    w.trunk()));
+                    w.trunk(),
+                    w.merge()));
         }
         return out;
     }
@@ -1190,14 +1202,18 @@ final class WireLayer {
     // region Trunks as drawn
 
     /**
-     * A stretch of wire as drawn: a wire on its own, whole; or a stretch of a trunk (wires leaving one port, as the
-     * router ran them together), drawn once and as wide as all it carries, or of a branch off one. {@code wires} are
-     * those running along it, first the one it is a stretch of (what a click on it means); {@code trunk} its trunk's
-     * number in this drawing (-1 for none), so the stretches of one trunk never hop each other.
+     * A stretch of wire as drawn: a wire on its own, whole; or a stretch of a trunk (wires leaving one port, or coming
+     * into one, as the router ran them together), drawn once and as wide as all it carries, or of a branch off one or
+     * into one. {@code wires} are those running along it, first the one it is a stretch of (what a click on it
+     * means); {@code trunk} the number of the wires tied together by trunks it is part of, in this drawing (-1 for
+     * none), so the stretches of those never hop each other.
      */
     record Strand(List<int[]> path, int color, float width, double perSecond, List<Wire> wires, int trunk) {}
 
-    /** Where a branch leaves a trunk: a dot in the trunk's colour, as wide as the stretch running into it. */
+    /**
+     * Where a branch leaves a trunk or joins one: a dot in the trunk's colour, as wide as the widest stretch meeting
+     * there.
+     */
     private record Junction(int x, int y, int color, float width) {}
 
     /** The wires as last drawn, their junctions, and the wires they were worked out for. */
@@ -1206,88 +1222,66 @@ final class WireLayer {
     private List<Wire> strandsFor;
 
     /**
-     * The wires as they are drawn: each on its own whole, in their order; the wires on a trunk (those leaving one port)
-     * where the first of them comes, split where they part ({@link WireTrunks#tree}), each stretch once, carrying all
-     * that runs along it, with a junction where each branch leaves. The widths are worked out over the stretches, so a
+     * The wires as they are drawn: each on its own whole, in their order; the wires tied together by trunks (those
+     * leaving one port, those coming into one, and through a wire on both, all of those) where the first of them
+     * comes, cut where they part and join ({@link WireTrunks#stretches}), each stretch once, carrying all that runs
+     * along it, with a junction where each branch leaves or joins. The widths are worked out over the stretches, so a
      * trunk is as wide as the sum it carries; with no trunks, these are the wires themselves.
      */
     private List<Strand> strands(final List<Wire> wires) {
         if (wires == strandsFor) return strands;
-        final Map<Object, List<Wire>> byTrunk = new HashMap<>();
-        for (final Wire w : wires) if (w.trunk() != null) byTrunk.computeIfAbsent(w.trunk(), k -> new ArrayList<>())
-            .add(w);
+        final int n = wires.size();
+        final List<List<int[]>> all = new ArrayList<>(n);
+        final List<Object> out = new ArrayList<>(n), in = new ArrayList<>(n);
+        for (final Wire w : wires) {
+            all.add(w.path());
+            out.add(w.trunk());
+            in.add(w.merge());
+        }
+        final int[] bundle = WireTrunks.bundles(out, in);
+        final WireTrunks.Share[] shares = WireTrunks.shares(all, out, in);
+        // Each bundle's wires, and each wire's stretches in order along it.
+        final List<List<Integer>> members = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            if (bundle[i] < 0) continue;
+            while (members.size() <= bundle[i]) members.add(new ArrayList<>());
+            members.get(bundle[i])
+                .add(i);
+        }
+        final List<List<WireTrunks.Stretch>> pieces = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) pieces.add(new ArrayList<>());
+        if (!members.isEmpty())
+            for (final WireTrunks.Stretch s : WireTrunks.stretches(all, shares)) pieces.get(s.wire())
+                .add(s);
         final List<List<int[]>> paths = new ArrayList<>();
         final List<Double> flows = new ArrayList<>();
         final List<List<Wire>> carried = new ArrayList<>();
         final List<Integer> trunkOf = new ArrayList<>();
-        // Junctions as {x, y, stretch running into it}.
-        final List<int[]> joints = new ArrayList<>();
-        final java.util.Set<Object> done = new java.util.HashSet<>();
-        int trunks = 0;
-        for (final Wire w : wires) {
-            final List<Wire> trunk = w.trunk() == null ? null : byTrunk.get(w.trunk());
-            if (trunk == null || trunk.size() < 2) {
+        final boolean[] done = new boolean[members.size()];
+        for (int i = 0; i < n; i++) {
+            final Wire w = wires.get(i);
+            final int b = bundle[i];
+            if (b < 0) {
                 paths.add(w.path());
                 flows.add(w.perSecond());
                 carried.add(List.of(w));
                 trunkOf.add(-1);
                 continue;
             }
-            if (!done.add(w.trunk())) continue;
-            final int number = trunks++;
-            final List<List<int[]>> own = new ArrayList<>(trunk.size());
-            for (final Wire t : trunk) own.add(t.path());
-            final WireTrunks.Branch[] tree = WireTrunks.tree(own);
-            final int n = trunk.size();
-            // What each wire's branch carries on, itself and every wire branching off it further on, theirs too.
-            final double[] below = new double[n];
-            final List<List<Wire>> beneath = new ArrayList<>(n);
-            final List<List<Integer>> kids = new ArrayList<>(n);
-            for (int k = 0; k < n; k++) {
-                kids.add(new ArrayList<>());
-                beneath.add(new ArrayList<>(List.of(trunk.get(k))));
-                below[k] = trunk.get(k)
-                    .perSecond();
-            }
-            for (int k = 0; k < n; k++) if (tree[k].parent() >= 0) kids.get(tree[k].parent())
-                .add(k);
-            // A wire's parent comes before it, so its branch's sum is done first from the last.
-            for (int k = n - 1; k >= 0; k--) for (final int c : kids.get(k)) {
-                below[k] += below[c];
-                beneath.get(k)
-                    .addAll(beneath.get(c));
-            }
-            for (int j = 0; j < n; j++) {
-                final List<int[]> path = own.get(j);
-                final double end = WireTrunks.length(path);
-                double from = tree[j].length();
-                int[] fromAt = tree[j].at();
-                if (from >= end - 1e-6) continue;
-                final List<Integer> off = kids.get(j);
-                off.sort(java.util.Comparator.comparingDouble(c -> tree[c].length()));
-                int next = 0;
-                while (true) {
-                    final boolean last = next >= off.size();
-                    final double to = last ? end : tree[off.get(next)].length();
-                    final int[] toAt = last ? null : tree[off.get(next)].at();
-                    // This stretch carries the wire and every branch leaving it at or past its end.
-                    double flow = trunk.get(j)
+            if (done[b]) continue;
+            done[b] = true;
+            for (final int j : members.get(b)) for (final WireTrunks.Stretch s : pieces.get(j)) {
+                double flow = 0;
+                final List<Wire> along = new ArrayList<>(s.along().length);
+                for (final int k : s.along()) {
+                    along.add(wires.get(k));
+                    flow += wires.get(k)
                         .perSecond();
-                    final List<Wire> along = new ArrayList<>(List.of(trunk.get(j)));
-                    for (int q = next; q < off.size(); q++) {
-                        flow += below[off.get(q)];
-                        along.addAll(beneath.get(off.get(q)));
-                    }
-                    paths.add(WireTrunks.between(path, from, fromAt, to, toAt));
-                    flows.add(flow);
-                    carried.add(along);
-                    trunkOf.add(number);
-                    if (last) break;
-                    joints.add(new int[] { toAt[0], toAt[1], paths.size() - 1 });
-                    while (next < off.size() && tree[off.get(next)].length() <= to + 1e-6) next++;
-                    from = to;
-                    fromAt = toAt;
                 }
+                paths.add(s.path());
+                flows.add(flow);
+                carried.add(along);
+                trunkOf.add(b);
             }
         }
         final double[] flow = new double[flows.size()];
@@ -1300,23 +1294,43 @@ final class WireLayer {
                     .resource());
         }
         final float[] width = widths(flow, fluid);
-        final List<Strand> out = new ArrayList<>(flow.length);
+        final List<Strand> drawn = new ArrayList<>(flow.length);
         for (int i = 0; i < flow.length; i++) {
             final Wire first = carried.get(i)
                 .getFirst();
-            out.add(new Strand(paths.get(i), first.color(), width[i], flow[i], carried.get(i), trunkOf.get(i)));
+            drawn.add(new Strand(paths.get(i), first.color(), width[i], flow[i], carried.get(i), trunkOf.get(i)));
         }
-        final List<Junction> dots = new ArrayList<>(joints.size());
-        final java.util.Set<Long> at = new java.util.HashSet<>();
-        for (final int[] j : joints) {
-            if (!at.add((long) j[0] << 32 | j[1] & 0xFFFFFFFFL)) continue;
-            final Strand into = out.get(j[2]);
-            dots.add(new Junction(j[0], j[1], into.color(), into.width()));
+        // Each junction takes the stretch carrying most of those meeting at it: the trunk's side.
+        final Map<Long, Integer> meeting = new java.util.LinkedHashMap<>();
+        if (!members.isEmpty()) for (final int[] p : WireTrunks.junctions(all, shares)) meeting.put(point(p), -1);
+        for (int i = 0; i < drawn.size(); i++) {
+            final Strand s = drawn.get(i);
+            if (s.trunk() < 0 || s.path()
+                .size() < 2) continue;
+            for (final int[] p : new int[][] { s.path()
+                .getFirst(),
+                s.path()
+                    .getLast() }) {
+                final Integer at = meeting.get(point(p));
+                if (at != null && (at < 0 || s.perSecond() > drawn.get(at)
+                    .perSecond())) meeting.put(point(p), i);
+            }
         }
-        strands = out;
+        final List<Junction> dots = new ArrayList<>(meeting.size());
+        for (final Map.Entry<Long, Integer> e : meeting.entrySet()) {
+            if (e.getValue() < 0) continue;
+            final Strand s = drawn.get(e.getValue());
+            dots.add(new Junction((int) (e.getKey() >> 32), (int) (long) e.getKey(), s.color(), s.width()));
+        }
+        strands = drawn;
         junctions = dots;
         strandsFor = wires;
-        return out;
+        return drawn;
+    }
+
+    /** A point as one number, for finding it again. */
+    private static long point(final int[] p) {
+        return (long) p[0] << 32 | p[1] & 0xFFFFFFFFL;
     }
 
     // endregion

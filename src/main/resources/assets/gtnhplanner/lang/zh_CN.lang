@@ -3427,7 +3427,7 @@ gtnhplanner.data.multiblock=多方块
 
 ## wires
 gtnhplanner.ui.settings.shared_trunks=连线共用主干
-gtnhplanner.ui.settings.shared_trunks_tip=同一端口通往多张卡片的连线合成一条，在各卡片附近分出。
+gtnhplanner.ui.settings.shared_trunks_tip=同一端口通往多张卡片的连线合成一条，在各卡片附近分出；多张卡片通往同一端口的连线在各卡片附近汇合，合成一条接入。
 gtnhplanner.ui.canvas.trunk_of_wires=§7%d 条连线共用的主干
 
 ## tst

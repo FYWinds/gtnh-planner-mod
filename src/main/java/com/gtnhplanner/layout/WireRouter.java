@@ -49,7 +49,10 @@ import java.util.UUID;
  * <li>Wires that leave one port with one resource ({@link Wire#trunk}) share a trunk: they are planned one place on
  * their box and route one after another, nearest box first, the first from that place and each next one from
  * wherever on those routed before it is cheapest (a route of their own costs a long detour more), so each branches off
- * where it turns toward its own box, near it, and they are routed again and kept as one.</li>
+ * where it turns toward its own box, near it, and they are routed again and kept as one. Wires that come into one port
+ * with one resource ({@link Wire#merge}) share one the same way round: one place on their box, and each next one
+ * routed to wherever on those before it is cheapest, so each joins near its own box and they come in as one line. A
+ * wire on both does both, and all the wires tied together so route and are kept as one.</li>
  * </ul>
  * The router keeps the board and its routes between calls: {@link #reroute} after a box moves routes again only the
  * wires at that box and those running where it now is or just was, so dragging a card re-routes in a moment on any
@@ -71,10 +74,17 @@ public final class WireRouter {
      * {@code stops} are the points ({x, y}, world px) the player pinned on it, the website's waypoints: the route
      * passes through each one's cell, in order (empty for none). {@code trunk} is anything equal for the wires that
      * leave one port with one resource (null for none): wires from the same box with equal trunks share one, leaving
-     * the box at one place as one line and each branching off it toward its own box.
+     * the box at one place as one line and each branching off it toward its own box. {@code merge} is the same for the
+     * wires that come into one port with one resource: wires into the same box with equal merges share one, each
+     * joining it near its own box and all arriving at one place as one line.
      */
     public record Wire(UUID key, int from, int to, int fromSides, int toSides, double weight, List<int[]> stops,
-        Object trunk) {
+        Object trunk, Object merge) {
+
+        public Wire(final UUID key, final int from, final int to, final int fromSides, final int toSides,
+            final double weight, final List<int[]> stops, final Object trunk) {
+            this(key, from, to, fromSides, toSides, weight, stops, trunk, null);
+        }
 
         public Wire(final UUID key, final int from, final int to, final int fromSides, final int toSides,
             final double weight, final List<int[]> stops) {
@@ -128,13 +138,15 @@ public final class WireRouter {
     /** Ending where another wire ends: a detour of up to that long beats sharing the spot. */
     private static final int DOCK_TAKEN = 100 * STEP;
     /**
-     * Leaving its box on its own, for a wire that could branch off its trunk: it goes alone only where that saves a
-     * detour longer than this (a box behind the port), so the wires of a trunk do not splay at their port.
+     * Leaving its box on its own, for a wire that could branch off its trunk (or arriving at its box on its own, for
+     * one that could join the trunk into it): it goes alone only where that saves a detour longer than this (a box
+     * behind the port), so the wires of a trunk do not splay at their port.
      */
     private static final int ALONE = Integer.getInteger("gtnhplanner.router.alone", 60 * STEP);
     /**
-     * Branching off a trunk anywhere but where another branch already leaves it: two forks a cell or two apart read as
-     * one that stutters, so a branch that could leave that near an existing fork leaves at it.
+     * Branching off a trunk anywhere but where another branch already leaves it (or joining one anywhere but where
+     * another already joins): two forks a cell or two apart read as one that stutters, so a branch that could leave
+     * that near an existing fork leaves at it.
      */
     private static final int FORK = Integer.getInteger("gtnhplanner.router.fork", 2 * STEP + STEP / 2);
     /** Docks keep a cell clear of a box's corners: a wire off the very corner reads as clipped through it. */
@@ -217,16 +229,18 @@ public final class WireRouter {
     private List<List<int[]>> paths = new ArrayList<>();
     private boolean[] rough = new boolean[0];
     /**
-     * Each wire's trunk (an index into {@link #trunks}, -1 for a wire on its own), and each trunk's wires in the order
-     * they route.
+     * Each wire's trunk out of its source (an index into {@link #trunks}, -1 for none) and into its target (into
+     * {@link #merges}), and each one's wires in the order they route; each wire's bundle (into {@link #bundles}, -1 for
+     * a wire on no trunk): the wires tied together by trunks, which route and are kept as one, in the order they route.
      */
-    private int[] trunkOf = new int[0];
-    private List<int[]> trunks = List.of();
+    private int[] trunkOf = new int[0], mergeOf = new int[0], bundleOf = new int[0];
+    private List<int[]> trunks = List.of(), merges = List.of(), bundles = List.of();
     /**
-     * The places on its trunk the wire being searched may branch off from: {wire, index into its route's cells}, named
-     * by a start {@link Dock}'s {@code round} as {@code -1 - index}.
+     * The places on its trunk the wire being searched may branch off from, and on the trunk into its target those it
+     * may join it at: {wire, index into its route's cells}, named by a start (or arrival) {@link Dock}'s {@code round}
+     * as {@code -1 - index}.
      */
-    private final List<int[]> joins = new ArrayList<>();
+    private final List<int[]> offs = new ArrayList<>(), ons = new ArrayList<>();
 
     // ── One search's window: the cells round a wire's ends inside a shut border, its costs worked out for that wire ──
     private int wx0, wy0, lw, lh;
@@ -253,15 +267,21 @@ public final class WireRouter {
     private static final int SHUT = -1, UNREACHED = Integer.MAX_VALUE;
     /** A {@link Dock}'s heading for a stop's cell: arrived at on any heading. */
     private static final int ANY_HEADING = 8;
+    /**
+     * A {@link Dock}'s heading for a place on the trunk into its target, plus the heading the trunk runs on from it:
+     * arrived at on any heading that may turn onto that one, the turn paid.
+     */
+    private static final int JOIN = 16;
     private static final int BOX = 16, LINES = 15;
     /** {@link #from8}: a start, and a state reached by a whole diagonal run at once. */
     private static final byte START = 32, RUN = 8, CLOSED = 64;
     /**
      * This search's arrivals by the way they are made (E, S, W, N): which ways at all, and for each the lane line
-     * (least and most) and the span along it, in window cells; and the least turn it may make.
+     * (least and most) and the span along it, in window cells; and the least turn it may make. {@code goalFree}: some
+     * arrival may be made on more than one heading (a stop, a place on a trunk), so no turning is bound to come.
      */
     private int goalSides, turnMin;
-    private boolean diagonalsOn;
+    private boolean diagonalsOn, goalFree;
     private final int[] goalLineMin = new int[4], goalLineMax = new int[4], goalLo = new int[4], goalHi = new int[4];
 
     /** What the last call did: states looked at, searches run, searches widened, wires that fell back. */
@@ -270,20 +290,28 @@ public final class WireRouter {
     public int statSearches, statWidened, statFailed, statRerouted, statSealed, statMaxWindow, statRouted;
 
     /**
-     * A place a wire may meet a box: its lane cell (a grid index), the heading out of the box, the point on its edge,
-     * how far round the box it is from its top-left corner, and what ending there costs.
+     * A place a wire may meet a box: its lane cell (a grid index), the heading out of the box (into it, for an
+     * arrival; {@link #ANY_HEADING} at a stop, {@link #JOIN} on a trunk), the point on its edge, how far round the box
+     * it is from its top-left corner (or, on a trunk, which place it is: {@link #offs}, {@link #ons}), and what ending
+     * there costs.
      */
     private record Dock(int cell, int heading, int x, int y, int round, int cost) {}
 
     /**
      * A routed wire: the cells it runs through, the heading it enters each one on, what it cost and its two docks; the
-     * first {@code shared} cells are its trunk's, run by wires routed before it (none for a wire that leaves its box
-     * itself), so they are on the board once, as theirs.
+     * first {@code shared} cells are the trunk's it leaves its source on, and the last {@code joined} the trunk's it
+     * comes into its target on, run by wires routed before it (none for a wire that leaves or meets its box itself), so
+     * they are on the board once, as theirs.
      */
-    private record Route(int[] cells, int[] headings, int cost, Dock source, Dock target, int shared) {
+    private record Route(int[] cells, int[] headings, int cost, Dock source, Dock target, int shared, int joined) {
 
         Route(final int[] cells, final int[] headings, final int cost, final Dock source, final Dock target) {
-            this(cells, headings, cost, source, target, 0);
+            this(cells, headings, cost, source, target, 0, 0);
+        }
+
+        /** Where its own cells end: the first of those it runs on the trunk into its target. */
+        int ownEnd() {
+            return cells.length - joined;
         }
     }
 
@@ -430,7 +458,8 @@ public final class WireRouter {
                     && w.fromSides == ow.fromSides
                     && w.toSides == ow.toSides
                     && sameStops(w.stops, ow.stops)
-                    && java.util.Objects.equals(w.trunk, ow.trunk);
+                    && java.util.Objects.equals(w.trunk, ow.trunk)
+                    && java.util.Objects.equals(w.merge, ow.merge);
                 // A wire that fell back is tried again only properly, or when its boxes move.
                 keep = same && (routes[o] != null ? !(thorough && rough[o]) && !runsIn(routes[o], areas) : !thorough);
             }
@@ -441,17 +470,17 @@ public final class WireRouter {
                 nextRough[k] = rough[o];
             } else redo[k] = true;
         }
-        // A trunk routes as one: kept only when every wire on it is, and it lost none.
-        final int[] oldTrunkOf = trunkOf;
-        final List<int[]> oldTrunks = trunks;
+        // Wires tied by trunks route as one: kept only when every wire of the bundle is, and it lost none.
+        final int[] oldBundleOf = bundleOf;
+        final List<int[]> oldBundles = bundles;
         trunks(wires);
         for (int k = 0; k < m; k++) {
             if (redo[k]) continue;
-            final int o = wireWas.get(wires.get(k).key), t = trunkOf[k], had = oldTrunkOf[o];
-            boolean whole = t < 0 ? had < 0 : had >= 0 && oldTrunks.get(had).length == trunks.get(t).length;
-            if (t >= 0) for (final int s : trunks.get(t)) whole &= !redo[s];
+            final int o = wireWas.get(wires.get(k).key), t = bundleOf[k], had = oldBundleOf[o];
+            boolean whole = t < 0 ? had < 0 : had >= 0 && oldBundles.get(had).length == bundles.get(t).length;
+            if (t >= 0) for (final int s : bundles.get(t)) whole &= !redo[s];
             if (whole) continue;
-            for (final int s : t < 0 ? new int[] { k } : trunks.get(t)) {
+            for (final int s : t < 0 ? new int[] { k } : bundles.get(t)) {
                 if (redo[s]) continue;
                 carried[wireWas.get(wires.get(s).key)] = false;
                 nextRoutes[s] = null;
@@ -486,8 +515,8 @@ public final class WireRouter {
      * never depends on the order wires were listed in; then, when {@code thorough}, those still crossing or running on
      * another are each routed again around all the others and kept when they do better, bounded in count and search
      * steps, so a tangled board still routes quickly and always the same way (what is left crossing hops when drawn).
-     * The wires of a trunk route together, where the first of them comes, in their own order, and are routed again
-     * together.
+     * The wires tied by trunks (a bundle) route together, where the first of them comes, in their own order, and are
+     * routed again together.
      */
     private void routeAgain(final boolean[] redo, final boolean thorough) {
         final List<Integer> picked = new ArrayList<>();
@@ -504,14 +533,14 @@ public final class WireRouter {
                 .thenComparingInt(i -> centreY(wires.get(i).to))
                 .thenComparingInt(i -> centreX(wires.get(i).to)));
         final List<int[]> units = new ArrayList<>(picked.size());
-        final boolean[] trunkDone = new boolean[trunks.size()];
+        final boolean[] bundleDone = new boolean[bundles.size()];
         for (final int i : picked) {
-            final int t = trunkOf[i];
+            final int t = bundleOf[i];
             if (t < 0) units.add(new int[] { i });
-            else if (!trunkDone[t]) {
-                trunkDone[t] = true;
+            else if (!bundleDone[t]) {
+                bundleDone[t] = true;
                 units.add(
-                    Arrays.stream(trunks.get(t))
+                    Arrays.stream(bundles.get(t))
                         .filter(s -> redo[s])
                         .toArray());
             }
@@ -563,10 +592,10 @@ public final class WireRouter {
     }
 
     /**
-     * A trunk's wires (in their order, all on the board) routed again together around everything else, kept when they
-     * cross or run on other wires less, or as little and cheaper: each wire's conflicts counted with only those before
-     * it on the board, as when it was routed. Returns -1 when nothing of the trunk conflicts (nothing tried), 1 when
-     * the new routes were kept, 0 when the old ones were.
+     * A bundle's wires (in their order, all on the board) routed again together around everything else, kept when
+     * they cross or run on other wires less, or as little and cheaper: each wire's conflicts counted with only those
+     * before it on the board, as when it was routed. Returns -1 when nothing of the bundle conflicts (nothing tried), 1
+     * when the new routes were kept, 0 when the old ones were.
      */
     private int rerouteTrunk(final int[] unit, final Dock[][] plan) {
         final Route[] old = new Route[unit.length];
@@ -613,10 +642,10 @@ public final class WireRouter {
 
     /**
      * Wire {@code i}'s route, around what is on the board: on its own, or, on a trunk with wires routed before it, off
-     * the trunk where that is cheapest.
+     * the trunk out of its source and onto the trunk into its target where that is cheapest.
      */
     private Route route(final int i, final Dock[][] plan, final boolean wide) {
-        return search(wires.get(i), plan[i][0], plan[i][1], trunkStarts(i), wide);
+        return search(wires.get(i), plan[i][0], plan[i][1], trunkStarts(i), trunkEnds(i), wide);
     }
 
     /** Every wire's corners by key; those that fell back to an elbow also into {@code fellBack}. */
@@ -765,7 +794,8 @@ public final class WireRouter {
                 r.cost,
                 shift(r.source, oldCols, dx, dy),
                 shift(r.target, oldCols, dx, dy),
-                r.shared);
+                r.shared,
+                r.joined);
             occupy(routes[i], 1);
         }
         return true;
@@ -935,7 +965,8 @@ public final class WireRouter {
      * side facing the other box, across from it), then the box's ends matched to places round its edge in that order,
      * apart where there is room, so they fan out without crossing. Two wires between the same two boxes are ordered
      * oppositely at the two, so they run side by side. A trunk leaves its box at one place, planned for the wire that
-     * routes first on it. Returns, per wire, its planned source and target dock.
+     * routes first on it, and a trunk into a box arrives at one place the same way. Returns, per wire, its planned
+     * source and target dock.
      */
     private Dock[][] plan(final List<Wire> wires) {
         final Dock[][] plan = new Dock[wires.size()][2];
@@ -945,7 +976,7 @@ public final class WireRouter {
         for (int i = 0; i < wires.size(); i++) {
             if (trunkOf[i] < 0 || trunks.get(trunkOf[i])[0] == i) ends.get(wires.get(i).from)
                 .add(new int[] { i, 0 });
-            ends.get(wires.get(i).to)
+            if (mergeOf[i] < 0 || merges.get(mergeOf[i])[0] == i) ends.get(wires.get(i).to)
                 .add(new int[] { i, 1 });
         }
         for (int b = 0; b < boxes.size(); b++) {
@@ -983,6 +1014,7 @@ public final class WireRouter {
             }
         }
         for (final int[] trunk : trunks) for (final int i : trunk) plan[i][0] = plan[trunk[0]][0];
+        for (final int[] merge : merges) for (final int i : merge) plan[i][1] = plan[merge[0]][1];
         return plan;
     }
 
@@ -1139,13 +1171,14 @@ public final class WireRouter {
     // region Occupancy
 
     /**
-     * Puts a routed wire on the board ({@code sign} 1) or takes it off again (-1): a branch only from where it leaves
-     * its trunk, which is on the board as the wires' that run it.
+     * Puts a routed wire on the board ({@code sign} 1) or takes it off again (-1): only its own cells, from where it
+     * leaves the trunk out of its source to where it joins the trunk into its target; those are on the board as the
+     * wires' that run them.
      */
     private void occupy(final Route route, final int sign) {
         if (route.shared == 0) dockUse[route.source.cell] += sign;
-        dockUse[route.target.cell] += sign;
-        for (int k = route.shared; k < route.cells.length; k++) {
+        if (route.joined == 0) dockUse[route.target.cell] += sign;
+        for (int k = route.shared, end = route.ownEnd(); k < end; k++) {
             final int idx = route.cells[k], line = LINE[route.headings[k]];
             lines[idx * 4 + line] += sign;
             if (lines[idx * 4 + line] > 0) mask[idx] |= (byte) (1 << line);
@@ -1159,16 +1192,21 @@ public final class WireRouter {
     }
 
     /**
-     * Cells where a wire crosses another or runs along one: what the rip-up pass works down. A branch's from where it
-     * leaves its trunk.
+     * Cells where a wire crosses another or runs along one: what the rip-up pass works down. Only its own, from where
+     * it leaves one trunk, the step onto the other included.
      */
     private int conflicts(final Route route) {
         int n = 0;
-        for (int k = route.shared; k < route.cells.length; k++) {
+        final int end = route.ownEnd();
+        for (int k = route.shared; k < end; k++) {
             if (mask[route.cells[k]] != 0) n++;
             if (k == 0) continue;
             final int a = route.cells[k - 1], b = route.cells[k];
             if (cornerCross(a % cols, a / cols, b % cols, b / cols, route.headings[k])) n++;
+        }
+        if (route.joined > 0 && end > 0) {
+            final int a = route.cells[end - 1], b = route.cells[end];
+            if (cornerCross(a % cols, a / cols, b % cols, b / cols, route.headings[end])) n++;
         }
         return n;
     }
@@ -1188,37 +1226,83 @@ public final class WireRouter {
     // region Trunks
 
     /**
-     * Sorts the wires into trunks, each in the order its wires route: wires from one box with equal trunk keys, two or
-     * more of them (a wire back into its own box is never on one). Wires a player steered come last, so the trunk runs
-     * where the router puts it and a steered wire leaves it for its dots; then the nearest box first, so the trunk
-     * heads straight for the nearest and the rest branch off it near their own boxes.
+     * Sorts the wires into trunks out of a port (wires from one box with equal trunk keys) and trunks into one (wires
+     * into one box with equal merge keys), two or more wires each (a wire back into its own box is never on one), and
+     * those into bundles: wires tied together by trunks, which route as one. All in the order the wires route: those a
+     * player steered last, so a trunk runs where the router puts it and a steered wire leaves it for its dots; then the
+     * two boxes nearest each other first, so a trunk heads straight from its port for the nearest box and the rest
+     * leave it, or join it, near their own boxes.
      */
     private void trunks(final List<Wire> wires) {
-        trunkOf = new int[wires.size()];
-        Arrays.fill(trunkOf, -1);
+        final int n = wires.size();
+        final List<Integer> order = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) if (wires.get(i).from != wires.get(i).to) order.add(i);
+        order.sort(
+            Comparator.<Integer>comparingInt(i -> wires.get(i).stops.isEmpty() ? 0 : 1)
+                .thenComparingInt(i -> reach(wires.get(i)))
+                .thenComparingInt(i -> span(wires.get(i)))
+                .thenComparing(i -> wires.get(i).key));
+        trunkOf = new int[n];
+        mergeOf = new int[n];
+        bundleOf = new int[n];
+        trunks = groups(wires, order, true, trunkOf);
+        merges = groups(wires, order, false, mergeOf);
+        // Bundles: each trunk ties its wires together, and a wire on two trunks ties those.
+        final int[] root = new int[n];
+        for (int i = 0; i < n; i++) root[i] = i;
+        for (final List<int[]> all : List.of(trunks, merges)) for (final int[] group : all) for (final int i : group) {
+            final int a = top(root, group[0]), b = top(root, i);
+            if (a != b) root[Math.max(a, b)] = Math.min(a, b);
+        }
+        final Map<Integer, List<Integer>> byRoot = new java.util.LinkedHashMap<>();
+        for (final int i : order)
+            if (trunkOf[i] >= 0 || mergeOf[i] >= 0) byRoot.computeIfAbsent(top(root, i), k -> new ArrayList<>())
+                .add(i);
+        Arrays.fill(bundleOf, -1);
+        final List<int[]> out = new ArrayList<>(byRoot.size());
+        for (final List<Integer> members : byRoot.values()) {
+            for (final int i : members) bundleOf[i] = out.size();
+            out.add(
+                members.stream()
+                    .mapToInt(Integer::intValue)
+                    .toArray());
+        }
+        bundles = out;
+    }
+
+    /**
+     * The wires in {@code order} grouped by their trunk key and source box ({@code out}) or merge key and target box,
+     * groups of two or more in the order of their first wire, each in that order; {@code of} gets each wire's group,
+     * -1 for none.
+     */
+    private static List<int[]> groups(final List<Wire> wires, final List<Integer> order, final boolean out,
+        final int[] of) {
+        Arrays.fill(of, -1);
         final Map<List<Object>, List<Integer>> byKey = new java.util.LinkedHashMap<>();
-        for (int i = 0; i < wires.size(); i++) {
+        for (final int i : order) {
             final Wire w = wires.get(i);
-            if (w.trunk == null || w.from == w.to) continue;
-            byKey.computeIfAbsent(List.of(w.trunk, w.from), k -> new ArrayList<>())
+            final Object key = out ? w.trunk : w.merge;
+            if (key != null) byKey.computeIfAbsent(List.of(key, out ? w.from : w.to), k -> new ArrayList<>())
                 .add(i);
         }
-        final List<int[]> out = new ArrayList<>();
+        final List<int[]> groups = new ArrayList<>();
         for (final List<Integer> members : byKey.values()) {
             if (members.size() < 2) continue;
-            members.sort(
-                Comparator.<Integer>comparingInt(i -> wires.get(i).stops.isEmpty() ? 0 : 1)
-                    .thenComparingInt(i -> reach(wires.get(i)))
-                    .thenComparingInt(i -> span(wires.get(i)))
-                    .thenComparing(i -> wires.get(i).key));
-            final int[] order = new int[members.size()];
-            for (int k = 0; k < order.length; k++) {
-                order[k] = members.get(k);
-                trunkOf[order[k]] = out.size();
-            }
-            out.add(order);
+            for (final int i : members) of[i] = groups.size();
+            groups.add(
+                members.stream()
+                    .mapToInt(Integer::intValue)
+                    .toArray());
         }
-        trunks = out;
+        return groups;
+    }
+
+    private static int top(final int[] root, int i) {
+        while (root[i] != i) {
+            root[i] = root[root[i]];
+            i = root[i];
+        }
+        return i;
     }
 
     /** How far apart a wire's two boxes stand: the wider gap between them, and two fifths of the other. */
@@ -1230,21 +1314,18 @@ public final class WireRouter {
     }
 
     /**
-     * Where wire {@code i} may start when it is on a trunk with wires routed before it: on any cell of theirs near its
-     * own two boxes, free, heading the way the trunk runs there (turned square off a diagonal where it may not run
-     * diagonally), each named in {@link #joins}; or, as a wire of its own, at {@link #ALONE} more, from its box near
-     * the place facing its other box (or its first stop) as a plan would put it. Null for a wire on no trunk, or the
-     * first of its trunk to route.
+     * Where wire {@code i} may start when it is on a trunk with wires routed before it: on any cell of their own (not
+     * of a trunk they ran on themselves) near its two boxes, free, heading the way the trunk runs there (turned square
+     * off a diagonal where it may not run diagonally), each named in {@link #offs}; or, as a wire of its own, at
+     * {@link #ALONE} more, from its box near the place facing its other box (or its first stop) as a plan would put it.
+     * Null for a wire on no trunk, or the first of its trunk to route.
      */
     private List<Dock> trunkStarts(final int i) {
         final int t = trunkOf[i];
         if (t < 0) return null;
-        joins.clear();
+        offs.clear();
         final Wire w = wires.get(i);
-        final Box a = boxes.get(w.from), b = boxes.get(w.to);
-        final int reach = WIDE_WINDOW * cell;
-        final int x0 = colAfter(Math.min(a.x, b.x) - reach), x1 = colBefore(Math.max(a.x + a.w, b.x + b.w) + reach);
-        final int y0 = rowAfter(Math.min(a.y, b.y) - reach), y1 = rowBefore(Math.max(a.y + a.h, b.y + b.h) + reach);
+        final int[] area = trunkArea(w);
         final boolean diagonals = diagonals(w);
         // Where branches already leave: leaving there too is a touch cheaper, so two that could part a cell apart
         // share one fork.
@@ -1255,11 +1336,11 @@ public final class WireRouter {
         for (final int s : trunks.get(t)) {
             final Route r = routes[s];
             if (s == i || r == null) continue;
-            for (int k = r.shared; k < r.cells.length; k++) {
+            for (int k = r.shared, end = r.ownEnd(); k < end; k++) {
                 final int idx = r.cells[k], x = idx % cols, y = idx / cols, h = r.headings[k];
-                if (x < x0 || x > x1 || y < y0 || y > y1 || cover[idx] > 0) continue;
-                final int round = -1 - joins.size(), fork = forks.contains(idx) ? 0 : FORK;
-                joins.add(new int[] { s, k });
+                if (x < area[0] || x > area[2] || y < area[1] || y > area[3] || cover[idx] > 0) continue;
+                final int round = -1 - offs.size(), fork = forks.contains(idx) ? 0 : FORK;
+                offs.add(new int[] { s, k });
                 if ((h & 1) == 0 || diagonals) out.add(new Dock(idx, h, midX(x), midY(y), round, fork));
                 else {
                     out.add(new Dock(idx, h + 7 & 7, midX(x), midY(y), round, fork + TURN45));
@@ -1279,18 +1360,101 @@ public final class WireRouter {
     }
 
     /**
-     * A route found from a place on the trunk ({@link #joins}), made the whole wire's: the trunk's cells up to that
-     * place, then its own; any other route as it is.
+     * The mirror of {@link #trunkStarts} for the trunk into wire {@code i}'s target: where it may arrive when wires
+     * routed before it come into its port, on any cell of their own near its two boxes, free, on any heading that may
+     * turn onto the way the trunk runs on from there ({@link #JOIN}, the turn paid on arriving), each named in
+     * {@link #ons}; or, as a wire of its own, at {@link #ALONE} more, into its box near the place facing its other box
+     * (or its last stop) as a plan would put it. Null for a wire into no trunk, or the first of its trunk to route.
+     */
+    private List<Dock> trunkEnds(final int i) {
+        final int t = mergeOf[i];
+        if (t < 0) return null;
+        ons.clear();
+        final Wire w = wires.get(i);
+        final int[] area = trunkArea(w);
+        // Where wires already join: joining there too is a touch cheaper, so two that could join a cell apart share
+        // one junction.
+        final List<Integer> joints = new ArrayList<>();
+        for (final int s : merges.get(t))
+            if (routes[s] != null && routes[s].joined > 0) joints.add(routes[s].cells[routes[s].ownEnd()]);
+        final List<Dock> out = new ArrayList<>();
+        for (final int s : merges.get(t)) {
+            final Route r = routes[s];
+            if (s == i || r == null) continue;
+            for (int k = r.shared, end = r.ownEnd(); k < end; k++) {
+                final int idx = r.cells[k], x = idx % cols, y = idx / cols;
+                if (x < area[0] || x > area[2] || y < area[1] || y > area[3] || cover[idx] > 0) continue;
+                // The way the trunk runs on: into its next cell, or from its last into its box.
+                final int on = k + 1 < r.cells.length ? r.headings[k + 1] : r.headings[k];
+                out.add(new Dock(idx, JOIN | on, midX(x), midY(y), -1 - ons.size(), joints.contains(idx) ? 0 : FORK));
+                ons.add(new int[] { s, k });
+            }
+        }
+        if (out.isEmpty()) return null;
+        final List<Dock> rim = rims.get(w.to);
+        if (rim.isEmpty()) return out;
+        final int[] stop = w.stops.isEmpty() || stopCells(w) == null ? null : w.stops.getLast();
+        final int ideal = stop == null ? ideal(w.to, w.from, w.toSides)
+            : ideal(w.to, new Box(stop[0], stop[1], 0, 0), w.toSides, false);
+        for (final Dock d : docks(w.to, w.toSides, true, rim.get(nearest(rim, ideal)), false))
+            out.add(new Dock(d.cell, d.heading, d.x, d.y, d.round, d.cost + ALONE));
+        return out;
+    }
+
+    /** The cells a wire may leave or join a trunk in: round its two boxes, a wide window out, as c0 r0 c1 r1. */
+    private int[] trunkArea(final Wire w) {
+        final Box a = boxes.get(w.from), b = boxes.get(w.to);
+        final int reach = WIDE_WINDOW * cell;
+        return new int[] { colAfter(Math.min(a.x, b.x) - reach), rowAfter(Math.min(a.y, b.y) - reach),
+            colBefore(Math.max(a.x + a.w, b.x + b.w) + reach), rowBefore(Math.max(a.y + a.h, b.y + b.h) + reach) };
+    }
+
+    /**
+     * A route found from a place on the trunk out of its source ({@link #offs}) or to one on the trunk into its target
+     * ({@link #ons}), made the whole wire's: the first trunk's cells up to where it leaves it, its own, then the other
+     * trunk's from where it joins it on (that cell entered its own way); any other route as it is. Null for one that
+     * would leave the one trunk and join the other in the same cell.
      */
     private Route graft(final Route r) {
-        if (r == null || r.source.round >= 0) return r;
-        final int[] at = joins.get(-1 - r.source.round);
-        final Route trunk = routes[at[0]];
-        final int k = at[1], own = r.cells.length - 1, n = k + 1 + own;
-        final int[] cells = Arrays.copyOf(trunk.cells, n), headings = Arrays.copyOf(trunk.headings, n);
-        System.arraycopy(r.cells, 1, cells, k + 1, own);
-        System.arraycopy(r.headings, 1, headings, k + 1, own);
-        return new Route(cells, headings, r.cost, trunk.source, r.target, k + 1);
+        if (r == null || r.source.round >= 0 && r.target.round >= 0) return r;
+        final int n = r.cells.length;
+        Route first = null, last = null;
+        int k1 = 0, k2 = 0, shared = 0, joined = 0;
+        if (r.source.round < 0) {
+            final int[] at = offs.get(-1 - r.source.round);
+            first = routes[at[0]];
+            k1 = at[1];
+            shared = k1 + 1;
+        }
+        if (r.target.round < 0) {
+            final int[] at = ons.get(-1 - r.target.round);
+            last = routes[at[0]];
+            k2 = at[1];
+            joined = last.cells.length - k2;
+        }
+        // Its own cells: past the one it leaves at, short of the one it joins at.
+        final int skip = first == null ? 0 : 1, own = n - skip - (last == null ? 0 : 1);
+        if (own < 0) return null;
+        final int[] cells = new int[shared + own + joined], headings = new int[cells.length];
+        if (first != null) {
+            System.arraycopy(first.cells, 0, cells, 0, shared);
+            System.arraycopy(first.headings, 0, headings, 0, shared);
+        }
+        System.arraycopy(r.cells, skip, cells, shared, own);
+        System.arraycopy(r.headings, skip, headings, shared, own);
+        if (last != null) {
+            System.arraycopy(last.cells, k2, cells, shared + own, joined);
+            System.arraycopy(last.headings, k2, headings, shared + own, joined);
+            headings[shared + own] = r.headings[n - 1];
+        }
+        return new Route(
+            cells,
+            headings,
+            r.cost,
+            first == null ? r.source : first.source,
+            last == null ? r.target : last.target,
+            shared,
+            joined);
     }
 
     // endregion
@@ -1301,17 +1465,19 @@ public final class WireRouter {
      * A wire's route: from near its planned places, in a window round them; if that crosses another wire or finds
      * nothing, from anywhere on its sides in a wider window, then a wider one again; the cheaper wins. A wire walled
      * apart from where it goes is routed through boxes, as lightly as it can. A steered wire goes through its stops
-     * ({@link #steered}), and is routed as if it had none when it cannot. A wire on a trunk ({@code trunk}: where it
-     * may start, {@link #trunkStarts}) branches off it ({@link #branch}), and is routed on its own when it cannot.
+     * ({@link #steered}), and is routed as if it had none when it cannot. A wire on a trunk out of its source
+     * ({@code starts}: where it may start, {@link #trunkStarts}) branches off it, and one into a trunk into its target
+     * ({@code ends}: where it may arrive, {@link #trunkEnds}) joins it ({@link #branch}); routed on its own when it
+     * cannot.
      */
-    private Route search(final Wire w, final Dock plannedSource, final Dock plannedTarget, final List<Dock> trunk,
-        final boolean wide) {
+    private Route search(final Wire w, final Dock plannedSource, final Dock plannedTarget, final List<Dock> starts,
+        final List<Dock> ends, final boolean wide) {
         if (!w.stops.isEmpty()) {
-            final Route steered = steered(w, plannedSource, plannedTarget, trunk, wide);
+            final Route steered = steered(w, plannedSource, plannedTarget, starts, ends, wide);
             if (steered != null) return steered;
         }
-        if (trunk != null) {
-            final Route branch = branch(w, trunk, plannedTarget, wide);
+        if (starts != null || ends != null) {
+            final Route branch = branch(w, starts, ends, plannedSource, plannedTarget, wide);
             if (branch != null) return branch;
         }
         Route best = null;
@@ -1352,18 +1518,25 @@ public final class WireRouter {
     }
 
     /**
-     * A wire's route off its trunk: from wherever on the trunk (or, at a price, its own box) is cheapest, so it leaves
-     * the trunk where it turns toward its own box; into near its planned place first, then, when that crosses another
-     * wire, anywhere on the target's sides in wider windows, the better kept. Null when it finds no way.
+     * A wire's route on its trunks: from wherever on the trunk out of its source (or, at a price, its own box) is
+     * cheapest, so it leaves the trunk where it turns toward its own box, and to wherever on the trunk into its target
+     * (or, at a price, its own box) is cheapest, so it joins that one where it comes near it. An end with no trunk
+     * near its planned place first, then, when that crosses another wire, anywhere on its box's sides in wider windows,
+     * the better kept. Null when it finds no way.
      */
-    private Route branch(final Wire w, final List<Dock> trunk, final Dock plannedTarget, final boolean wide) {
-        Route best = plannedTarget == null ? null
-            : graft(search(w, trunk, docks(w.to, w.toSides, true, plannedTarget, false), WINDOW, false, NEAR_WEIGHT));
+    private Route branch(final Wire w, final List<Dock> starts, final List<Dock> ends, final Dock plannedSource,
+        final Dock plannedTarget, final boolean wide) {
+        final List<Dock> from = starts != null ? starts
+            : plannedSource == null ? null : docks(w.from, w.fromSides, false, plannedSource, false);
+        final List<Dock> to = ends != null ? ends
+            : plannedTarget == null ? null : docks(w.to, w.toSides, true, plannedTarget, false);
+        Route best = from == null || to == null ? null : graft(search(w, from, to, WINDOW, false, NEAR_WEIGHT));
         if (best != null && (conflicts(best) == 0 || !wide || statPops > widenBudget)) return best;
         statWidened++;
-        final List<Dock> targets = docks(w.to, w.toSides, true, null, false);
-        Route r = graft(search(w, trunk, targets, WIDE_WINDOW, false, WIDE_WEIGHT));
-        if (r == null) r = graft(search(w, trunk, targets, FAR_WINDOW, false, WIDE_WEIGHT));
+        final List<Dock> sources = starts != null ? starts : docks(w.from, w.fromSides, false, null, false);
+        final List<Dock> targets = ends != null ? ends : docks(w.to, w.toSides, true, null, false);
+        Route r = graft(search(w, sources, targets, WIDE_WINDOW, false, WIDE_WEIGHT));
+        if (r == null) r = graft(search(w, sources, targets, FAR_WINDOW, false, WIDE_WEIGHT));
         if (r != null && (best == null || conflicts(r) < conflicts(best)
             || conflicts(r) == conflicts(best) && r.cost < best.cost)) best = r;
         return best;
@@ -1375,30 +1548,32 @@ public final class WireRouter {
      * passing straight through costs nothing and turning there costs a turn. The legs already found are on the board
      * while the next is searched, so the wire neither runs back along itself nor crosses itself where it need not. Near
      * the planned places first; when that crosses another wire, from anywhere on the sides too, the better kept. On a
-     * trunk, its first leg leaves the trunk ({@code trunk}, as {@link #branch}). Null when a stop is off the grid or in
-     * a box, or a leg finds no way: then the wire is routed as if it had no stops.
+     * trunk out of its source its first leg leaves the trunk ({@code starts}), and into a trunk into its target its
+     * last leg joins it ({@code ends}), as {@link #branch}. Null when a stop is off the grid or in a box, or a leg
+     * finds
+     * no way: then the wire is routed as if it had no stops.
      */
-    private Route steered(final Wire w, final Dock plannedSource, final Dock plannedTarget, final List<Dock> trunk,
-        final boolean wide) {
+    private Route steered(final Wire w, final Dock plannedSource, final Dock plannedTarget, final List<Dock> starts,
+        final List<Dock> ends, final boolean wide) {
         final int[] stops = stopCells(w);
         if (stops == null) return null;
         Route best = plannedSource == null || plannedTarget == null ? null
             : legs(
                 w,
-                trunk != null ? trunk : docks(w.from, w.fromSides, false, plannedSource, false),
-                docks(w.to, w.toSides, true, plannedTarget, false),
+                starts != null ? starts : docks(w.from, w.fromSides, false, plannedSource, false),
+                ends != null ? ends : docks(w.to, w.toSides, true, plannedTarget, false),
                 stops,
                 wide,
-                trunk != null);
+                starts != null);
         if (best != null && (conflicts(best) == 0 || !wide || statPops > widenBudget)) return best;
         statWidened++;
         final Route any = legs(
             w,
-            trunk != null ? trunk : docks(w.from, w.fromSides, false, null, false),
-            docks(w.to, w.toSides, true, null, false),
+            starts != null ? starts : docks(w.from, w.fromSides, false, null, false),
+            ends != null ? ends : docks(w.to, w.toSides, true, null, false),
             stops,
             wide,
-            trunk != null);
+            starts != null);
         if (any != null && (best == null || conflicts(any) < conflicts(best)
             || conflicts(any) == conflicts(best) && any.cost < best.cost)) best = any;
         return best;
@@ -1424,7 +1599,7 @@ public final class WireRouter {
     /**
      * The legs from the sources through each stop to the targets, joined into one route; null when one finds no way.
      * {@code offTrunk}: the sources are places on a trunk ({@link #trunkStarts}), where the first leg starts on another
-     * wire.
+     * wire. The targets may be places on a trunk too ({@link #trunkEnds}), where the last leg arrives on another wire.
      */
     private Route legs(final Wire w, final List<Dock> sources, final List<Dock> targets, final int[] stops,
         final boolean wide, final boolean offTrunk) {
@@ -1482,10 +1657,15 @@ public final class WireRouter {
     }
 
     /**
-     * A leg's conflicts, but for the cell it starts on, where the leg before it (or the trunk it leaves) already runs.
+     * A leg's conflicts, but for the cell it starts on, where the leg before it (or the trunk it leaves) already runs,
+     * and the place on a trunk it arrives at ({@link #JOIN}), where that trunk runs.
      */
     private int legConflicts(final Route leg, final boolean fromStop) {
-        return conflicts(leg) - (fromStop && mask[leg.cells[0]] != 0 ? 1 : 0);
+        final int last = leg.cells.length - 1;
+        int n = conflicts(leg);
+        if (fromStop && mask[leg.cells[0]] != 0) n--;
+        if (leg.target.heading >= JOIN && last > 0 && mask[leg.cells[last]] != 0) n--;
+        return n;
     }
 
     /** Whether no open region holds both a place the wire may leave from and one it may arrive at. */
@@ -1544,7 +1724,8 @@ public final class WireRouter {
         final boolean diagonals = diagonals(w);
         window(w, through, x0, y0, x1, y1);
 
-        // Arrivals: on a target dock's lane cell, heading into the box; the cheaper dock where two share a cell.
+        // Arrivals: on a target dock's lane cell, heading into the box (at a stop or on a trunk, on any heading it
+        // allows); the cheaper dock where two share a cell.
         Arrays.fill(goalHeading, 0, cells, (byte) -1);
         for (int t = 0; t < targets.size(); t++) {
             final Dock d = targets.get(t);
@@ -1556,9 +1737,13 @@ public final class WireRouter {
         }
         if (!field(sources, targets, diagonals, through)) return null;
         goalSides = 0;
+        goalFree = false;
         for (final Dock d : targets) {
-            // A stop is arrived at on any heading: no turning to come.
-            if (d.heading == ANY_HEADING) continue;
+            // A stop, or a place on a trunk, is arrived at on more than one heading: no turning is bound to come.
+            if (d.heading >= ANY_HEADING) {
+                goalFree = true;
+                continue;
+            }
             final int s = d.heading >> 1, x = d.cell % cols - wx0 + 1, y = d.cell / cols - wy0 + 1;
             final boolean level = (d.heading & 2) == 0;
             final int line = level ? x : y, along = level ? y : x;
@@ -1603,8 +1788,9 @@ public final class WireRouter {
             if (g != g8[l] || (from8[l] & CLOSED) != 0) continue;
             from8[l] |= CLOSED;
             final int lc = l >> 3, dir = l & 7, x = lc % lw, y = lc / lw;
-            if ((goalHeading[lc] == dir || goalHeading[lc] == ANY_HEADING) && g + goalExtra[lc] < bestCost) {
-                bestCost = g + goalExtra[lc];
+            final int arrive = arrival(lc, dir);
+            if (arrive != UNREACHED && g + arrive < bestCost) {
+                bestCost = g + arrive;
                 bestState = l;
             }
             // Turning where another wire runs reads as a junction.
@@ -1878,7 +2064,7 @@ public final class WireRouter {
      * The least each window cell can cost to get from to an arrival (Dijkstra out from the arrivals, over the window's
      * costs): the steps, the boxes and their rings, other wires as crossed or run along. Turns and corners are left
      * out, so it never overestimates. An arrival is reached only heading into its box, so it starts from the cell
-     * before each. Returns whether any source can arrive at all.
+     * before each; a stop or a place on a trunk from its own cell. Returns whether any source can arrive at all.
      */
     private boolean field(final List<Dock> sources, final List<Dock> targets, final boolean diagonals,
         final boolean through) {
@@ -1888,8 +2074,8 @@ public final class WireRouter {
             final Dock d = targets.get(t);
             final int g = local(d.cell);
             if (goalDock[g] != t) continue;
-            if (d.heading == ANY_HEADING) {
-                // A stop: from its own cell, entered along any line.
+            if (d.heading >= ANY_HEADING) {
+                // A stop or a place on a trunk: from its own cell, entered along any line.
                 if (wcost[g << 2] >= 0 && goalExtra[g] < field[g]) {
                     field[g] = goalExtra[g];
                     fieldOpen.push(field[g], g, 0);
@@ -1937,13 +2123,24 @@ public final class WireRouter {
     }
 
     /**
+     * What arriving in window cell {@code lc} heading {@code dir} costs on top of getting there: its dock's cost, and
+     * on a trunk the turn onto it; {@link #UNREACHED} where no arrival is made so.
+     */
+    private int arrival(final int lc, final int dir) {
+        final int goal = goalHeading[lc];
+        if (goal == dir || goal == ANY_HEADING) return goalExtra[lc];
+        if (goal < JOIN) return UNREACHED;
+        final int turn = TURN[(dir << 3) + (goal & 7)];
+        return turn < 0 ? UNREACHED : goalExtra[lc] + turn;
+    }
+
+    /**
      * A lower bound on the way on from window cell {@code lc} (at x, y) entered heading {@code dir}: arriving here; or
      * on straight into the next cell and the cheapest way on from there; or a turn and the cheapest way on from here;
      * either way with the least turning that any way on still needs.
      */
     private int estimate(final int lc, final int x, final int y, final int dir) {
-        final int h = goalHeading[lc] == dir || goalHeading[lc] == ANY_HEADING ? goalExtra[lc] : UNREACHED,
-            f = field[lc];
+        final int h = arrival(lc, dir), f = field[lc];
         if (f == UNREACHED) return h;
         final int bound = turning(x, y, dir);
         int best = f + Math.max(turnMin, bound);
@@ -1956,9 +2153,11 @@ public final class WireRouter {
     /**
      * The least turning a way on from (x, y) heading {@code dir} must do to arrive: at least the angle between the
      * heading and the way it arrives, in 45-degree turns (right angles without diagonals); heading the way it arrives
-     * but not in line with an arrival, a turn off and a turn back.
+     * but not in line with an arrival, a turn off and a turn back. None when an arrival may be made on more than one
+     * heading ({@link #goalFree}).
      */
     private int turning(final int x, final int y, final int dir) {
+        if (goalFree) return 0;
         int best = Integer.MAX_VALUE;
         for (int s = 0; s < 4; s++) {
             if ((goalSides & 1 << s) == 0) continue;
