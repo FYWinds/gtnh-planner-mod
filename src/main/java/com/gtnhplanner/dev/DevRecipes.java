@@ -39,13 +39,17 @@ final class DevRecipes {
      *               ("fluid:mutagen")
      */
     static Map<String, Object> addRecipe(final String output, final String handlerFilter, final String inputFilter,
-        final int x, final int y) {
+        final String machine, final boolean uses, final int x, final int y) {
         final ItemStack stack = resolveStack(output);
         if (stack == null) throw new IllegalArgumentException("no item for '" + output + "'");
         final String hf = handlerFilter.toLowerCase(Locale.ROOT);
         final String inf = inputFilter.toLowerCase(Locale.ROOT);
         final List<String> seen = new ArrayList<>();
-        for (final ICraftingHandler handler : GuiCraftingRecipe.getCraftingHandlers("item", stack)) {
+        // uses: the recipes that take it (a fuel's pages), not the ones that make it.
+        final List<? extends codechicken.nei.recipe.IRecipeHandler> handlers = uses
+            ? codechicken.nei.recipe.GuiUsageRecipe.getUsageHandlers("item", stack)
+            : GuiCraftingRecipe.getCraftingHandlers("item", stack);
+        for (final codechicken.nei.recipe.IRecipeHandler handler : handlers) {
             final String name = handler.getRecipeName()
                 .trim();
             seen.add(name + " (" + handler.numRecipes() + ")");
@@ -56,8 +60,14 @@ final class DevRecipes {
                 final Node node;
                 final com.gtnhplanner.ui.BoardSession board = com.gtnhplanner.ui.BoardSession.current();
                 if (board != null) {
-                    // The board is open: add it the way NEI's "+" does, placed.
-                    node = board.addRecipe(handler, i);
+                    // The board is open: add it the way NEI's "+" does, placed; then on `machine`, as its menu picks.
+                    final Node added = board.addRecipe(handler, i);
+                    if (!machine.isEmpty()) {
+                        final ItemStack on = resolveStack(machine);
+                        if (on == null) throw new IllegalArgumentException("no item for '" + machine + "'");
+                        board.chooseMachine(added, on, true);
+                    }
+                    node = Plan.getActiveGraph().nodes.get(added.id);
                 } else {
                     node = new Node(handler, i, x, y);
                     com.gtnhplanner.ui.card.CardDefaults.apply(node);
@@ -70,6 +80,7 @@ final class DevRecipes {
                 m.put("ok", true);
                 m.put("node", node.id.toString());
                 m.put("machine", node.machineName);
+                if (node.isPower()) m.put("power", node.powerSource);
                 m.put("handler", name);
                 m.put("recipeIndex", i);
                 return m;
@@ -184,7 +195,8 @@ final class DevRecipes {
         return out;
     }
 
-    private static boolean hasIngredient(final ICraftingHandler handler, final int recipe, final String filter) {
+    private static boolean hasIngredient(final codechicken.nei.recipe.IRecipeHandler handler, final int recipe,
+        final String filter) {
         for (final PositionedStack ps : handler.getIngredientStacks(recipe)) {
             for (final ItemStack s : ps.items) {
                 if (s != null && s.getDisplayName()

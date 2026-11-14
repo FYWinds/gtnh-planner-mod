@@ -329,8 +329,15 @@ public final class DevHarness {
                         arg(q, "output"),
                         q.getOrDefault("handler", ""),
                         q.getOrDefault("input", ""),
+                        q.getOrDefault("machine", ""),
+                        "1".equals(q.get("uses")),
                         intArg(q, "x", 200),
                         intArg(q, "y", 200)));
+            case "/cardset":
+                // Sets card N's settings as its controls do: tier=<voltage>, any other key a machine setting (or a
+                // non-recipe card's setting); a value is a boolean or an integer when it reads as one (s:<text> keeps
+                // it text).
+                return onClient(() -> DevBoard.set(q));
             case "/frame":
                 return onClient(() -> {
                     final ModularScreen mui = muiScreen();

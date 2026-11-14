@@ -248,6 +248,27 @@ final class DevBoard {
         throw new IllegalArgumentException("no card " + index);
     }
 
+    /** Sets card {@code card}'s settings through the session, as the card's controls do. */
+    static Map<String, Object> set(final Map<String, String> q) {
+        final com.gtnhplanner.data.flowchart.Node node = card(Integer.parseInt(q.get("card"))).node;
+        final com.gtnhplanner.ui.BoardSession session = screen().session();
+        for (final Map.Entry<String, String> e : q.entrySet()) {
+            final String key = e.getKey(), value = e.getValue();
+            if ("card".equals(key)) continue;
+            if (node.isPower()) session.setPowerSetting(node, key, value);
+            else if ("tier".equals(key)) session.setVoltage(node, value);
+            else if (value.startsWith("s:")) session.setSetting(node, key, value.substring(2));
+            else if ("true".equals(value) || "false".equals(value))
+                session.setSetting(node, key, Boolean.parseBoolean(value));
+            else if (value.matches("-?\\d+")) session.setSetting(node, key, Integer.parseInt(value));
+            else session.setSetting(node, key, value);
+        }
+        final Map<String, Object> m = new LinkedHashMap<>();
+        m.put("ok", true);
+        m.put("settings", node.isPower() ? String.valueOf(node.powerSettings) : String.valueOf(node.machineConfig));
+        return m;
+    }
+
     /** The stand-in read-outs and shortfalls {@link #upTo} has put on the board, kept so calls add up. */
     private static final Map<java.util.UUID, com.gtnhplanner.data.flowchart.balancer.UpToReadout> UP_TO = new LinkedHashMap<>();
     private static final List<com.gtnhplanner.data.flowchart.balancer.DrawerReadout.Shortfall> SHORT = new ArrayList<>();
