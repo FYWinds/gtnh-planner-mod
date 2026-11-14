@@ -1240,7 +1240,8 @@ public final class DevHarness {
                 });
             }
             case "/importff":
-                // Imports a Factory Flow plan as a new slot: file=<path> (absolute, or from the repo root) or text=.
+                // Imports a plan as a new slot: file=<path> (absolute, or from the repo root) or text=. A Factory Flow
+                // plan, or a GTNH Planner share code as Paste plan takes it.
                 requireWorld(); {
                 final String text;
                 if (q.containsKey("file")) {
@@ -1249,6 +1250,20 @@ public final class DevHarness {
                     text = java.nio.file.Files.readString(f.toPath());
                 } else text = arg(q, "text");
                 return onClient(() -> {
+                    com.gtnhplanner.data.flowchart.Graph own = null;
+                    try {
+                        own = com.gtnhplanner.data.flowchart.Serializer.decode(text.trim());
+                    } catch (final Exception e) {
+                        // Not a share code: a Factory Flow plan below.
+                    }
+                    if (own != null) {
+                        com.gtnhplanner.importer.game.FactoryFlowImport.addAsSlot(own);
+                        if (com.gtnhplanner.ui.Planner.isPlanner(mc.currentScreen)) {
+                            mc.displayGuiScreen(null);
+                            openFlowchart();
+                        }
+                        return Map.of("name", own.getName(), "summary", "share code");
+                    }
                     final com.gtnhplanner.importer.FfConverter.Result result;
                     try {
                         result = com.gtnhplanner.importer.game.FactoryFlowImport.importAsSlot(text);
