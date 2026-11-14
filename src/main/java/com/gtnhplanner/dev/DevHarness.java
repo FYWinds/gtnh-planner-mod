@@ -953,6 +953,7 @@ public final class DevHarness {
             case "/gtmachines":
                 return onClient(() -> {
                     try {
+                        if ("1".equals(q.get("audit"))) return DevMachines.audit();
                         return DevMachines
                             .list(q.getOrDefault("q", ""), "1".equals(q.get("all")), "1".equals(q.get("art")));
                     } catch (final LinkageError e) {
