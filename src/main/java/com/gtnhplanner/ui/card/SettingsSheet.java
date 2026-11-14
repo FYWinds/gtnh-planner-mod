@@ -76,7 +76,9 @@ public final class SettingsSheet extends Popup {
         List<com.gtnhplanner.machines.FormulaLine> formulas, int formulasX, int formulasW) {
 
         static Sheet of(final CardModel m) {
-            return of(SettingControls.of(m), com.gtnhplanner.machines.game.MachineModels.formulas(m.node, m.machines));
+            return of(
+                SettingControls.of(m),
+                FormulaWords.of(com.gtnhplanner.machines.game.MachineModels.formulas(m.node, m.machines)));
         }
 
         static Sheet of(final List<SettingControls.Control> controls,
@@ -521,7 +523,8 @@ public final class SettingsSheet extends Popup {
             final boolean live = c.enabled();
             switch (c.type()) {
                 case TOGGLE -> {
-                    final boolean on = UiText.tr("settingssheet.on")
+                    // The value as SettingControls words it: the same key, so a translation cannot set them apart.
+                    final boolean on = UiText.tr("settingcontrols.on")
                         .equals(c.value());
                     Hyb.roundRect(x, y + 4, 22, 10, 5, !live ? 0xFF2C2E33 : on ? 0xFF3FAE5C : 0xFF3A3C42);
                     Hyb.roundRect(on ? x + 13 : x + 1, y + 5, 8, 8, 4, live ? 0xFFF2F3F5 : 0xFF6E7179);

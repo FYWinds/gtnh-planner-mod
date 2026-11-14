@@ -232,7 +232,7 @@ public final class CardPaint {
         Hyb.rect(bx + 1, cy + 1, bw - 2, 1, 0xB3000000);
         if (fixed != null || number == null) {
             Hyb.textCentered(
-                fixed != null ? fixed : "Set",
+                fixed != null ? fixed : com.gtnhplanner.ui.UiText.tr("audit.set"),
                 bx + bw / 2f,
                 cy + 1,
                 fixed == null && prompt ? prompt() : 0xFF6F737C);
@@ -293,12 +293,12 @@ public final class CardPaint {
         final int bx = CardLayout.railX(p.output()), bw = CardLayout.RAIL_W;
         if (carried > 0 && left < 1e-6) {
             Hyb.dashed(bx, y + CardLayout.BOX_Y, bw, CardLayout.BOX_H, Hyb.mix(tint, EDGE, 0.35f), 3, 3);
-            final String gone = "picked up";
+            final String gone = com.gtnhplanner.ui.UiText.tr("mach.card.picked_up");
             final float x = p.output() ? CardLayout.textEdge(true) - Hyb.width(gone) : CardLayout.textEdge(false);
             Hyb.text(gone, x, y + (CardLayout.ROW - 8) / 2f, Hyb.mix(tint, Hyb.MUTED, 0.3f));
             return;
         }
-        spareRow(p, unit, y, z, left, p.output() ? EXTRA_OUT : EXTRA_IN, false, false, why, false);
+        spareRow(p, unit, y, z, left, com.gtnhplanner.ui.UiText.tr("sparebar.forced"), false, false, why, false);
     }
 
     /**
@@ -370,11 +370,6 @@ public final class CardPaint {
             controls);
     }
 
-    public static final String EXTRA_OUT = "Forced", EXTRA_IN = "Forced";
-
-    /** What a free input reads in place of its rate (the website's word). */
-    public static final String FREE = "free";
-
     /**
      * An input the game gives for nothing ({@link com.gtnhplanner.data.provider.FreeInputs}: the Rock Breaker's lava)
      * in the row at {@code y}: its tile, icon and name with "free" for its rate, greyed as the website's (its row at
@@ -389,7 +384,7 @@ public final class CardPaint {
         final float size = Hyb.width(label) <= room ? 1 : NAME_SMALL;
         final String shown = Hyb.width(label) * size <= room ? label : Hyb.fit(label, (int) (room / size));
         final float top = RecipeCard.crisp(y + (CardLayout.ROW - (10 + 8 * size)) / 2f);
-        Hyb.text(FREE, edge, top, Hyb.MUTED);
+        Hyb.text(com.gtnhplanner.ui.UiText.tr("mach.card.free"), edge, top, Hyb.MUTED);
         Hyb.text(shown, edge, top + 10, size, Hyb.MUTED);
         Hyb.rect(
             CardLayout.railX(false),

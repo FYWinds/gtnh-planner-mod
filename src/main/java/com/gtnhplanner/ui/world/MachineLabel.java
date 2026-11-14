@@ -157,16 +157,14 @@ public final class MachineLabel {
         return p != null;
     }
 
-    /** A name on one line, or two split at a space when it is wider than {@code room}, each cut to fit. */
+    /** A name on one line, or two broken where its language allows (TextWrap), each cut to fit. */
     private static List<String> wrap(final String s, final int room) {
         if (Hyb.width(s) <= room) return List.of(s);
-        final String[] words = s.split(" ");
-        String first = words[0];
-        int i = 1;
-        while (i < words.length && Hyb.width(first + " " + words[i]) <= room) first += " " + words[i++];
-        if (i >= words.length) return List.of(Hyb.fit(first, room));
-        return List.of(
-            Hyb.fit(first, room),
-            Hyb.fit(String.join(" ", java.util.Arrays.copyOfRange(words, i, words.length)), room));
+        final List<String> lines = com.gtnhplanner.ui.TextWrap.wrap(s, room, Hyb::width);
+        if (lines.size() < 2) return List.of(Hyb.fit(s, room));
+        final String first = lines.get(0);
+        final String rest = s.substring(s.indexOf(first) + first.length())
+            .strip();
+        return List.of(Hyb.fit(first, room), Hyb.fit(rest, room));
     }
 }

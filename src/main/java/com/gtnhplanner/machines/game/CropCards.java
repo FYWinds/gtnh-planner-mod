@@ -448,12 +448,12 @@ public final class CropCards {
         return out;
     }
 
-    /** The farm's upgrade slots, used and all: "2 of 3". Null on a Crop Manager. */
+    /** The farm's upgrade slots, {used, all}; null on a Crop Manager. */
     @Nullable
-    public static String slots(final Node node) {
+    public static int[] slots(final Node node) {
         final Setup setup = setup(node);
         if (setup == null || !setup.farm()) return null;
-        return CropsNh.unitSlotsUsed(setup) + " of " + CropsNh.upgradeSlots(setup.tier()) + " used";
+        return new int[] { CropsNh.unitSlotsUsed(setup), CropsNh.upgradeSlots(setup.tier()) };
     }
 
     /** An item by registry name; null when that mod is missing. */

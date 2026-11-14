@@ -67,7 +67,13 @@ public final class CardModel {
     }
 
     public final Node node;
+    /** The machine's name as the card shows it, in the player's language. */
     public final String machineName;
+    /**
+     * The machine's English name, which its structure picture is filed under ({@link StructureArt}): the game's
+     * GregTech name in English, a crop harvester's, else the shown name (a power card's source id).
+     */
+    public final String artName;
     /** Machines that run this recipe, from NEI's catalysts; the first is the default picture. */
     public final List<ItemStack> catalysts;
     public final ItemStack machineStack;
@@ -119,6 +125,7 @@ public final class CardModel {
         final boolean steam) {
         this.node = node;
         this.machineName = machineName;
+        this.artName = power != null ? node.powerSource : artName(node, machineStack, machineName);
         this.catalysts = catalysts;
         this.machineStack = machineStack;
         this.gregtech = gregtech;
@@ -253,9 +260,10 @@ public final class CardModel {
             }
         }
         final ItemStack machineStack = chosen != null ? chosen : catalysts.isEmpty() ? null : catalysts.get(0);
-        final String machineName = crop != null ? com.gtnhplanner.machines.game.CropCards.harvesterName(crop)
-            : bee != null ? com.gtnhplanner.machines.game.BeeCards.cardName(node)
-                : machineStack != null ? machineStack.getDisplayName() : node.machineName;
+        // The crop harvester and the bee are named in English (the website's words, kept in plans): shown translated.
+        final String machineName = crop != null
+            ? com.gtnhplanner.ui.UiText.data(com.gtnhplanner.machines.game.CropCards.harvesterName(crop))
+            : bee != null ? beeName(node) : machineStack != null ? machineStack.getDisplayName() : node.machineName;
         // A steam machine burns steam at no voltage: no tier, as the website has none on its card.
         final boolean steam = gregtech && steam(machineStack);
 
@@ -297,6 +305,20 @@ public final class CardModel {
             web,
             steam && web != null ? steamPerTick(node, cfg) : 0,
             steam);
+    }
+
+    /** A bee card's name: its species (as Forestry names it) and the word for a bee. */
+    private static String beeName(final Node node) {
+        final com.gtnhplanner.machines.Bees.Species species = com.gtnhplanner.machines.game.BeeCards.species(node);
+        return species == null ? com.gtnhplanner.machines.game.BeeCards.cardName(node)
+            : com.gtnhplanner.ui.UiText.tr("mach.bee.card_name", species.name());
+    }
+
+    private static String artName(final Node node, final ItemStack machineStack, final String machineName) {
+        final com.gtnhplanner.machines.CropsNh.Setup crop = com.gtnhplanner.machines.game.CropCards.setup(node);
+        if (crop != null) return com.gtnhplanner.machines.game.CropCards.harvesterName(crop);
+        final String english = com.gtnhplanner.ui.gt.GtMachines.englishName(machineStack);
+        return english != null ? english : machineName;
     }
 
     /**

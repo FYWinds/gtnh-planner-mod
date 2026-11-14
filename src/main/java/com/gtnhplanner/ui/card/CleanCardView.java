@@ -29,8 +29,14 @@ public final class CleanCardView {
         final List<PlanSnapshot.Flow> rows = new ArrayList<>(c.inputs());
         boolean power = false;
         for (final PlanSnapshot.Flow f : c.inputs()) power |= f.power();
-        if (!power && c.euPerTick() > 0)
-            rows.add(new PlanSnapshot.Flow("Power", null, null, true, c.euPerTick() * 20, "power:eu"));
+        if (!power && c.euPerTick() > 0) rows.add(
+            new PlanSnapshot.Flow(
+                com.gtnhplanner.ui.UiText.tr("card.power"),
+                null,
+                null,
+                true,
+                c.euPerTick() * 20,
+                "power:eu"));
         return rows;
     }
 

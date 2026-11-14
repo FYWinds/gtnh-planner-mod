@@ -98,7 +98,9 @@ public final class MachineChoices {
             }
             final String key = CardDefaults.itemKey(m);
             if (find(out, key) != null) continue;
-            final String detail = kind == null ? "" : kind.steam() ? "Steam" : "Multiblock";
+            final String detail = kind == null ? ""
+                : kind.steam() ? com.gtnhplanner.ui.UiText.tr("card.steam")
+                    : com.gtnhplanner.ui.UiText.tr("card.multiblock");
             out.add(new Choice(key, m, m.getDisplayName(), detail));
         }
         if (singlesAt >= 0) {

@@ -32,14 +32,17 @@ final class RecipePicks {
         for (final MobDropsProvider.Choice c : MobDropsProvider.choices()) {
             final boolean now = c.key()
                 .equals(current);
+            // Found by its drops too, and by its English entity name in any language.
             rows.add(
                 new PickList.Entry(
                     c.icon(),
                     c.name(),
-                    c.alwaysInfernal() ? UiText.tr("recipepick.always_infernal") : Fmt.compact(c.health()) + " health",
+                    c.alwaysInfernal() ? UiText.tr("recipepick.always_infernal")
+                        : UiText.tr("mach.eec.health", Fmt.compact(c.health())),
                     Hyb.INK,
                     now,
-                    () -> { if (!now) session.swapRecipe(node, c.ref()); }).searching(String.join(" ", c.drops())));
+                    () -> { if (!now) session.swapRecipe(node, c.ref()); })
+                        .searching(c.key() + " " + String.join(" ", c.drops())));
         }
         if (rows.isEmpty()) rows.add(PickList.Entry.of(UiText.tr("recipepick.no_mobs_in_this_game"), () -> {}));
         Popup.open(
@@ -57,12 +60,13 @@ final class RecipePicks {
         for (final CropsNhProvider.Choice c : CropsNhProvider.choices()) {
             final boolean now = c.id()
                 .equals(current);
+            // Found by its drops too, and by its CropsNH id (English) in any language.
             rows.add(
-                new PickList.Entry(c.icon(), c.name(), "Tier " + c.tier(), Hyb.INK, now, () -> {
+                new PickList.Entry(c.icon(), c.name(), UiText.tr("mach.crop.tier", c.tier()), Hyb.INK, now, () -> {
                     if (now) return;
                     if (empty) session.pickCrop(node, c.ref());
                     else session.swapRecipe(node, c.ref());
-                }).searching(String.join(" ", c.drops())));
+                }).searching(c.id() + " " + String.join(" ", c.drops())));
         }
         if (rows.isEmpty()) rows.add(PickList.Entry.of(UiText.tr("recipepick.no_crops_in_this_game"), () -> {}));
         Popup.open(session.panel(), PickList.popup("gtnhplanner_crops", UiText.tr("recipepick.crops_to_plant"), rows, true, 190), sx, sy);

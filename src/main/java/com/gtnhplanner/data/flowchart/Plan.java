@@ -172,13 +172,18 @@ public class Plan {
     public static Graph getActiveGraph() {
         Plan plan = getInstance();
         if (plan.graphs.isEmpty()) {
-            plan.graphs.add(new Graph("Slot 1"));
+            plan.graphs.add(new Graph(firstName()));
         }
         if (plan.activeIndex < 0 || plan.activeIndex >= plan.graphs.size()) {
             plan.activeIndex = 0;
         }
         plan.reread(plan.activeIndex);
         return plan.graphs.get(plan.activeIndex);
+    }
+
+    /** The name a first plan gets: "Plan 1", in the player's language (a name the player can change). */
+    private static String firstName() {
+        return com.gtnhplanner.ui.UiText.tr("audit.default_plan_name", 1);
     }
 
     /** A slot that could not be read at load, read again (NEI has its recipes by the time a slot is opened). */
@@ -222,7 +227,7 @@ public class Plan {
         if (local != null) return local;
         final Plan plan = new Plan();
         plan.getGraphs()
-            .add(new Graph("Slot 1"));
+            .add(new Graph(firstName()));
         return plan;
     }
 
@@ -284,7 +289,7 @@ public class Plan {
         if (aside != null) return;
         aside = getInstance();
         INSTANCE = new Plan();
-        INSTANCE.graphs.add(new Graph("Plan 1"));
+        INSTANCE.graphs.add(new Graph(firstName()));
     }
 
     /** The tour's plans as they were at some point, decoded again (the tour going back). */

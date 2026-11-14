@@ -65,7 +65,8 @@ public final class CardFace {
             (crop ? "" : "×") + Fmt.machines(value),
             value,
             rule,
-            pinned ? rule.label.toLowerCase(Locale.ROOT) : "",
+            pinned ? UiText.data(rule.label)
+                .toLowerCase(Locale.ROOT) : "",
             ruleFixed,
             pinned ? set : 0,
             pinned ? setText(set) : "",
@@ -219,11 +220,9 @@ public final class CardFace {
             final String n = cardName.apply(id);
             upstream.add(n == null ? UiText.tr("cardface.a_card") : n);
         }
+        // The bar's word in capitals ("STARVED"), as upstream draws it; a language without capitals reads the same.
         final String word = loop != null ? loopWord(loop)
-            : reason == null ? ""
-                : UiText.tr(
-                    "audit.reason_" + reason.name()
-                        .toLowerCase(Locale.ROOT));
+            : reason == null ? "" : reasonWord(reason).toUpperCase(Locale.ROOT);
         final int room = FOOT_TEXT - (word.isEmpty() ? 0 : width.applyAsInt(word) + FOOT_GAP)
             - width.applyAsInt(frac)
             - FOOT_GAP;
@@ -443,6 +442,14 @@ public final class CardFace {
 
     /** A reason's word in a sentence or the overview's tip ("Starved"); FULL is the quiet case. */
     public static String word(final UpToReason reason) {
+        final String w = reasonWord(reason);
+        return w.isEmpty() ? w
+            : w.substring(0, 1)
+                .toUpperCase(Locale.ROOT) + w.substring(1);
+    }
+
+    /** A reason's word as a sentence has it, in lower case ("starved"): the bar and the overview capitalise it. */
+    private static String reasonWord(final UpToReason reason) {
         return UiText.tr(
             "audit.reason_" + reason.name()
                 .toLowerCase(Locale.ROOT));
@@ -485,12 +492,8 @@ public final class CardFace {
             final UpToReason why = reason.apply(id);
             final String sentence;
             if (rule.apply(id) == PinRule.EXACT) sentence = String.format(UiText.tr("audit.machine_exact"), n);
-            else if (why != null && why != UpToReason.FULL && why != UpToReason.BOTTLENECK) sentence = String.format(
-                UiText.tr("audit.machine_reason"),
-                n,
-                UiText.tr(
-                    "audit.reason_" + why.name()
-                        .toLowerCase(Locale.ROOT)));
+            else if (why != null && why != UpToReason.FULL && why != UpToReason.BOTTLENECK)
+                sentence = String.format(UiText.tr("audit.machine_reason"), n, reasonWord(why));
             else sentence = String.format(UiText.tr("audit.machine_full"), n);
             out.append(' ')
                 .append(sentence);

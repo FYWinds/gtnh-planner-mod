@@ -114,7 +114,7 @@ public final class SettingControls {
                 "reading:mode",
                 UiText.tr("settingcontrols.settings"),
                 UiText.tr("settingcontrols.mode"),
-                mode,
+                UiText.data(mode),
                 null,
                 false,
                 true,
@@ -122,10 +122,13 @@ public final class SettingControls {
                 false));
         for (final com.gtnhplanner.machines.game.MachineModels.Setting s : com.gtnhplanner.machines.game.MachineModels
             .settings(m.node)) {
-            final String group = crop ? com.gtnhplanner.machines.game.CropCards.group(s.key())
-                : UiText.tr("settingcontrols.settings");
+            // The machines word their settings in English (the website's); the sheet and the chips show them
+            // translated.
+            final String section = crop ? com.gtnhplanner.machines.game.CropCards.group(s.key()) : null;
+            final String group = crop ? UiText.data(section) : UiText.tr("settingcontrols.settings");
             // The farm's slots, read-only, close the units it shares them between.
-            if (crop && com.gtnhplanner.machines.game.CropCards.FARM_UNITS.equals(group)
+            final int[] slots = crop ? com.gtnhplanner.machines.game.CropCards.slots(m.node) : null;
+            if (slots != null && com.gtnhplanner.machines.game.CropCards.FARM_UNITS.equals(section)
                 && out.stream()
                     .noneMatch(
                         c -> c.group()
@@ -135,7 +138,7 @@ public final class SettingControls {
                         "reading:slots",
                         group,
                         UiText.tr("settingcontrols.upgrade_slots"),
-                        com.gtnhplanner.machines.game.CropCards.slots(m.node),
+                        UiText.tr("mach.crop.slots_used", slots[0], slots[1]),
                         null,
                         false,
                         true,
@@ -145,8 +148,8 @@ public final class SettingControls {
                 new Control(
                     MACHINE_PREFIX + s.key(),
                     group,
-                    s.label(),
-                    s.value(),
+                    UiText.data(s.label()),
+                    s.number() ? s.value() : UiText.data(s.value()),
                     s.icon(),
                     s.warn(),
                     // A number with nowhere to go (a farm unit with no slot left, overclocks below ZPM) is greyed.

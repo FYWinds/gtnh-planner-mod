@@ -418,7 +418,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
         final Node node = model.node;
         final List<PickList.Entry> rows = new ArrayList<>();
         for (final com.gtnhplanner.data.flowchart.PinRule rule : com.gtnhplanner.data.flowchart.PinRule.values())
-            rows.add(new PickList.Entry(null, rule.label, switch (rule) {
+            rows.add(new PickList.Entry(null, UiText.data(rule.label), switch (rule) {
             case ANY -> UiText.tr("card.the_plan_picks");
             case UP_TO -> UiText.tr("card.what_you_have");
             case EXACT -> UiText.tr("card.no_matter_what");
@@ -439,9 +439,10 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
         final Tip tip;
         final String times = (crop() ? "" : "×");
         if (c.pinned()) {
-            tip = Tip.of(c.rule().label + " " + c.setText())
+            final String rule = UiText.data(c.rule().label);
+            tip = Tip.of(rule + " " + c.setText())
                 .row(UiText.tr("card.running"), c.run())
-                .row(c.rule().label, times + c.setText());
+                .row(rule, times + c.setText());
             if (c.rule() == com.gtnhplanner.data.flowchart.PinRule.UP_TO && c.set() > 0)
                 tip.row(UiText.tr("card.usage"), CardFace.usage(c.value(), c.set()));
         } else {
@@ -473,7 +474,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
     /** The rule word's tip: what the rule does, and that a click changes it. */
     private Tip ruleTip() {
         final CardFace.Count c = face();
-        final Tip tip = Tip.of(c.rule().label)
+        final Tip tip = Tip.of(UiText.data(c.rule().label))
             .muted(
                 c.rule() == com.gtnhplanner.data.flowchart.PinRule.EXACT
                     ? c.ruleFixed() ? UiText.tr("card.a_custom_rate_always_runs_at_its_dial")
@@ -1612,16 +1613,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
      */
     private static void drawMachineArt(final CardModel m, final float x, final float y, final float w, final float h,
         final float itemSize, final float z, final boolean shadow) {
-        drawMachineArt(
-            m.isPower() ? m.node.powerSource : m.machineName,
-            m.machineStack,
-            x,
-            y,
-            w,
-            h,
-            itemSize,
-            z,
-            shadow);
+        drawMachineArt(m.artName, m.machineStack, x, y, w, h, itemSize, z, shadow);
     }
 
     /**
@@ -1727,7 +1719,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
                 session.panel(),
                 NumberPopup.create(
                     def.label,
-                    def.minInt + " to " + def.maxInt,
+                    UiText.tr("mach.range", def.minInt, def.maxInt),
                     CardDefaults.intSetting(cfg, c.key()),
                     def.minInt,
                     def.maxInt,
@@ -1819,8 +1811,9 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
             Popup.open(
                 session.panel(),
                 NumberPopup.create(
-                    s.label(),
-                    plainNumber(s.min()) + (s.max() < Double.MAX_VALUE ? " to " + plainNumber(s.max()) : " or more"),
+                    UiText.data(s.label()),
+                    s.max() < Double.MAX_VALUE ? UiText.tr("mach.range", plainNumber(s.min()), plainNumber(s.max()))
+                        : UiText.tr("mach.range_or_more", plainNumber(s.min())),
                     Double.parseDouble(s.value()),
                     s.min(),
                     s.max(),
@@ -1837,15 +1830,16 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
             return;
         }
         final List<PickList.Entry> rows = new ArrayList<>();
+        // Shown translated, found by the English too.
         for (final com.gtnhplanner.machines.game.MachineModels.Option o : s.options()) rows.add(
             new PickList.Entry(
                 o.icon(),
-                o.label(),
+                UiText.data(o.label()),
                 "",
                 Hyb.INK,
                 o.key()
                     .equals(now),
-                () -> changeMachine(key, o.key())));
+                () -> changeMachine(key, o.key())).searching(o.label()));
         Popup.open(
             session.panel(),
             PickList.popup("gtnhplanner_machine_setting", null, rows, rows.size() > 10, 190),
@@ -2007,8 +2001,10 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
 
     /** "Kanthal Coil Block" reads as "Kanthal" in the well, as on the website. */
     public static String shortCoilName(final String name) {
-        for (final String tail : new String[] { " Coil Block", " Coil" }) {
-            if (name.endsWith(tail)) return name.substring(0, name.length() - tail.length());
+        // The game's own coil names in its language ("白铜线圈方块" reads "白铜").
+        for (final String tail : new String[] { " Coil Block", " Coil", UiText.tr("mach.coil_block_suffix") }) {
+            if (!tail.isEmpty() && name.length() > tail.length() && name.endsWith(tail))
+                return name.substring(0, name.length() - tail.length());
         }
         return name;
     }
@@ -2092,7 +2088,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
                 countRows(tip);
                 if (shared()) tip.row(UiText.tr("card.recipes"), Integer.toString(models.size()));
                 if (m.gregtech && !m.steam()) tip.row(UiText.tr("card.configured_tier"), m.tier);
-                tip.row(UiText.tr("card.time_per_operation"), Fmt.compact(m.durationTicks / 20.0) + " s");
+                tip.row(UiText.tr("card.time_per_operation"), UiText.tr("mach.seconds", Fmt.compact(m.durationTicks / 20.0)));
                 if (m.steam()) tip.row(UiText.tr("card.steam_per_machine"), Fmt.compact(m.steamPerTick * 20) + " L/s");
                 else tip.row(UiText.tr("card.draw_per_machine"), Fmt.power(m.euPerTick) + " EU/t");
                 if (m.parallels > 1) tip.row(UiText.tr("card.parallel_operations"), Integer.toString(m.parallels));
@@ -2118,7 +2114,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
                     .row(UiText.tr("card.configured_tier"), m.tier);
                 if (m.node.properties.get(GTKeys.EU_PER_TICK) instanceof final Number eu && eu.longValue() > 0)
                     tip.row(UiText.tr("card.recipe_tier"), CardDefaults.TIERS[CardDefaults.recipeTier(eu.longValue())]);
-                tip.row(UiText.tr("card.time_per_operation"), Fmt.compact(m.durationTicks / 20.0) + " s")
+                tip.row(UiText.tr("card.time_per_operation"), UiText.tr("mach.seconds", Fmt.compact(m.durationTicks / 20.0)))
                     .row(UiText.tr("card.draw_per_machine"), Fmt.power(m.euPerTick) + " EU/t");
                 if (m.tierTooLow()) tip.note(UiText.tr("card.below_the_recipe_s_tier_it_cannot_run"), Hyb.RED_INK);
                 yield tip.action(Tip.Input.LEFT, UiText.tr("card.up"))
@@ -2172,7 +2168,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
     private void countRows(final Tip tip) {
         final CardFace.Count c = face();
         tip.row(c.pinned() ? UiText.tr("card.running_machines") : UiText.tr("card.required_machines"), c.run());
-        if (c.pinned()) tip.row(c.rule().label, "×" + c.setText());
+        if (c.pinned()) tip.row(UiText.data(c.rule().label), "×" + c.setText());
     }
 
     /** The fluid tank's name: what it empties or fills, and how much a cell holds. */
@@ -2852,14 +2848,14 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
         final Tip tip = Tip.of(m.machineName)
             .sub(farm ? UiText.tr("card.multiblock") : UiText.tr("card.machine"))
             .row(UiText.tr("card.crops_planted"), Fmt.machines(c.value()));
-        if (c.pinned()) tip.row(c.rule().label, c.setText());
+        if (c.pinned()) tip.row(UiText.data(c.rule().label), c.setText());
         tip.row(
             UiText.tr("card.crops_per_machine"),
             Integer.toString(com.gtnhplanner.machines.game.CropCards.cropsPerHarvester(m.node)))
             .row(
                 farm ? UiText.tr("card.industrial_farms") : UiText.tr("card.crop_managers"),
                 "×" + com.gtnhplanner.machines.game.CropCards.harvesters(m.node, crops))
-            .row(UiText.tr("cardtail.harvest_every"), Fmt.compact(m.durationTicks / 20.0) + " s")
+            .row(UiText.tr("cardtail.harvest_every"), UiText.tr("mach.seconds", Fmt.compact(m.durationTicks / 20.0)))
             .row(
                 UiText.tr("cardtail.draw"),
                 Fmt.power(com.gtnhplanner.machines.game.CropCards.drawEut(m.node, crops)) + " EU/t");
@@ -2871,13 +2867,13 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
     /** A crusher card's name: the mob in its spawner, the kill's figures, and what a click does. */
     private Tip mobTip(final CardModel m) {
         final Tip tip = Tip.of(headName(m))
-            .sub("In the " + m.machineName + "'s spawner");
+            .sub(UiText.tr("mach.eec.in_spawner", m.machineName));
         countRows(tip);
         if (m.gregtech) tip.row(UiText.tr("card.configured_tier"), m.tier);
-        tip.row(UiText.tr("cardtail.time_per_kill"), Fmt.compact(m.durationTicks / 20.0) + " s")
+        tip.row(UiText.tr("cardtail.time_per_kill"), UiText.tr("mach.seconds", Fmt.compact(m.durationTicks / 20.0)))
             .row(UiText.tr("card.draw_per_machine"), Fmt.power(m.euPerTick) + " EU/t");
         final String gated = com.gtnhplanner.machines.game.EecCards.gated(m.node);
-        if (!gated.isEmpty()) tip.muted(UiText.tr("cardtail.never_drops_here") + gated + ".");
+        if (!gated.isEmpty()) tip.muted(UiText.tr("mach.eec.never_drops_here", gated));
         return tip.action(Tip.Input.LEFT, UiText.tr("cardtail.put_in_another_mob"));
     }
 
@@ -2887,7 +2883,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
                 : listed() ? UiText.tr("cardtail.pinned_to_the_screen") : UiText.tr("cardtail.pin"));
         if (placed()) {
             final int[] at = model.node.worldLinks.get(0);
-            tip = tip.sub(UiText.tr("cardtail.on_the_block_at") + at[1] + ", " + at[2] + ", " + at[3]);
+            tip = tip.sub(UiText.tr("mach.world.on_the_block_at", at[1], at[2], at[3]));
         }
         if (placed() && listed()) tip = tip.sub(UiText.tr("cardtail.on_your_pin_list_while_playing"));
         if (!pinnedAnywhere())
@@ -2961,12 +2957,14 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
                     : ItemStack.areItemStacksEqual(machine, model.machineStack)
                         || isSingle(machine) && isSingle(model.machineStack);
             final String name = crop() && !farm ? UiText.tr("cardtail.crop_manager") : machine.getDisplayName();
+            // Found by GregTech's English name too, whatever the game's language.
+            final String english = GtMachines.englishName(machine);
             rows.add(new PickList.Entry(machine, name, detail, Hyb.INK, current, () -> {
                 if (!current) {
                     com.gtnhplanner.ui.sound.Sfx.ADJUST.play();
                     chooseMachine(machine);
                 }
-            }));
+            }).searching(english == null ? "" : english));
         }
         Popup.open(
             session.panel(),
