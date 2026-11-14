@@ -139,6 +139,12 @@ public final class PowerPorts {
             return manager != null && manager.getDisplayName()
                 .contains("Crop") ? manager : item("minecraft:wheat_seeds");
         }
+        // The website draws none of the TST generators (machine-icons.json is its file): their controllers, in a game
+        // with TwistSpaceTechnology (its mod id), else none.
+        if (com.gtnhplanner.power.sources.TstGenerators.UNIVERSAL_GENERATOR.equals(sourceId))
+            return cpw.mods.fml.common.Loader.isModLoaded("TwistSpaceTechnology")
+                ? item(com.gtnhplanner.power.sources.TstGenerators.UNIVERSAL_GENERATOR_ITEM)
+                : null;
         final PowerResources.Ref ref = PowerResources.machineIcon(sourceId);
         return ref == null ? null : item(ref.id);
     }

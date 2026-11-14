@@ -69,7 +69,8 @@ own maps by their English name.
 | 19010 | Space Scaler | 空间缩放仪 | compressor, extractor, cyclotron, EIC, neutroniumcompressor | done | field generator; compressor CompressionTierKey gate not modelled (no recipe metadata) |
 | 19011 | Molecule Deconstructor | 分子解构器 | multielectro, multicentrifuge | done | sections |
 | 19012 | Crystalline Infinitier | 无限晶胞 | autoclave, chemicalbath; Crystalline Infinitier | done | glass, field (gate) |
-| 19013–19015 | DSP Launch Site / Ray Receiver / Artificial Star | — | — | not processing | launcher / generators |
+| 19013 | DSP Launch Site | — | — | not processing | launcher |
+| 19014, 19015 | Dyson Sphere Ray Receiving Station, Artificial Star | 戴森球射线接收站, 人造恒星 | — | generator not done | see Generators |
 | 19016 | Miracle Door | 奇迹之门 | Stellar Forge maps | not done | always wireless: fixed 512/1280 t over a circuit, 100 batches, critical photons |
 | 19017 | General Ore Processing Factory TST | 通用矿物处理厂TST | — | not processing | own ore logic |
 | 19018, 19500 | ElvenWorkshop | 精灵工坊 | Rune Engraver; Mana Infuser | done | — |
@@ -80,7 +81,7 @@ own maps by their English name.
 | 19023 | Scavenger | 拾荒者 | sifter | done | — |
 | 19024 | CleanRoom | TST超净间 | — | not processing | cleanroom |
 | 19025 | Biosphere III | 生物圈III号 | brewer, fermenter | brewing/fermenting done | glass; bacterial vat modes scale fluids by hatch fill and Sievert (not a coefficient) |
-| 19026 | Mega Egg Generator | — | — | not processing | generator |
+| 19026 | Tower of Abstraction (Mega Egg Generator) | 抽象之塔 | — | generator not done | see Generators |
 | 19027 | Advanced Mega Oil Cracker | 进阶巨型石油裂化机 | craker | done | coil |
 | 19028 | Indistinct Tentacle | 不可视之触 | Mega Assembly Line, componentassemblyline, assembler, precise_assembler | done on hatches | component casing (gates); wireless (UMV glass and casing, no hatches): fixed 512 t × 100 batches |
 | 19029 | Astral Computing Array | 星规阵列 | — | not processing | computation |
@@ -101,7 +102,7 @@ own maps by their English name.
 | 19049 | MegaArray (Big Bro Array) | 大哥阵列 | inserted machine's map | not done | map and voltage gate come from the inserted machine item |
 | 19050 | Industrial Magnetar Separator | 工业电磁离析机 | electromagneticseparator | done | — |
 | 19051, 19052 | Eco-Sphere Simulator, Extreme Crafting Center | 拟似生态圈, 梦魇工业合成中心 | — | not processing | own simulation, AE2 crafting |
-| 19053 | Lightning Spire | 闪电尖塔 | — | not processing | generator |
+| 19053 | Lightning Spire | 闪电尖塔 | — | generator not done | see Generators |
 | 19054 | DTPF Prototype MK-II | 超维度物质等离子锻炉原型机MK-II | plasmaforge | not done | execution cores share EU and split parallels, spare EU boosts, catalyst discount over run time |
 | 19055 | Large Neutron Oscillator | 大型中子振荡器 | NeutronActivatorWithEU | not done | execution cores (as above) |
 | 19056 | Indistinct Tentacle Prototype MK-II | 不可视之触原型机MK-II | as 19028 | not done | always wireless: 20 t per batch, lump-sum network EU |
@@ -119,11 +120,65 @@ own maps by their English name.
 | 19068, 19298 | Swelegfyr Blast Furnace | 熯焱高炉 | blastfurnace | not done | EU discount and heat overclocks follow a heat that rises and decays over time |
 | 19069 | Hyper Thermal Convector | 高能态热对流器 | Rapid Heat Exchange, Rapid Cooling | not done | fixed 20 t, up to 128 or 16 batches of unlimited parallels, no EU |
 | 19070–19072, 19075, 19077, 19078 | Primordial Disjunctus, Skypiercer Tower, Laser Meteor Miner, Infusion Material Dispenser, Nether Interface, Super Water Purifier | — | — | not processing | own logic |
-| 19073, 19074, 19076 | Steam Basic Generator, Universal Generator, Large Solar Boiler | — | — | not processing | generators |
+| 19073, 19076 | Basic Steam Generator, Large Solar Boiler | 基础蒸汽发电机, 大型太阳能锅炉 | — | generator not done | see Generators |
+| 19074 | Universal Generator | 通用发电机 | — (gasTurbineFuels, dieselFuels) | done as a power source | see Generators |
 | 19079 | Integrated Assembly Matrix | 集成装配矩阵 | Mega Assembly Line | done | nanites; data-stick whitelist and highest-hatch voltage cap not modelled |
 | 19080 | Mega Solar Panel Factory | 巨型太阳能板工厂 | Mega Solar Panel Factory | done | component casing |
+| 19081 | Mega Naquadah Reactor | 巨型硅岩反应堆 | — | generator not done | new in 0.8.1; see Generators |
 
 Not registered in 0.8.0: `TST_TombOfTheDragon`, `TST_PatternMachineClass`, `GTCM_TestMultiMachine`.
+
+## Generators
+
+A TST generator is not a recipe card: it is a power source (`power/`, the top bar's Non-recipe key), in
+`power/sources/TstGenerators`, registered after the website's engines (`PowerRegistry`). The website has none of
+them: their source ids are the fork's own, and a plan posted with one carries a `sourceId` the website does not know.
+The card's picture is the controller (`PowerPorts.machineStack`, only with TST loaded).
+Worked from TST tag 0.8.1 and GregTech 5.09.54.265; pinned by `TstGeneratorsTest`.
+
+### Universal Generator (19074, `tst-universal-generator`)
+
+In the picker's Engines column (unlock LV: its controller is a crafting recipe of an LV hull, LV robot arms and
+pistons, `GTCMMachineRecipes`). Settings: Fuel, Dynamo tier, Dynamo amps.
+
+- **Fuels.** `getRecipeMap`: the gas structure (`STRUCTURE_PIECE_GAS`, `mSetTier` 1) burns
+  `RecipeMaps.gasTurbineFuels`, the fuel structure (`mSetTier` 2) `RecipeMaps.dieselFuels`. The card lists both, gas
+  fuels first: the workbook's `gasFuels` and `combustionFuels`, the tables the Gas Turbine and the Combustion Generator
+  burn. Ether is in both maps at 537 EU/L and listed once. The Structure reading names the build: Gas mode, Fuel
+  mode, or Gas or fuel mode for Ether.
+- **Output.** `checkProcessing`: `euPerTick = DYNAMO_TIER * DYNAMO_AMP`, set in `checkMachine` from
+  `GTCM_MultiMachineBase.getTierDynamo` (the hatches' common `maxEUOutput`, their voltage) and `getDynamoAmperage`
+  (the sum of each hatch's `getOutputAmperage`). It runs at `getMaxEfficiency` = 10,000, so EU/t is the dynamos' full
+  voltage x amps whatever the fuel. `checkMachine` takes 1 to 8 dynamo hatches (`checkHatchMin`, `checkHatchMax`), all
+  at HV or below (`setDynamoTier(3, false)`: ULV 8, LV 32, MV 128, HV 512 V) and of one voltage (`checkMixedDynamo`);
+  GregTech's Dynamo element takes a hatch of at most 4 A (`MTEMultiBlockBase.addDynamoToMachineList`: the plain
+  1 A hatch, GT++'s 4 A buffer dynamos at ULV to HV, the 4 A HV dynamo), so Dynamo amps runs 1 to 32.
+- **Fuel.** Each run drains 1,000 L of the first stored fluid the map knows and lasts
+  `(int) ((double) (mSpecialValue x 1,500) / (euPerTick x 20) x 20)` ticks (`fuelBurning`, `mMaxProgresstime`):
+  floor(EU/L x 1,500 / EU/t) for every fuel and setting the card offers (checked over all of them). The 1,500 is the
+  tooltip's 150%: 1,000 L of fuel give 1.5 x their value, less the truncated tick. A finished run starts the next on
+  the same tick (`MTEMultiBlockBase.runMachine` calls `checkRecipe` when progress ends), so the card burns
+  20,000 / ticks L/s at a steady EU/t. Readings: the burn ("1,000 L every N ticks"), EU per L and the efficiency
+  against the fuel's own value.
+- **Under a tick.** A fuel worth less than one tick of output (Fish Oil from 3,072 EU/t, Short Mead from 6,144) gets
+  `mMaxProgresstime` 0: the run drains its 1,000 L and ends before it makes anything. The card makes no EU and says so.
+
+What the power model cannot express: the 1,000 L gulps (the card averages them); the structure's mode being the
+fuel's (the card shows it, the game burns nothing from the other map); several fuels in the hatches (the game burns
+the first it finds each run); EU the dynamos cannot pass on is lost, and the under-a-tick case burns 1,000 L on every
+recipe check, which are driven by hatch events, not a rate. TST has no maintenance, pollution or lubricant on it.
+
+### Not done
+
+Each is its own model, none a fuel-map burner:
+
+- 19014 Dyson Sphere Ray Receiving Station and 19015 Artificial Star (the Dyson Sphere Program; the star burns its
+  own recipe map).
+- 19026 Tower of Abstraction (`GT_TileEntity_MegaEggGenerator`).
+- 19053 Lightning Spire (`GTCM_LightningSpire`).
+- 19073 Basic Steam Generator (`TST_SteamBasicGenerator`, steam to EU).
+- 19076 Large Solar Boiler (`TST_LargeSolarBoiler`, steam from the sun).
+- 19081 Mega Naquadah Reactor (`TST_MegaNqReactor`, new in 0.8.1).
 
 ## Other mods in the pack
 

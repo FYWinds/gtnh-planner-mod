@@ -3555,3 +3555,13 @@ gtnhplanner.data.nano_core=纳米核心
 gtnhplanner.data.star_kernel_generator=星核发生器
 gtnhplanner.data.bloody_hell_altar=血狱祭坛
 gtnhplanner.data.mega_stone_breaker=巨型碎石机
+
+## unigen
+gtnhplanner.ui.power.warning_under_a_tick=%s在 %s EU/t 下烧不满一刻：每次燃烧 1,000 L 却不产出 EU。
+gtnhplanner.data.universal_generator=通用发电机
+gtnhplanner.data.burns_gas_or_diesel_fuels_at_150_for_its_dynamos_c3960086=以 150% 的燃料效率燃烧气体或柴油类燃料，按动力仓的满功率发电。
+gtnhplanner.data.dynamo_tier=动力仓等级
+gtnhplanner.data.dynamo_amps=动力仓总电流
+gtnhplanner.data.gas_mode=燃气模式
+gtnhplanner.data.fuel_mode=燃油模式
+gtnhplanner.data.gas_or_fuel_mode=燃气或燃油模式

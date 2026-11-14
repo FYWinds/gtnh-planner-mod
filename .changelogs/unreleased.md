@@ -3,6 +3,7 @@
 - **Simplified Chinese.** The whole planner reads in Chinese when the game does. Machine and material names are the ones the GTNH Chinese pack uses.
 - **Wires share a trunk.** When one output feeds several cards its wires leave as one line and fork near the cards. Settings has a switch for it.
 - TwistSpaceTechnology machines work out their own speed, power and parallels on cards.
+- TwistSpaceTechnology's Universal Generator is among the non-recipe machines, with the Engines: pick its fuel, dynamo tier and dynamo amps, and it burns gas or diesel fuels the way the machine does.
 
 ## Better
 

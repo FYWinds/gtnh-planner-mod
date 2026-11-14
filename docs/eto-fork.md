@@ -23,7 +23,8 @@ package and the save format are upstream's, so plans and the gtnhplanner.com acc
 - **Wire trunks.** Wires from one output port to several cards leave as one line and fork near the cards
   (`layout/WireTrunks`, `docs/design/routing-and-arrange.md`); Settings, Board, "Shared wire trunks" turns it off.
 - **TwistSpaceTechnology machines.** 38 TST 0.8.0 multiblocks compute their own speed, power, parallels and
-  overclocks on cards (`machines/eto/`, `assets/gtnhplanner/machines/eto-tst.json`, `docs/design/tst-machines.md`).
+  overclocks on cards (`machines/eto/`, `assets/gtnhplanner/machines/eto-tst.json`, `docs/design/tst-machines.md`);
+  TST 0.8.1's Universal Generator is a power source (`power/sources/TstGenerators`).
 - **Fixes** for reports open upstream: see `.changelogs/unreleased.md`.
 - **The tour runs in English only.** It finds interface parts and NEI items by their English text; in another
   language it says so instead of starting.

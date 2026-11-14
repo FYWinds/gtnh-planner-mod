@@ -15,6 +15,7 @@ import com.gtnhplanner.power.sources.Reactors;
 import com.gtnhplanner.power.sources.Singleblocks;
 import com.gtnhplanner.power.sources.Sofc;
 import com.gtnhplanner.power.sources.SteamMakers;
+import com.gtnhplanner.power.sources.TstGenerators;
 import com.gtnhplanner.power.sources.Turbines;
 
 /**
@@ -32,6 +33,8 @@ public final class PowerRegistry {
             all.addAll(Singleblocks.sources());
             all.addAll(Engines.sources());
             all.addAll(Sofc.sources());
+            // The ETO fork's TwistSpaceTechnology generators, after the website's engines.
+            all.addAll(TstGenerators.sources());
             all.addAll(SteamMakers.sources());
             all.addAll(Turbines.sources());
             all.addAll(Reactors.reactorSources());

@@ -1820,3 +1820,6 @@ gtnhplanner.ui.taskthings.way_south_east=south-east
 gtnhplanner.ui.settings.shared_trunks=Shared wire trunks
 gtnhplanner.ui.settings.shared_trunks_tip=Wires from one port to several cards leave as one line and branch off near each card.
 gtnhplanner.ui.canvas.trunk_of_wires=§7Trunk of %d wires
+
+## unigen
+gtnhplanner.ui.power.warning_under_a_tick=%s lasts under a tick at %s EU/t: each 1,000 L burns for no EU.

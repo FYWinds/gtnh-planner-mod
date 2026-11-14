@@ -126,7 +126,11 @@ public final class PowerText {
         new Shape(
             "Regular water calcifies this boiler: full (.+) L/s for (.+) hours of run time, then down to (.+) L/s by (.+) hours\\. Distilled water does not\\.",
             "power.warning_calcifies"),
-        new Shape("(.+) is over (.+) EU/L and needs the oxygen boost\\.", "power.warning_needs_oxygen", 0b1));
+        new Shape("(.+) is over (.+) EU/L and needs the oxygen boost\\.", "power.warning_needs_oxygen", 0b1),
+        new Shape(
+            "(.+) lasts under a tick at (.+) EU/t: each 1,000 L burns for no EU\\.",
+            "power.warning_under_a_tick",
+            0b1));
 
     /** The text in the player's language: its shape's key with its parts, else its own translation. */
     private static String said(final List<Shape> shapes, final String english) {
