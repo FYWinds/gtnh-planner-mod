@@ -2450,11 +2450,51 @@ public final class BoardSession {
         });
     }
 
-    /** Picks which machine runs the recipe; GregTech single blocks bring their tier, multiblocks their options. */
+    /**
+     * Picks which machine runs the recipe; GregTech single blocks bring their tier, multiblocks their options. A fuel
+     * put on a generator that is a non-recipe machine here (RecipePower.fuelCard) makes the card that machine's.
+     */
     public void chooseMachine(final Node node, final ItemStack machine, final boolean gregtech) {
+        // A shared machine's recipes stay recipes: a power card is no section of one.
+        final com.gtnhplanner.power.game.RecipePower.Card fuel = sharedOf(node.id) == null
+            ? com.gtnhplanner.power.game.RecipePower.fuelCard(node, machine)
+            : null;
+        if (fuel != null) {
+            becomePower(node, fuel);
+            return;
+        }
         edit(() -> {
             CardDefaults.switchMachine(node, machine, gregtech);
             syncShared(node);
+        });
+    }
+
+    /**
+     * A recipe card become a non-recipe machine's card in place, at the settings that machine was last left at with
+     * {@code power}'s over them: its id, place, group, count and placements in the world kept, and a wire, drawer or
+     * rate on a port following its resource to where it is on the power card, gone where the power card has none.
+     */
+    private void becomePower(final Node node, final com.gtnhplanner.power.game.RecipePower.Card power) {
+        Sfx.ADJUST.play();
+        edit(() -> {
+            final List<String> ins = keys(node.inputs), outs = keys(node.outputs);
+            final Node card = Node.power(
+                power.source(),
+                com.gtnhplanner.ui.card.SettingMemory.powerSettings(power.source(), power.settings()),
+                node.x,
+                node.y);
+            card.id = node.id;
+            card.group = node.group;
+            card.worldLinks.addAll(node.worldLinks);
+            card.elsewhere.putAll(node.elsewhere);
+            PinRule.set(card, PinRule.of(node), node.machineConfig.getMachineCount());
+            card.targetOutputRates.putAll(node.targetOutputRates);
+            card.targetInputRates.putAll(node.targetInputRates);
+            // Put under the recipe card's id, so its wires and drawer links are still on it.
+            graph.addNode(card);
+            followPorts(card, ins, outs);
+            followRates(card.targetOutputRates, outs, keys(card.outputs));
+            followRates(card.targetInputRates, ins, keys(card.inputs));
         });
     }
 

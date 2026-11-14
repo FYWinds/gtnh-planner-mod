@@ -26,6 +26,16 @@ package and the save format are upstream's, so plans and the gtnhplanner.com acc
 - **TwistSpaceTechnology machines.** 38 TST 0.8.0 multiblocks compute their own speed, power, parallels and
   overclocks on cards (`machines/eto/`, `assets/gtnhplanner/machines/eto-tst.json`, `docs/design/tst-machines.md`);
   TST 0.8.1's Universal Generator is a power source (`power/sources/TstGenerators`).
+- **Fuel pages on generators the machine data lacks.** A card from an NEI fuel recipe put on a generator no handler of
+  its map stands for (the Solid-Oxide Fuel Cells and the Universal Generator on the gas turbine fuels, GT++'s Large
+  Semifluid Generator, TST's Mega Naquadah Reactor) would run as the map's first machine. Instead, when a power source
+  is drawn as that generator (`PowerPorts.machineStack`, same item and meta) and one of its Select settings has an
+  option whose resource (`PowerResources.resolve`) is one of the recipe's inputs, the card is that source's power card
+  at that option, its other settings as last left (`RecipePower.fuelCard`; no table of generators). It applies to a
+  new card from NEI (`MachineChoices.newNode`) and to a card switched to that machine from its machine menu
+  (`BoardSession.chooseMachine`): replaced in place, one undo step, keeping its id, place, group, count and the wires,
+  drawers and rates on the ports the power card has. A machine a handler stands for, or a fuel the source does not
+  list, leaves the recipe card as it was.
 - **Fixes** for reports open upstream: see `.changelogs/unreleased.md`.
 - **The tour runs in English only.** It finds interface parts and NEI items by their English text; in another
   language it says so instead of starting.

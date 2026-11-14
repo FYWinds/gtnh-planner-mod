@@ -53,7 +53,15 @@ public final class MachineChoices {
                 ? com.gtnhplanner.machines.game.BeeCards.housingOf(use.machine())
                 : null;
             if (housing != null) node.machineConfig.setString(com.gtnhplanner.machines.Bees.HOUSING, housing.key());
-            else CardDefaults.useMachine(node, use.machine(), gregtech(node));
+            else {
+                // A fuel on a generator the machine data has no handler for, that is a non-recipe machine here: that
+                // machine's card burning the fuel, at the settings it was last left at.
+                final com.gtnhplanner.power.game.RecipePower.Card fuel = com.gtnhplanner.power.game.RecipePower
+                    .fuelCard(node, use.machine());
+                if (fuel != null)
+                    return Node.power(fuel.source(), SettingMemory.powerSettings(fuel.source(), fuel.settings()), 0, 0);
+                CardDefaults.useMachine(node, use.machine(), gregtech(node));
+            }
         }
         SettingMemory.applyTo(node);
         CardDefaults.seedHatches(node);
