@@ -159,7 +159,7 @@ final class Fresh {
                     .card(n, FfPlan.GAME_RECIPE_PREFIX + id, game, n.machineConfig.getMachineCount());
                 final JsonObject site = withoutPlace(card.node());
                 site.addProperty("id", id);
-                return new JsonObject[] { site, Derived.recipe(card.recipe()) };
+                return new JsonObject[] { site, card.recipe() };
             }));
         }
         for (final Drawer d : g.getDrawers()) {

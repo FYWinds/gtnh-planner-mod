@@ -59,7 +59,9 @@ public final class GameIds {
             for (final String ore : OreDictionary.getOreNames()) {
                 if (!ore.equalsIgnoreCase(name)) continue;
                 final List<ItemStack> ores = OreDictionary.getOres(ore);
-                if (!ores.isEmpty() && ores.getFirst() != null) return ores.getFirst()
+                // get(0), not getFirst(): Forge's list is a view over another, its own ArrayList storage empty, and
+                // ArrayList.getFirst reads that storage (NoSuchElementException on Java 21 and up, issue 557).
+                if (!ores.isEmpty() && ores.get(0) != null) return ores.get(0)
                     .copy();
             }
             return null;

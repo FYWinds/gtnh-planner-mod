@@ -25,8 +25,8 @@ import com.gtnhplanner.importer.ImportReport;
  * importer's way, under its own id, keeping what the website has no place for.</li>
  * <li>Writing ({@link #write}), against the plan read and its {@link Basis}: what nobody changed is written as the plan
  * had it, so reading a plan and writing it straight back changes nothing.</li>
- * <li>Never in the plan: the camera, the pin list (each player's own), the solve's answers, and what the website works
- * out on load ({@link Derived}).</li>
+ * <li>Never in the plan: the camera, the pin list (each player's own) and the solve's answers. Never an edit by itself:
+ * what the website works out on load ({@link Derived}).</li>
  * </ul>
  */
 public final class CloudPlans {
@@ -72,8 +72,11 @@ public final class CloudPlans {
         return new PlanWrite(graph, game, base, basis).run();
     }
 
-    /** The edit that turns one plan into the other, what is worked out on load left out of both ({@link Derived}). */
+    /**
+     * The edit that turns one plan into the other, what is worked out on load left out of both ({@link Derived}), and
+     * put back into each op that sends a power card's {@code power} ({@link Derived#carry}).
+     */
     public static List<LiveOp> diff(final JsonObject before, final JsonObject after) {
-        return LiveOps.diff(Derived.plan(before), Derived.plan(after));
+        return Derived.carry(LiveOps.diff(Derived.plan(before), Derived.plan(after)), after);
     }
 }

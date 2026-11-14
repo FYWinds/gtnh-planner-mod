@@ -247,9 +247,10 @@ public class GTProvider implements PropertyProvider {
 
         // Copies, never GT's own stacks: Node.deduplicate merges ports by writing the summed amount
         // into the first one, which on an aliased stack rewrites the recipe itself (and grows it
-        // again on every refresh).
+        // again on every refresh). A null is an empty slot (the Bricked Blast Furnace's recipes keep
+        // one between their input and their coal, issues 525, 531, 548): no port.
         for (int i = 0; i < r.mInputs.length; i++) {
-            if (r.mInputs[i].stackSize <= 0) continue;
+            if (r.mInputs[i] == null || r.mInputs[i].stackSize <= 0) continue;
             final ItemStack in = copyOf(r.mInputs[i]);
             // The Rock Breaker's lava placeholder (FreeInputs): kept on the card, an amount of 0 so nothing asks for it.
             if (FreeInputs.isFree(in)) in.stackSize = 0;
@@ -260,6 +261,7 @@ public class GTProvider implements PropertyProvider {
                     r.mInputChances != null ? r.mInputChances[i] / GT_CHANCE_SCALE : 1.f));
         }
         for (int i = 0; i < r.mOutputs.length; i++) {
+            if (r.mOutputs[i] == null) continue;
             node.outputs.add(
                 new Port<>(
                     RecipePropertyAPI.ITEM,
@@ -267,7 +269,7 @@ public class GTProvider implements PropertyProvider {
                     r.mOutputChances != null ? r.mOutputChances[i] / GT_CHANCE_SCALE : 1.f));
         }
         for (int i = 0; i < r.mFluidInputs.length; i++) {
-            if (r.mFluidInputs[i].amount <= 0) continue;
+            if (r.mFluidInputs[i] == null || r.mFluidInputs[i].amount <= 0) continue;
             node.inputs.add(
                 new Port<>(
                     RecipePropertyAPI.FLUID,
@@ -275,6 +277,7 @@ public class GTProvider implements PropertyProvider {
                     r.mFluidInputChances != null ? r.mFluidInputChances[i] / GT_CHANCE_SCALE : 1.f));
         }
         for (int i = 0; i < r.mFluidOutputs.length; i++) {
+            if (r.mFluidOutputs[i] == null) continue;
             node.outputs.add(
                 new Port<>(
                     RecipePropertyAPI.FLUID,

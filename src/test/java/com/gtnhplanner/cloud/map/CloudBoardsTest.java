@@ -67,7 +67,9 @@ class CloudBoardsTest {
             final CloudPlans.Written w = CloudPlans.write(board, game, plan, basis);
             final List<LiveOp> ops = CloudPlans.diff(plan, w.plan());
             final JsonObject applied = LiveOps.apply(Derived.plan(plan), ops);
-            assertTrue(LiveOps.plansEqual(applied, Derived.plan(w.plan())), what + ": the batch makes the plan");
+            assertTrue(
+                LiveOps.plansEqual(Derived.plan(applied), Derived.plan(w.plan())),
+                what + ": the batch makes the plan");
             final List<LiveOp> undo = LiveOps.invert(Derived.plan(plan), ops);
             assertTrue(LiveOps.plansEqual(LiveOps.apply(applied, undo), Derived.plan(plan)), what + ": and undoes");
             final CloudPlans.Read r = CloudPlans.read(w.plan(), game.knowing(board));

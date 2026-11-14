@@ -45,6 +45,8 @@ public final class BoardScreen extends ModularScreen {
     private final PowerPicker picker;
     /** The top bar's keys and the board's other parts, by name, for the tour to point at. */
     private final java.util.Map<String, IWidget> parts;
+    /** The main panel, kept here: ModularUI refuses to hand it out while the screen is disposed. */
+    private final ModularPanel board;
 
     private BoardScreen(final ModularPanel panel, final BoardSession session, final BoardCanvas canvas,
         final LibraryDoor library, final PowerPicker picker, final java.util.Map<String, IWidget> parts) {
@@ -54,6 +56,7 @@ public final class BoardScreen extends ModularScreen {
         this.library = library;
         this.picker = picker;
         this.parts = parts;
+        this.board = panel;
         getContext().setSettings(new UISettings());
         getContext().getUISettings()
             .getRecipeViewerSettings()
@@ -1040,11 +1043,13 @@ public final class BoardScreen extends ModularScreen {
 
     /**
      * The board lays out on the screen measured in its own pixels ({@link PlannerScale}), a step or two smaller than
-     * the game's that NEI keeps; it keeps clear of NEI's search box, which is measured in the game's.
+     * the game's that NEI keeps; it keeps clear of NEI's search box, which is measured in the game's. The screen may
+     * come back disposed (NEI's recipe page returning to a board ModularUI let go of, issues 514, 544): the resize
+     * opens it again, so the margin goes on the panel itself rather than on what the screen would refuse to hand out.
      */
     @Override
     public void onResize(final int width, final int height) {
-        getMainPanel().marginBottom(PlannerScale.fromGame(22));
+        board.marginBottom(PlannerScale.fromGame(22));
         super.onResize(PlannerScale.boardWidth(), PlannerScale.boardHeight());
     }
 
@@ -1111,6 +1116,9 @@ public final class BoardScreen extends ModularScreen {
         // tips over it.
         if (canvas.inHand()) return;
         final Object hovered = getContext().getHovered();
+        // The hover is worked out apart from the draw; a card or port the board has taken out of its tree since is no
+        // longer valid and has no panel to ask for (issues 521, 533, 552): no tip this frame.
+        if (hovered instanceof final IWidget widget && !widget.isValid()) return;
         // While a popup is open, only it explains itself: a tip from the board would cover it.
         final ModularPanel top = getPanelManager().getTopMostPanel();
         // The thing the tip is about: a widget, an overview row or a tab (by what they say), a wire on the board.

@@ -60,7 +60,7 @@ class CloudEditsTest {
             final List<LiveOp> ops = CloudPlans.diff(plan, w.plan());
             final JsonObject applied = LiveOps.apply(Derived.plan(plan), ops);
             assertTrue(
-                LiveOps.plansEqual(applied, Derived.plan(w.plan())),
+                LiveOps.plansEqual(Derived.plan(applied), Derived.plan(w.plan())),
                 what + ": the batch makes the plan written");
             final List<LiveOp> undo = LiveOps.invert(Derived.plan(plan), ops);
             assertTrue(LiveOps.plansEqual(LiveOps.apply(applied, undo), Derived.plan(plan)), what + ": and undoes");
@@ -169,6 +169,41 @@ class CloudEditsTest {
             ops.stream()
                 .anyMatch(op -> op.o() == LiveOp.Kind.PUT && "edges".equals(op.c())),
             ops.toString());
+    }
+
+    /**
+     * Issue 515 and the non-recipe cluster: a generator added on the board sends its recipe with the readings the live
+     * service's schema requires, else the service refuses the batch and the card vanishes again.
+     */
+    @Test
+    void aNewGeneratorSendsItsReadings() {
+        final Open o = new Open(new Graph("Power"));
+        final Node gen = new Node(UUID.randomUUID(), 0, 0);
+        gen.powerSource = "gas-turbine";
+        gen.powerSettings.putAll(java.util.Map.of("tier", "LV", "fuel", "Benzene"));
+        final com.gtnhplanner.power.PowerSource source = com.gtnhplanner.power.PowerRegistry.get(gen.powerSource);
+        gen.machineName = source.name();
+        gen.powerModel = source.compute(gen.powerSettings);
+        gen.inputs.add(TestGame.port("fluid", "benzene", 1));
+        o.board.addNode(gen);
+
+        final CloudPlans.Written w = CloudPlans.write(o.board, o.game, o.plan, o.basis);
+        final LiveOp put = CloudPlans.diff(o.plan, w.plan())
+            .stream()
+            .filter(op -> op.o() == LiveOp.Kind.PUT && "recipes".equals(op.c()))
+            .findFirst()
+            .orElseThrow();
+        final JsonObject power = put.v()
+            .getAsJsonObject("power");
+        assertTrue(gen.powerModel.euPerTick() > 0, "the test wants a generator that makes power");
+        assertEquals(
+            gen.powerModel.euPerTick(),
+            power.get("euPerTick")
+                .getAsDouble(),
+            1e-9);
+        assertTrue(
+            power.get("stats")
+                .isJsonArray());
     }
 
     @Test

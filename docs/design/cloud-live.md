@@ -370,9 +370,12 @@ every annotation kind, groups (pockets), port rates, setting pins and leftover s
   `gtnhplanner:<id>` recipe rather than changing one the website made, which other cards may share. A recipe no card
   uses any more after a game edit goes.
 - A local edit in the game is `CloudPlans.diff(view, write(board, view, basis))`.
-- Derived, stripped from both plans before every diff (`cloud/map/Derived`), never an edit: a power card recipe's
-  readings, `recipes[].power.euPerTick`, `.stats` and `.warnings` (the source's model at the card's settings; both
-  sides work them out again on load). Nothing the solve answers is written at all.
+- Derived, stripped from both plans before every diff (`cloud/map/Derived`), never an edit by itself: a power card
+  recipe's readings, `recipes[].power.euPerTick`, `.stats` and `.warnings` (the source's model at the card's settings;
+  both sides work them out again on load). The game still writes them, and an op that sends a recipe's `power` (a put
+  of the recipe, a patch of its `power`) carries them (`Derived.carry`): the service checks those against the
+  website's schema, which requires `euPerTick` and `stats`, and refuses the batch without them. Nothing the solve
+  answers is written at all.
 - Per player, never in the plan: camera, selection, folded sections, the pin list (a cloud plan keeps its pins on this
   device, per plan), when the plan was last open, whether its tab is open, its library post (`postId`). Its
   description and icon are the plan's `description` and `icon`.

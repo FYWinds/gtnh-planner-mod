@@ -113,6 +113,11 @@ public final class RecipePropertyAPI {
     private static boolean itemsMatch(final ItemStack a, final ItemStack b) {
         if (a.getItem() == null || b.getItem() == null) return false;
         if (a.isItemEqual(b)) return true;
+        // A wildcard damage takes the item at any meta: GregTech's recycling recipes take their input that way (the
+        // Macerator's Clay Block and Raw Beef, issues 524, 559).
+        if (a.getItem() == b.getItem()
+            && (a.getItemDamage() == OreDictionary.WILDCARD_VALUE || b.getItemDamage() == OreDictionary.WILDCARD_VALUE))
+            return true;
         final int[] idsA = OreDictionary.getOreIDs(a);
         final int[] idsB = OreDictionary.getOreIDs(b);
         if (idsA.length == 0 || idsB.length == 0) return false;

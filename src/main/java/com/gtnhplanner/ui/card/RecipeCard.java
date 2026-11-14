@@ -447,8 +447,10 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
         } else {
             tip = Tip.of(crop() ? UiText.tr("card.crops_planted") : UiText.tr("card.required_machines"))
                 .row(UiText.tr("card.calculated"), c.run());
+            // A count at or below the round-off rounds to no whole machine at all, and nothing to divide by (issue
+            // 558).
             final double whole = Math.ceil(c.value() - 1e-9);
-            if (!crop() && c.value() > 0 && whole != c.value())
+            if (!crop() && whole > 0 && whole != c.value())
                 tip.row(UiText.tr("card.whole_machines"), "×" + (long) whole)
                     .row(UiText.tr("card.average_utilization"), Fmt.compact(100 * c.value() / whole) + "%");
         }

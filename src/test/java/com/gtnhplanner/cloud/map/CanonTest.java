@@ -7,12 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.gtnhplanner.cloud.sync.LiveOp;
 
 /** The mapping's small rules: one spelling of JSON, the plan's ids, and what is worked out on load. */
 class CanonTest {
@@ -89,5 +91,68 @@ class CanonTest {
                 .getAsJsonObject()
                 .getAsJsonObject("power")
                 .has("stats"));
+    }
+
+    /** Issue 515: the live service refused every new generator, its power sent without euPerTick and stats. */
+    @Test
+    void anOpThatSendsAPowerCarriesItsReadings() {
+        final String turbine = "{\"id\":\"r\",\"outputs\":[],\"power\":{\"sourceId\":\"gas-turbine\",\"euPerTick\":32,"
+            + "\"stats\":[{\"label\":\"Fuel\",\"value\":\"Benzene\"}]}}";
+        final JsonObject none = json("{\"name\":\"P\",\"recipes\":[]}"),
+            one = json("{\"name\":\"P\",\"recipes\":[" + turbine + "]}");
+
+        final List<LiveOp> added = CloudPlans.diff(none, one);
+        assertEquals(1, added.size(), added.toString());
+        assertEquals(
+            LiveOp.Kind.PUT,
+            added.getFirst()
+                .o());
+        final JsonObject put = added.getFirst()
+            .v()
+            .getAsJsonObject("power");
+        assertEquals(
+            32,
+            put.get("euPerTick")
+                .getAsDouble());
+        assertEquals(
+            1,
+            put.getAsJsonArray("stats")
+                .size());
+
+        final JsonObject reread = json("{\"name\":\"P\",\"recipes\":[" + turbine.replace("32", "40") + "]}");
+        assertEquals(List.of(), CloudPlans.diff(one, reread), "readings alone are no edit");
+
+        final JsonObject resourced = json(
+            "{\"name\":\"P\",\"recipes\":[" + turbine.replace("gas-turbine", "steam-turbine")
+                .replace("32", "24") + "]}");
+        final List<LiveOp> patched = CloudPlans.diff(one, resourced);
+        assertEquals(1, patched.size(), patched.toString());
+        assertEquals(
+            LiveOp.Kind.PATCH,
+            patched.getFirst()
+                .o());
+        final JsonObject sent = patched.getFirst()
+            .f()
+            .getAsJsonObject("power");
+        assertEquals(
+            "steam-turbine",
+            sent.get("sourceId")
+                .getAsString());
+        assertEquals(
+            24,
+            sent.get("euPerTick")
+                .getAsDouble());
+        assertTrue(sent.has("stats"));
+
+        final JsonObject rewired = json(
+            "{\"name\":\"P\",\"recipes\":[" + turbine.replace("\"outputs\":[]", "\"outputs\":[{\"id\":\"eu\"}]")
+                + "]}");
+        final List<LiveOp> other = CloudPlans.diff(one, rewired);
+        assertEquals(1, other.size(), other.toString());
+        assertFalse(
+            other.getFirst()
+                .f()
+                .has("power"),
+            "a patch that leaves the power alone sends none");
     }
 }
