@@ -35,21 +35,20 @@ import com.gtnhplanner.machines.web.Web;
  */
 class TstMachinesTest {
 
-    private static final String ICD = "tst.common.recipe.IntensifyChemicalDistorterRecipeMap.name",
-        PHC = "tst.common.recipe.PreciseHighEnergyPhotonicQuantumMasterRecipeMap.name",
-        MIRACLE_TOP = "tst.common.recipe.MiracleTopRecipeMap.name",
-        CRYSTALLINE = "tst.common.recipe.CrystallineInfinitierRecipeMap.name",
-        RUNE_ENGRAVER = "tst.common.recipe.RuneEngraverRecipeMap.name",
-        HST = "tst.common.recipe.HyperSpacetimeTransformerRecipeMap.name",
-        COKING = "tst.common.recipe.CokingFactoryRecipeMap.name",
-        MEGA_AL = "tst.common.recipe.AssemblyLineWithoutResearchRecipeMap.name",
-        NANO_CORE = "tst.common.recipe.DeployedNanoCoreRecipeMap.name",
-        STAR_KERNEL = "tst.common.recipe.StarKernelGeneratorRecipeMap.name",
-        GENESIS = "tst.common.recipe.MassFabricatorGenesisRecipeMap.name",
-        MSTF = "tst.common.recipe.MicroSpaceTimeFabricatorioRecipeMap.name",
-        BLOODY_HELL = "tst.common.recipe.BloodyHellRecipeMap.name",
-        STONE_BREAKER = "tst.common.recipe.MegaStoneBreakerRecipeMap.name",
-        SOLAR = "tst.common.recipe.MegaSolarPanelFactoryRecipeMap.name";
+    private static final String ICD = "tst.recipe.IntensifyChemicalDistorterRecipeMap.name",
+        PHC = "tst.recipe.PreciseHighEnergyPhotonicQuantumMasterRecipeMap.name",
+        MIRACLE_TOP = "tst.recipe.MiracleTopRecipeMap.name",
+        CRYSTALLINE = "tst.recipe.CrystallineInfinitierRecipeMap.name",
+        RUNE_ENGRAVER = "tst.recipe.RuneEngraverRecipeMap.name",
+        HST = "tst.recipe.HyperSpacetimeTransformerRecipeMap.name", COKING = "tst.recipe.CokingFactoryRecipeMap.name",
+        MEGA_AL = "tst.recipe.AssemblyLineWithoutResearchRecipeMap.name",
+        NANO_CORE = "tst.recipe.DeployedNanoCoreRecipeMap.name",
+        STAR_KERNEL = "tst.recipe.StarKernelGeneratorRecipeMap.name",
+        GENESIS = "tst.recipe.MassFabricatorGenesisRecipeMap.name",
+        MSTF = "tst.recipe.MicroSpaceTimeFabricatorioRecipeMap.name",
+        BLOODY_HELL = "tst.recipe.BloodyHellRecipeMap.name",
+        STONE_BREAKER = "tst.recipe.MegaStoneBreakerRecipeMap.name",
+        SOLAR = "tst.recipe.MegaSolarPanelFactoryRecipeMap.name";
 
     // region Harness
 
@@ -160,7 +159,7 @@ class TstMachinesTest {
             }
         }
         assertEquals(entries.keySet(), listed);
-        assertEquals(38, entries.size());
+        assertEquals(60, entries.size());
     }
 
     @Test
@@ -213,13 +212,21 @@ class TstMachinesTest {
     // region One case per machine
 
     /**
-     * GT_TileEntity_IntensifyChemicalDistorter: own mode 16 parallels at 1x (:270-279), perfect (:282-284). 120 EU/t x
-     * 16 = 1920 of 8192 (IV, 1 A): one step; 400 / 4 = 100 ticks at 480 EU/t.
+     * GT_TileEntity_IntensifyChemicalDistorter (0.8.1): own mode 16 parallels, duration x 1 / (1 + whole 900 K steps of
+     * coil heat over the recipe's) (:286-288, :337-344), perfect (:290-293). A 0 K recipe on Cupronickel (1801 K): 1801
+     * / 900 = 2 steps, 400 / 3 = 133.3 ticks; 120 EU/t x 16 = 1920 of 8192 (IV, 1 A): one step, 133.3 / 4 = 33.3 -> 33
+     * ticks at 480 EU/t. A 4500 K recipe on TPV (4501 K): no step over, 400 / 4 = 100 ticks.
      */
     @Test
     void intensifyChemicalDistorterOwnMode() {
         expect(
             run(ICD, 120, 400, "Intensify Chemical Distorter", "IV", 1, Map.of()),
+            "Intensify Chemical Distorter",
+            33,
+            480,
+            16);
+        expect(
+            run(ICD, 120, 400, 4500, "Intensify Chemical Distorter", "IV", 1, Map.of(), null),
             "Intensify Chemical Distorter",
             100,
             480,
@@ -227,15 +234,31 @@ class TstMachinesTest {
     }
 
     /**
-     * As a chemical reactor: 1024 parallels at 1/10 (:270-279). 30 EU/t at EV 1 A: 2048 / 30 = 68 parallels, 2040 EU/t,
-     * no step; 1200 x 0.1F = 120 ticks. A 4500 K recipe asks TPV coils (validateRecipe :311-314).
+     * As a chemical reactor (0.8.1): 1024 parallels at 1F / max(1, coil tier + 1) (:281-288; 0.8.0's 1/10 is gone). 30
+     * EU/t at EV 1 A: 2048 / 30 = 68 parallels, 2040 EU/t, no step. Cupronickel (tier 0): 1200 ticks; Infinity (tier
+     * 11): 1200 x 1F/12 = 100.0000029 -> 100 ticks. A 4500 K recipe asks TPV coils (validateRecipe :333-334).
      */
     @Test
     void intensifyChemicalDistorterAsAChemicalReactor() {
         expect(
             run("gt.recipe.largechemicalreactor", 30, 1200, "Intensify Chemical Distorter", "EV", 1, Map.of()),
             "Intensify Chemical Distorter",
-            120,
+            1200,
+            30,
+            68);
+        expect(
+            run(
+                "gt.recipe.largechemicalreactor",
+                30,
+                1200,
+                0,
+                "Intensify Chemical Distorter",
+                "EV",
+                1,
+                Map.of(),
+                "infinity"),
+            "Intensify Chemical Distorter",
+            100,
             30,
             68);
         final NodeMath.Result hot = run(ICD, 120, 400, 4500, "Intensify Chemical Distorter", "IV", 1, Map.of(), null);

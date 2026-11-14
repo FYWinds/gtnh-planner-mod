@@ -104,7 +104,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
         }
         if (emptyHolder()) {
             child(new SocketSlot(this, false));
-            child(new SocketSlot(this, true));
+            if (!com.gtnhplanner.power.sources.NrEssentiaSmeltery.is(model.node)) child(new SocketSlot(this, true));
         }
     }
 
@@ -842,6 +842,8 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
     private void drawSockets() {
         final boolean inHand = canvas() != null && canvas().draggingFor(nodeId);
         for (final boolean supply : new boolean[] { false, true }) {
+            // The essentia smeltery only takes things in.
+            if (supply && com.gtnhplanner.power.sources.NrEssentiaSmeltery.is(model.node)) continue;
             final int[] r = SocketSlot.rect(supply);
             final boolean hot = isHovering() && localX() >= r[0]
                 && localX() < r[0] + r[2]
@@ -852,7 +854,8 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
             // A fluid tank takes cells and fluids only.
             final boolean tank = com.gtnhplanner.power.FluidTank.is(model.node);
             final String label = tank ? supply ? UiText.tr("card.give_cell_fluid") : UiText.tr("card.take_cell_fluid")
-                : supply ? UiText.tr("card.supply_any") : UiText.tr("card.drain_any");
+                : com.gtnhplanner.power.sources.NrEssentiaSmeltery.is(model.node) ? UiText.tr("card.smelt_item_fluid")
+                    : supply ? UiText.tr("card.supply_any") : UiText.tr("card.drain_any");
             Hyb.text(
                 label,
                 r[0] + (r[2] - Hyb.width(label)) / 2f,

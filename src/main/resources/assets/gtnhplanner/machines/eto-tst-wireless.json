@@ -1,0 +1,17 @@
+{
+  "format": "gtnhplanner-pack-machines/1",
+  "source": "TwistSpaceTechnology 0.8.1, its wireless, steam and heat machines on the maps they run (docs/design/tst-machines.md)",
+  "maps": [
+    {"id": "gt.recipe.hammer", "handlers": [{"id": "tst-large-steam-forge-hammer", "label": "Large Steam Forge Hammer", "kind": "multiblock", "eutMultiplier": 1, "items": ["gregtech:gt.blockmachines@19032"]}]},
+    {"id": "gt.recipe.alloysmelter", "handlers": [{"id": "tst-large-steam-alloy-smelter", "label": "Large Steam Alloy Smelter", "kind": "multiblock", "eutMultiplier": 1, "items": ["gregtech:gt.blockmachines@19033"]}]},
+    {"id": "gt.recipe.blastfurnace", "handlers": [{"id": "tst-swelegfyr-blast-furnace", "label": "Swelegfyr Blast Furnace", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19068", "gregtech:gt.blockmachines@19298"]}]},
+    {"id": "gg.recipe.componentassemblyline", "handlers": [{"id": "tst-indistinct-tentacle-prototype-mk-ii", "label": "Indistinct Tentacle Prototype MK-II", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19056"]}]},
+    {"id": "gt.recipe.assembler", "handlers": [{"id": "tst-indistinct-tentacle-prototype-mk-ii", "label": "Indistinct Tentacle Prototype MK-II", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19056"]}]},
+    {"id": "gg.recipe.precise_assembler", "handlers": [{"id": "tst-indistinct-tentacle-prototype-mk-ii", "label": "Indistinct Tentacle Prototype MK-II", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19056"]}]},
+    {"id": "tst.recipe.AssemblyLineWithoutResearchRecipeMap.name", "name": "Mega Assembly Line", "handlersOnRecipes": true, "handlers": [{"id": "tst-indistinct-tentacle-prototype-mk-ii", "label": "Indistinct Tentacle Prototype MK-II", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19056"]}]},
+    {"id": "tst.recipe.StellarForgeRecipeMap.name", "name": "Stellar Forge", "handlersOnRecipes": true, "handlers": [{"id": "tst-miracle-door", "label": "Miracle Door", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19016"]}]},
+    {"id": "tst.recipe.StellarForgeAlloySmelterRecipeMap.name", "name": "Stellar Forge: Alloy Smelter", "handlersOnRecipes": true, "handlers": [{"id": "tst-miracle-door", "label": "Miracle Door", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19016"]}]},
+    {"id": "tst.recipe.RapidHeatExchangeRecipeMap.name", "name": "Rapid Heat Exchange", "handlersOnRecipes": true, "handlers": [{"id": "tst-hyper-thermal-convector", "label": "Hyper Thermal Convector", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19069"]}]},
+    {"id": "tst.recipe.RapidCoolingDownRecipeMap.name", "name": "Rapid Cooling Down", "handlersOnRecipes": true, "handlers": [{"id": "tst-hyper-thermal-convector", "label": "Hyper Thermal Convector", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19069"]}]}
+  ]
+}

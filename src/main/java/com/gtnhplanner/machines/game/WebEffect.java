@@ -47,11 +47,15 @@ public final class WebEffect {
             final double perTick = Math.round(1 / duration);
             out = new EffectResult(1, 0, (int) Math.min(Integer.MAX_VALUE, parallels * perTick)).exact(1, draw);
         } else out = new EffectResult(1, 0, (int) parallels).exact(duration, draw);
+        final double[] inputs = new double[r.inputMultipliers()
+            .size()];
+        for (int i = 0; i < inputs.length; i++) inputs[i] = r.inputMultipliers()
+            .get(i);
         final double[] outputs = new double[r.outputMultipliers()
             .size()];
         for (int i = 0; i < outputs.length; i++) outputs[i] = r.outputMultipliers()
             .get(i);
-        return out.multipliers(null, outputs)
+        return out.multipliers(inputs, outputs)
             .stall(r.stall())
             .detail(r);
     }

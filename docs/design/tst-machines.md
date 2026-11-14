@@ -1,9 +1,12 @@
 # TwistSpaceTechnology machines
 
-TwistSpaceTechnology (TST) 0.8.0's recipe-processing multiblocks on cards, for the ETO GTNH 2.9.0 pack. The website's
+TwistSpaceTechnology (TST) 0.8.1's recipe-processing multiblocks on cards, for the ETO GTNH 2.9.0 pack. The website's
 data knows none of them: without this a TST machine picked on a card ran as the map's first machine. Every number
 below is from the TST source (`common/machine/...`) with the pack's `config/TwistSpaceTechnology.cfg`, whose relevant
-values all equal TST's defaults.
+values all equal TST's defaults. From 0.8.0, 0.8.1 renamed every TST map to `tst.recipe.*`, changed the Intensify
+Chemical Distorter (coil-tier speed on the chemical reactor, a new chemical plant mode; its cfg key
+`SpeedUpMultiplier_LCRMode` is now ignored), and added the Mega Digester and Bottled Chaos; other machines changed only
+text.
 
 ## How a TST machine reaches a card
 
@@ -18,7 +21,8 @@ values all equal TST's defaults.
      now returns the website's own map machine first (`RecipeRules.mapMachine`, same id and label as the old
      fallback, multiblock where the table says so), then the TST templates. A card with no pick still runs the
      map's machine.
-   - TST's own maps (17, `tst.common.recipe.*`) are new entries with English names and their machines.
+   - TST's own maps (`tst.recipe.*`; 0.8.0 called them `tst.common.recipe.*` and `tst.dyson.recipe.*`) are new
+     entries with English names and their machines.
 3. **Maths.** A template's `label` names a machine table entry. `MachineTable` keeps the TST entries in a separate
    `EXTRA` map filled by `machines/eto/TstMachines.register`; they are found by name (`behaviour`) but never listed
    in `names()`, and a name the website's table already has stays the website's. Each entry gives the speed (the
@@ -57,22 +61,22 @@ own maps by their English name.
 
 | ID | Machine | 中文 | Maps | Status | Settings / rule missing |
 |---|---|---|---|---|---|
-| 19001 | Intensify Chemical Distorter | 深度化学扭曲仪 | Intense Chemical Distorter; largechemicalreactor | done | coil (gates recipe heat) |
+| 19001 | Intensify Chemical Distorter | 深度化学扭曲仪 | Intense Chemical Distorter; largechemicalreactor; fluidchemicaleactor (Chemical Plant) | done | coil (gates recipe heat; the chemical plant needs Infinity) |
 | 19002 | Precise High-Energy Photonic Quantum Master | 精密高能光量子掌控者 | laserengraver; Photon Manipulator | done | intensifier tier |
 | 19003 | Miracle Top | 奇迹顶点 | Miracle Top; Quantum Inversion | done | rings |
 | 19004 | Magnetic Drive Pressure Former | 磁驱压力成型机 | extruder, metalbender, press, hammer | done | coil |
 | 19005 | Physical Form Switcher | 物质形态转换器 | fluidsolidifier, fluidextractor | done | glass (gate) |
 | 19006 | "Mini" Magnetic Mixer | "小型"磁力搅拌机 | multimixer | done | — |
 | 19007 | Magnetic Domain Constructor | 磁畴构建器 | electromagneticseparator, polarizer | done | rings |
-| 19008 | Silksong | 丝之歌 | wiremill | done on hatches | coil, sections; wireless (≥94 sections, no hatches): fixed 188 t × 100 batches on network EU |
-| 19009 | Holy Separator | 神圣分离者 | lathe | lathe done | sections; cutting runs `cuttingsaw` but NEI lists `fakecuttingsaw`, which the website data lacks (all cutters) |
+| 19008 | Silksong | 丝之歌 | wiremill | done | coil, sections; Power Source (wireless from 94 sections: 100 batches in 188 t on network EU) |
+| 19009 | Holy Separator | 神圣分离者 | lathe, cuttingsaw | done | sections; NEI's `fakecuttingsaw` page is read as `cuttingsaw` (all cutters) |
 | 19010 | Space Scaler | 空间缩放仪 | compressor, extractor, cyclotron, EIC, neutroniumcompressor | done | field generator; compressor CompressionTierKey gate not modelled (no recipe metadata) |
 | 19011 | Molecule Deconstructor | 分子解构器 | multielectro, multicentrifuge | done | sections |
 | 19012 | Crystalline Infinitier | 无限晶胞 | autoclave, chemicalbath; Crystalline Infinitier | done | glass, field (gate) |
-| 19013 | DSP Launch Site | — | — | not processing | launcher |
+| 19013 | DSP Launch Site | 戴森球模块发射场 | Dyson Sphere Module Launch Site | done | motor tier, overload seconds left (Space Warpers as a port), energy hatches or wireless |
 | 19014, 19015 | Dyson Sphere Ray Receiving Station, Artificial Star | 戴森球射线接收站, 人造恒星 | — | done as power sources | see Generators |
-| 19016 | Miracle Door | 奇迹之门 | Stellar Forge maps | not done | always wireless: fixed 512/1280 t over a circuit, 100 batches, critical photons |
-| 19017 | General Ore Processing Factory TST | 通用矿物处理厂TST | — | not processing | own ore logic |
+| 19016 | Miracle Door | 奇迹之门 | Stellar Forge; Stellar Forge: Alloy Smelter | done (always wireless) | circuit number x stack size; crafts a run (0 = no limit), which counts the run's Critical Photons as an input (read out on the card at 0); White Dwarf Mold casts molten outputs into ingots |
+| 19017 | General Ore Processing Factory TST | 通用矿物处理厂TST | Ore Processing Recipes | done | energy input (one hatch, several or exotic, wireless), ores a run on wireless; 1600 L Lubricant a run |
 | 19018, 19500 | ElvenWorkshop | 精灵工坊 | Rune Engraver; Mana Infuser | done | — |
 | 19019 | HyperSpacetimeTransformer | 极限时空转换仪 | Hyper Spacetime Transformer | done | fusion coil, cooling, matrix (gate) |
 | 19020 | General Circuit Converter | 通用电路板转换器 | — | not processing | oredict conversion |
@@ -80,53 +84,354 @@ own maps by their English name.
 | 19022 | Mega Bricked Blast Furnace | 巨型砖高炉 | — | not processing | primitive, fuel-efficiency over run time |
 | 19023 | Scavenger | 拾荒者 | sifter | done | — |
 | 19024 | CleanRoom | TST超净间 | — | not processing | cleanroom |
-| 19025 | Biosphere III | 生物圈III号 | brewer, fermenter | brewing/fermenting done | glass; bacterial vat modes scale fluids by hatch fill and Sievert (not a coefficient) |
+| 19025 | Biosphere III | 生物圈III号 | brewer, fermenter, BacteriaVat | done | glass; vat: mode, petri dishes and the bartworks vat's own settings (hatch, fill, void protection, radio hatch) |
 | 19026 | Tower of Abstraction (Mega Egg Generator) | 抽象之塔 | — | done as a power source | pieces, infinity, dragon and creeper eggs; see Generators |
 | 19027 | Advanced Mega Oil Cracker | 进阶巨型石油裂化机 | craker | done | coil |
-| 19028 | Indistinct Tentacle | 不可视之触 | Mega Assembly Line, componentassemblyline, assembler, precise_assembler | done on hatches | component casing (gates); wireless (UMV glass and casing, no hatches): fixed 512 t × 100 batches |
+| 19028 | Indistinct Tentacle | 不可视之触 | Mega Assembly Line, componentassemblyline, assembler, precise_assembler | done | component casing (gates); Power Source (wireless with UMV glass and casing: 100 batches in 512 t, or 20 t at 64x EU with an Astral Array Fabricator) |
 | 19029 | Astral Computing Array | 星规阵列 | — | not processing | computation |
-| 19030 | Thermal Energy Devourer | 热能饕餮 | vacuumfreezer | done on hatches | mode; wireless with a tesseract: fixed 128 t × 100 batches |
+| 19030 | Thermal Energy Devourer | 热能饕餮 | vacuumfreezer | done | mode; Power Source (an Energised Tesseract: 100 batches in 128 t) |
 | 19031 | Vacuum Filter Extractor | 真空抽滤器 | distillationtower, distillery | done | — |
-| 19032 | Large Steam Forge Hammer | 大型蒸汽锻造锤 | hammer | not done | steam at 1.33× EU with no pressure tier, parallels capped by 8 × 16·casing EU; PowerReport's steam is 1.25 × pressure |
-| 19033 | Large Steam Alloy Smelter | 大型蒸汽合金炉 | alloysmelter | not done | as above, 48 parallels on 24576 EU |
+| 19032 | Large Steam Forge Hammer | 大型蒸汽锻造锤 | hammer | done (steam) | steam casing: 16 parallels a tier on 8 EU/t each, steam 1.33F a recipe EU (the card's steam bill, not 1.25 x pressure) |
+| 19033 | Large Steam Alloy Smelter | 大型蒸汽合金炉 | alloysmelter | done (steam) | as above, 48 parallels on 24,576 EU/t |
 | 19034, 19035 | Eye of Wood, Bee Engineer | 武德之眼, 蜜蜂操纵者 | — | not processing | ore generator, bee breeding |
 | 19036 | "Mini" Household Cell Fragmentizer | "小型"家用破壁机 | macerator | done | glass (speed and gate), structure block |
-| 19037 | Hephaestus' Atelier | 赫菲斯托斯的工坊 | alloysmelter | alloy smelting on Molecular coils done | furnace mode (item-count EU, no map); T2/T3 coils force wireless |
-| 19038 | Deployed Nano Core | 展开的纳米核心 | Nano Core | done on hatches | wireless without hatches: 128 t × 100 batches |
+| 19037 | Hephaestus' Atelier | 赫菲斯托斯的工坊 | alloysmelter, smelting, furnace | done | ring coil (T1 hatches; T2/T3 wireless, 256/20-tick runs) |
+| 19038 | Deployed Nano Core | 展开的纳米核心 | Nano Core | done | Power Source (no hatches: 100 batches in 128 t) |
 | 19039 | Core Device of Human Power Generation Facility | 人类能源设施的核心装置 | fluidheater | done | coil |
 | 19040, 19041 | Starcore Miner, TST Large Disassembler | 星核钻机, TST大型拆解机 | — | not processing | miner, disassembly |
 | 19042–19045 | Space Apiary Module MK-I–IV | 太空蜂箱模块 | — | not processing | bee simulation |
-| 19046 | BallLightning | 球状闪电 | arcfurnace; Star Kernel Generator | arc and star kernel done | machine tier, fusion coil, coil (Infinity+), field, glass; fusion mode (FusionMaxEut cap, fusion tier gate); wireless at tier 4 without hatches |
-| 19047 | Industrial Magic Matrix | 工业注魔矩阵 | Industrial Magic Matrix | not done | speed from world node aspects, parallels from networked essentia |
+| 19046 | BallLightning | 球状闪电 | arcfurnace; fusionreactor; Star Kernel Generator | done with energy hatches | machine tier, fusion coil, coil (Infinity+), field, glass; wireless (tier 4 without hatches) not modelled |
+| 19047 | Industrial Magic Matrix | 工业注魔矩阵 | Industrial Magic Matrix | done | essentia cell, controller slot, energized nodes and their primal amounts; essentia and research not modelled |
 | 19048 | Large Canner | 大型装罐机 | canner | done | — |
-| 19049 | MegaArray (Big Bro Array) | 大哥阵列 | inserted machine's map | not done | map and voltage gate come from the inserted machine item |
+| 19049 | MegaArray (Big Bro Array) | 大哥阵列 | its 28 machine types' maps (cell mixer, centrifuge, electrolyzer; massfab; smelting) | processor mode done | machine tier, count, parallelism casing, coil, frame (gate); generator mode not done |
 | 19050 | Industrial Magnetar Separator | 工业电磁离析机 | electromagneticseparator | done | — |
-| 19051, 19052 | Eco-Sphere Simulator, Extreme Crafting Center | 拟似生态圈, 梦魇工业合成中心 | — | not processing | own simulation, AE2 crafting |
+| 19051 | Eco-Sphere Simulator | 拟似生态圈 | Eco-Sphere: Arboreal Genesis, Aquatic Simulation, Artificial Greenhouse, Directed Mob Cloning | done | see Machines with their own recipe pages |
+| 19052 | Extreme Crafting Center | 梦魇工业合成中心 | Extreme Craft Recipe Transform | done | pattern magnification, pattern crafts a cycle; no EU; containers handed back as outputs |
 | 19053 | Lightning Spire | 闪电尖塔 | — | done as a power source | rods, dynamo tier and amps; see Generators |
-| 19054 | DTPF Prototype MK-II | 超维度物质等离子锻炉原型机MK-II | plasmaforge | not done | execution cores share EU and split parallels, spare EU boosts, catalyst discount over run time |
-| 19055 | Large Neutron Oscillator | 大型中子振荡器 | NeutronActivatorWithEU | not done | execution cores (as above) |
-| 19056 | Indistinct Tentacle Prototype MK-II | 不可视之触原型机MK-II | as 19028 | not done | always wireless: 20 t per batch, lump-sum network EU |
+| 19054 | DTPF Prototype MK-II | 超维度物质等离子锻炉原型机MK-II | plasmaforge | done | coil, controllers, core counts, hours running (catalyst discount) |
+| 19055 | Large Neutron Oscillator | 大型中子振荡器 | NeutronActivatorWithEU | done | controllers, core counts |
+| 19056 | Indistinct Tentacle Prototype MK-II | 不可视之触原型机MK-II | as 19028 | done (always wireless) | — (an unlimited batch every 21 t on network EU) |
 | 19057 | Mass Fabricator : Genesis | 质量发生器 : 创世纪 | Mass Fabricator: Genesis | done | parallels (controllers + 1) |
 | 19058 | PULSAR - Incompact Cyclotron | PULSAR - 非紧凑式回旋加速器 | cyclotron | done | — |
-| 19059 | Strange Matter Aggregator | 奇异物质聚合器 | — | not processing | fuel-rod logic |
+| 19059 | Strange Matter Aggregator | 奇异物质聚合器 | Strange Matter Aggregation | done | oscillator, constraintor, merger tiers and counts, constrainers a run, consecutive runs, Core Element, speed and power controllers, energy hatches or wireless |
 | 19060 | Micro SpaceTime Fabricatorio | 微型时空发生器 | Micro SpaceTime Fabricatorio | done | field, SpaceTime Seed (outputs ×2) |
 | 19061 | Bloody Hell | 血狱 | Bloody Hell Altar | done | structure tier, speed runes; orb tier gate not modelled |
 | 19062 | Silicon Rock Synthesizer | 硅岩制造机 | Mega Stone Breaker | done | water and lava (outputs ×4 / ×1024; the 1000 L/s upkeep is not an input) |
 | 19063 | Manufacturing Center | 加工中心 | compressor, lathe, polarizer, fermenter, fluidextractor, extractor, laserengraver, autoclave, fluidsolidifier | done | core (gate); CompressionTierKey gate not modelled |
-| 19064 | Industrial Alchemy Tower | 工业炼金塔 | Industrial Alchemy Tower | not done | speed from node aspects, parallels from essentia |
+| 19064 | Industrial Alchemy Tower | 工业炼金塔 | Industrial Alchemy Tower | done | essentia cell, controller slot, energized nodes and their primal amounts |
 | 19065 | Giant Vacuum Drying Furnace | 巨型真空干燥炉 | vacfurnace, multidehydrator | done | coil, sections |
-| 19066 | TST Processing Array | TST处理阵列 | inserted machine's map | not done | no NEI catalyst; map, voltage and parallels from the inserted machine |
+| 19066 | TST Processing Array | TST处理阵列 | every basic single block's map (multimixer, multicentrifuge, multielectro for the cell three) | done | machine tier, count; CompressionTierKey gate not modelled |
 | 19067 | Advanced Circuit Assembly Line | 进阶电路装配线 | bw.recipe.cal (runs a copy without imprints) | done | imprint whitelist and single-hatch voltage cap not modelled |
-| 19068, 19298 | Swelegfyr Blast Furnace | 熯焱高炉 | blastfurnace | not done | EU discount and heat overclocks follow a heat that rises and decays over time |
-| 19069 | Hyper Thermal Convector | 高能态热对流器 | Rapid Heat Exchange, Rapid Cooling | not done | fixed 20 t, up to 128 or 16 batches of unlimited parallels, no EU |
-| 19070–19072, 19075, 19077, 19078 | Primordial Disjunctus, Skypiercer Tower, Laser Meteor Miner, Infusion Material Dispenser, Nether Interface, Super Water Purifier | — | — | not processing | own logic |
+| 19068, 19298 | Swelegfyr Blast Furnace | 熯焱高炉 | blastfurnace | done | coil (any; a recipe above coil heat + 100 K a hatch tier over MV refused), mode, heat (rises and decays: a setting), glass (below UMV caps the hatch tier); Blazing Pyrotheum an input |
+| 19069 | Hyper Thermal Convector | 高能态热对流器 | Rapid Heat Exchange, Rapid Cooling Down | done | — (20 t a run, unlimited parallels, no EU) |
+| 19070 | Primordial Disjunctus | — | — | not processing | own logic |
+| 19071 | Skypiercer Tower | 穿云尖塔 | Skypiercer Tower | done | mode, rings, crystals a stack, the tree's seconds in Passive Mode |
+| 19072 | Laser Meteor Miner | — | — | not processing | own logic |
 | 19073, 19076 | Basic Steam Generator, Large Solar Boiler | 基础蒸汽发电机, 大型太阳能锅炉 | — | done as power sources | dynamo; boiler, water, heat, calcification; see Generators |
 | 19074 | Universal Generator | 通用发电机 | — (gasTurbineFuels, dieselFuels) | done as a power source | see Generators |
+| 19075 | Infusion Material Dispenser | — | — | not processing | own logic |
+| 19077, 19078 | Nether Interface, Super Water Purifier | 地狱接口, 超净水生成器 | Nether Interface; Super Water Purifier | done | no settings: parallels from the hatches' EU |
 | 19079 | Integrated Assembly Matrix | 集成装配矩阵 | Mega Assembly Line | done | nanites; data-stick whitelist and highest-hatch voltage cap not modelled |
 | 19080 | Mega Solar Panel Factory | 巨型太阳能板工厂 | Mega Solar Panel Factory | done | component casing |
 | 19081 | Mega Naquadah Reactor | 巨型硅岩反应堆 | — (gg.recipe.naquadah_reactor) | done as a power source | new in 0.8.1; fuel, coolant, excited fluid, parallels, running time; see Generators |
+| 19082 | Bottled Chaos | 瓶中混沌 | Bottled Chaos; Bottled Chaos - Credential Injection; Bottled Chaos - Machine Structure Packaging | done | speed, power and overclock controllers, core tier, energy hatches or wireless, batches a run (wireless), credential capacity share, source upkeep fluid and L/s, Critical Photons a run, route time a batch |
+| 19083 | Mega Digester | 巨型煮解池 | digester | done | coil (gates recipe heat); new in 0.8.1 |
 
 Not registered in 0.8.0: `TST_TombOfTheDragon`, `TST_PatternMachineClass`, `GTCM_TestMultiMachine`.
+
+## Wireless, steam and heat machines
+
+`machines/eto/TstMachinesWireless` (settings in `TstWirelessControls`, handler templates in
+`assets/gtnhplanner/machines/eto-tst-wireless.json`, a second `HandlerData.EXTRA_FILES` entry), worked from TST tag
+0.8.1 with the pack's config (every value these read is TST's default) and GregTech 5.09.54.265; pinned by
+`TstWirelessMachinesTest`. Source lines below are under `common/machine/` unless named otherwise.
+
+### Wireless runs
+
+`WirelessEnergyMultiMachineBase` (`:141-207`): in wireless mode a run checks up to 100 batches
+(`DefaultCycleNum_WirelessEnergyMultiMachineBase`), each with the voltage at `Long.MAX_VALUE`, 1 A and
+`OverclockCalculator.ofNoOverclock`, which sets neither the speed bonus nor the EU modifier (GT `:94-99`, `:399-403`).
+A batch's EU, `ceil(recipe EU/t x parallels) x recipe ticks x getExtraEUCostMultiplier()`, leaves the owner's network
+when it starts; the run then lasts `getWirelessModeProcessingTime()` ticks however much it did.
+
+On the card this is the generic hook `MachineTable.Behaviour.fixedTicks` (read by `MachineEffects.fixedTicks`): a
+card whose entry gives it more than 0 runs that many ticks with no overclock (`Overclock.stats`), its EU/t a
+parallel is the recipe's times the entry's `power` (or the entry's own `fixedEut` where that is above 0), the pool
+caps no parallel (`MachineEffects.poweredParallelLimit`, `TstMachines.put` skips `paid`) and the hatches stop nothing
+(`PowerReport.report`, which `NodeMath` runs for a fixed run even at 0 EU/t; only a recipe gate stops it). For a
+wireless run `power` is recipe ticks x extra / run ticks, so the card's EU/t is the run's lump sum spread over it,
+and its parallels are 100 x a batch's. A batch with no parallel limit is counted as 2^31 - 1 crafts a run in all
+(`WebEffect` caps there anyway): one machine never runs short.
+
+What a machine uses up besides its recipe is the generic hook `MachineTable.Behaviour.upkeep`: a list of
+`machines/web/Upkeep` (an `item:`/`fluid:` id, an amount a second of running or a run, in or out), read by
+`MachineEffects.upkeep`. `machines/game/UpkeepPorts` (after every refresh, from `GTProvider`) gives the card a port
+for each, its amount a craft the run's amount (a second's x the run's seconds) over the run's crafts, so the plan wires
+and totals it like the recipe's own. A card with no limit to a run's crafts cannot share a run's amount out: it gets
+no port, and reads the amount out as a pinned reading ("..., not counted").
+
+The four machines that may run either way have a Power Source setting (`TstMachinesWireless.orWireless` wraps their
+hatch entries; Energy Hatches keeps the old maths):
+
+- **Silksong** (`GT_TileEntity_Silksong :261-274, :336`): wireless from 94 sections with no hatch; a batch is its
+  sections x (coil tier + 1) x 32 parallels, the run 188 ticks. Fewer sections: refused.
+- **Indistinct Tentacle** (`TST_IndistinctTentacle :231-257, :329-331, :436-453`): wireless with UMV glass, a UMV or
+  better component casing and no hatch; unlimited batches in 512 ticks, or 20 ticks at 64x the EU with an Astral
+  Array Fabricator in the controller (its own option). A casing below UMV is refused; the casing's recipe gates stay.
+- **Thermal Energy Devourer** (`TST_ThermalEnergyDevourer :181-185, :229-246, :284-287`): an Energised Tesseract in
+  the controller; unlimited batches in 128 ticks, the mode beside the point.
+- **Deployed Nano Core** (`TST_DeployedNanoCore :358, :375-377, :399-421`): no hatch; unlimited batches in 128
+  ticks.
+
+Always wireless:
+
+- **Miracle Door** (`TST_MiracleDoor`): never overclocked (`:347-351`), unlimited (`:386`). The run is
+  `max(1, 1280 / p)` ticks as a stellar forge and `max(1, 512 / p)` as an alloy smelter (`:457-463`, `ValueEnum
+  :152-155`: 64 s and 25.6 s), each batch costing its EU x p, x 2 as a stellar forge (`:451-455`), p the overclock
+  parameter: the controller slot's circuit number x stack size, 1 without one (`:482-491`). The setting is that
+  product. Each run takes p Critical Photons (`checkProcessing :399-407`, `consumePhoton :465-480`) however much it
+  crafts: the crafts a run are whatever its buses hold when it starts, which the card cannot know, so Crafts a Run is
+  a setting (0, the default, is the game's no limit). Set, it is the card's parallels and the photons are an input
+  of p / crafts each (one Door fed that much every run: p x 20 / ticks photons a second); at 0 the card reads them
+  out instead. White Dwarf Mold (a setting; the mold sits in an input bus, `prepareCatalyst :353-365`) casts each
+  molten output that has an ingot in `StellarForgeRecipePool.MoltenToIngot` (read from TST at run time) as the game
+  does (`turnToIngotRecipe :493-516`): litres / 144 ingots as an output of their own, the rest left on the fluid's
+  port; under 144 L it stays molten (`machines/game/TstWirelessPorts`).
+- **Indistinct Tentacle Prototype MK-II** (`modularizedMachine/MM_IndistinctTentaclePrototypeMK2`): the controller is
+  its own perfect execution core: no overclock (`:308-312`), no parallel limit
+  (`MultiExecutionCoreMachineBase.setupProcessingLogicWirelessEU :727-730`), recipe EU x ticks from the network, then
+  20 ticks (`done :317-336`), counted 1 to 20 and ended on the next tick (`runExecutionCoreTick :280-309`): 21 ticks a
+  batch. Perfect execution core hatches add more such lanes, which one card's unlimited batch does not need.
+- **Hyper Thermal Convector** (`TST_HyperThermalConvector :298-336`): no hatch, recipes at 0 EU/t; 128 (heat
+  exchange) or 16 (cooling) batches of unlimited parallels, the run 20 ticks whatever the recipe.
+
+### Steam
+
+The Large Steam Forge Hammer and Large Steam Alloy Smelter extend GT++'s `MTESteamMultiBlockBase`, but their logic is
+TST's (`multiMachineClasses/TST_SteamMultiMachineBase :86-98`): `ofNoOverclock` with a 1.33F EU discount, so a run is
+the recipe's own ticks and burns `ceil(EU/t x parallels x 1.33F)` L of steam a tick (`MTESteamMultiBlockBase
+:240-249` at efficiency 10000). Parallels are paid from `V[getTierRecipes()] x parallels` EU/t (`:176-183`), each at
+its recipe EU/t (`GTCM_ParallelHelper :86-90, :160-161`); a recipe above that never starts.
+
+- **Large Steam Forge Hammer** (`TST_LargeSteamForgeHammer :118, :184-188`): 16 parallels per steam casing tier
+  (Bronze Plated Bricks 1, Solid Steel Machine Casing 2, a setting) on 8 EU/t each: 128 or 256 EU/t.
+- **Large Steam Alloy Smelter** (`TST_LargeSteamAlloySmelter :120-123, :153-157`): 48 parallels at tier 3: 24,576
+  EU/t.
+
+The card's steam bill (`PowerReport.steam`) takes the entry's `steamPerEu` (1.33F) in place of the website's
+1.25 x pressure tier; the templates' `eutMultiplier` 1 keeps the recipe's EU/t on the handler's profile, which the
+parallel limit reads (a steam card's own EU/t is 0).
+
+### Swelegfyr Blast Furnace
+
+`TST_SwelegfyrBlastFurnace` (and the legacy controller 19298, a subclass on the old structure): 1 / 3.9F
+(`:485-489`), 4096 parallels, 256 in passive mode (`:479-483`), normal overclocks (`:491-494`) of which one perfect
+per 1800 K of heat over the recipe's (`:597-602`), and EU x (float) 0.9^((heat - recipe heat) / 900) in whole steps
+(`:588-590`), the heat being the furnace's `mHeatingCapacity`, which changes while it runs: raised to the coil's on
+forming (`:330`), falling a tenth of the way to the coil's every 10 s in normal mode (`:819-831`), climbing 5 K a
+second toward `floor(coil heat^1.08 / 100) x 100 + 1` in passive mode (`:331`, `:749-766`), partly reset on a new
+recipe (`:517-546`). Settings: the coil (every coil; a recipe hotter than the coil's heat + 100 K per tier of the
+dominant energy hatch over MV never starts, `:354`, `:568`, read off the card's hatch tier, `Context.runTier`), Mode,
+Heat in K, held between the coil's and the maximum (0 is the mode's steady heat: the coil's in normal mode, the
+maximum in passive mode), and Glass Tier (UMV by default): below UMV an energy hatch above the glass fails the
+structure (`:333-346`), which the card refuses. Blazing Pyrotheum is an input (`onRunningTick :749-766`, every 20
+running ticks): 1,000 L/s in normal mode, heat / 5 L/s (whole litres) in passive mode.
+
+Rapid heating is no setting: it is passive mode's warm-up after a recipe change (`RapidHeating :634-667`, 20-tick
+fake runs at V x A x 15/16 EU/t that burn extra pyrotheum and jump the heat toward the maximum, `:740-747`). It ends
+once the heat reaches the maximum, which is passive mode's steady heat anyway, so a furnace running one recipe on
+gets the same duration, EU and pyrotheum with it or without it; the warm-up itself is no steady rate (Heat in K
+covers a furnace not yet at the maximum).
+## Cores, arrays and Thaumcraft machines
+
+Some machines are worked out whole, the game's way, and the card shows the run as it is
+(`TstCoresCards.exact`): no overclock of the card's own, a speed and an EU factor that turn the recipe's ticks and
+EU/t into the run's, and the run's own parallels. `TstCoresGt` is GT's ProcessingLogic (OverclockCalculator, sub-tick
+parallels) with TST's `GTCM_ParallelHelper` (0.8.1 :60-190), which bills the machine's EU modifier and has no
+one-tier-above check.
+
+**Execution cores** (DTPF Prototype MK-II, Large Neutron Oscillator; `MultiExecutionCoreMachineBase`). The card
+sets the overclock controller (none 2/4, Low Speed Perfect 2/2, Perfect 4/4, Singularity 8/4), Parallels (the
+controller's plus 1), the speed controller's multiplier (speed bonus 1/m), the power controller (T1-T8: 0.95, 0.9,
+0.85, 0.8, 0.75, 0.7, 0.5, 0.25) and the counts of Execution, Advanced and Perfect Execution Cores. Any Perfect core:
+every input runs at once, 20 ticks, no overclock, EU/t x duration a parallel from the wireless network. Otherwise
+`TstCoresExecution` runs the controller and its cores tick by tick until the state repeats and takes that stretch's
+average: the budget is `(long) (0.975 x getMaxInputEu)`; idle cores are checked when one finishes and every 64 ticks,
+Advanced cores first at the whole spare budget, then plain cores and the controller at the spare budget over the idle
+ones left, each capped at `1 + parallels / (cores + 1)`; spare EU boosts working cores (a perfect type a tick per core
+EU/t, else `2^n - 1` ticks for `(4^n - 1)` x EU/t); a plain core ends when progress reaches duration - 1, the
+controller a tick after its duration. With Advanced cores the card counts the run as wireless (fixed ticks) and its
+EU/t is the hatches' and the network's together. Assumed: inputs never run short. The DTPF's excited fuels
+(DTEC/DTRC/DTPC/DTCC/DTSC, the first one the recipe takes) become `round(amount x max(0.25, 1 - hours / 24 x 0.75))`
+(:362-383, `MaxFuelDiscount_DTMPFP` 0.25); Hours Running defaults to 24 (the decay after a stop is not modelled).
+
+**Industrial Magic Matrix** (0.8.1 :389, :431-450, :558-644). Parallels = cell tier << 3, or Integer.MAX_VALUE with
+a Proof of Heroes in the controller slot (then the run lasts 1 tick). Speed from the energized nodes: none 1, 1-5
+nodes `(6 - n) x 1.75`, six nodes from each primal's amount (Aer, Ignis, Terra, Aqua, Ordo, Perditio): a missing
+primal gives 1 and 20 extra ticks each, else `1 / (1 + (0.4 + (0.45e)^(-0.005 Var) + 0.15 log2(1 + e^-Var)) x Mean /
+500)`, no lower than 1/11.4514, where the overclocks turn perfect. Each run gives back one Primordial Pearl per pearl
+the infusion takes (not for Avaritia's big pearl): the card's pearl input is `(P - 1) / P` of its parallels' (the
+pearl input's amount taken as the components'). Essentia supply and research are not modelled.
+
+**Industrial Alchemy Tower** (:297-315, :415-467). Parallels = cell tier^5 (Proof of Heroes: unlimited). Speed:
+none 1, 1-3 nodes `1 - 0.1 n`, four from the purest node's Ignis, Aer, Ordo, Perditio and 10:
+`base = 1/11.4514 + (0.7 - 1/11.4514)(1 - e^(min - 10))`, plus `(0.7 - base)(max - min) / max`; perfect at 1/11.4514.
+
+**Hephaestus' Atelier** (:182-187, :242-292, :325-513; Config :324-329). Its ring decides: Molecular Coil runs on
+hatches (alloy smelting perfect and unlimited; smelting a fixed 512 ticks at 7 EU/t an item, `(15/16 x
+getMaxInputEu) / 7` items); Ultimate Containment Field Generator and Teleportation Casing run wireless, every input in
+256 or 20 ticks, smelting 2048 EU an item, alloy smelting the recipe's EU/t x duration a parallel. The furnace maps'
+templates carry the 512 ticks and 7 EU/t (`Behaviour.handlerNumbers`).
+
+**Ball Lightning fusion** (mode 2, :445-531, :613-627). Machine tier 3+; 65536 parallels; perfect overclocks; speed
+0.25 at tier 4; when `FusionMaxEut = RECIPE_MAX x 4^(compact coil - 2) x 1.8^(field - 1)` is below the hatches, the
+run has that voltage at 1 A without amperage overclocks. Its fusion tier gate needs a startup the planner reads as 0
+from NEI, so it never refuses.
+
+**Intensify Chemical Distorter** (0.8.1 :234-351): its map 16 parallels at `1 / (1 + (coil heat - recipe heat) /
+900)`; the chemical reactor and the chemical plant 1024 parallels at `1 / (coil tier + 1)`; the chemical plant needs
+Infinity coils. **Mega Digester** (:182-230): `1 / (coil tier + 1)`, 2147483640 parallels, perfect.
+
+**TST Processing Array and MegaArray** (`TST_ProcessingArray`, `TST_BigBroArray` processor mode). Neither is an NEI
+catalyst, so the card's machine menu adds them after NEI's own on the maps `eto-tst-cores-arrays.json` lists
+(`machines/game/TstArrays`, from `CardModel.catalysts`); the machine put in them is the card's map, its tier and count
+settings (`TstCoresArrays`). Processing Array: any `MTEBasicMachineWithRecipe` (PAHelper :57-68; mixer, centrifuge and
+electrolyzer on their multiblock maps, :33-35), 1-64 machines; voltage V[tier] x the machine's amps (thermal centrifuge
+2, arc furnace 3, PAHelper :77-80), a recipe over it refused (:190); ProcessingLogic at amperage n without amperage
+overclocks, n parallels (:193-201), 2/4 overclocks. MegaArray: forms only with all four add-ons (:468-486); parallels
+`(int) min(n x 2^casing, max)` (:691-693, max 1,280 / 5,120 / 20,480 / 5,242,880 / ((2^31 - 1) << 11) / 5 x 5,
+:1104-1112), speed `(float) 0.66^casing`, EU `(float) 0.9^coil` (:498-499), on the hatches with 2/4 overclocks; refused
+over `8 x 4^machine tier` (:686-689) or a machine tier above frame + 4 under Quantum (:1127, :1151). Both smelt at GT's
+furnace recipe, 128 ticks at 4 EU/t. Not modelled: the PA's CompressionTierKey refusal, the deprecated Plasma Arc
+Furnace, batch mode, the MegaArray's glass and generator mode.
+
+**Biosphere III as a bacterial vat** (`TST_BiosphereIII` 0.8.1). On `bw.recipe.BacteriaVat` the card keeps the
+bartworks vat's settings and model (`BacterialVat`, `MachineModels`) and adds Mode and Petri Dishes (1-64, default 1;
+`TstCoresVat`). Parallels: 4 a dish in mode 0, 1 a dish in mode 1 (:266-273, the cap at :348); void protection (on by
+default) cuts them to `(capacity - stored) / (M x first fluid out)` (`GTCM_ParallelHelper` :133-155, GT
+`VoidProtectionHelper` :207-215), none fitting holds the machine. Speed bonus 0.5 / 1 (:275-282), normal overclocks.
+Only the first fluid in and out are multiplied (:375-376): mode 0 by bartworks' fill formula (:380-393), mode 1 by
+`1601 + 600 x (glass - recipe glass)` (:363-364). The vat card's Glass (`bioVatGlass`, HV-UXV here) serves the gate
+and mode 1. Not modelled: inputs short of `P x M x first fluid in` (the game lowers M and P, :366-373), the petri dish
+matching the culture.
+
+GregTech's cutters list their NEI page under `gt.recipe.fakecuttingsaw`, which merges a cut's fluids; the planner
+reads it as `gt.recipe.cuttingsaw` (`HandlerData.map`). The page's duration is the water variant's.
+
+## Machines with their own recipe pages
+
+These controllers look up no recipe: their NEI pages (TST's visual and fake maps) show what a run takes and makes,
+and the controller works the run out itself. `assets/gtnhplanner/machines/eto-tst-visual.json` adds the 14 maps
+(0.8.1 ids, `handlersOnRecipes`, the controller as the only machine; the Eco-Sphere maps also list their execution
+protocols) and `machines/eto/TstMachinesVisual` (with `TstVisualEcoSphere`) the entries. Every entry uses
+`fixedTicks` (the controller's own run length; no GT overclock on the card), `inputMultiplier` / `outputMultiplier`
+where a page's amount is not a parallel's, and `upkeep` for what a run uses that the page has no slot for. Line
+numbers are TST 0.8.1's; the pack's `TwistSpaceTechnology.cfg` keeps TST's defaults for all of them. Pinned by
+`TstVisualMachinesTest` and `TstVisualEcoSphereTest`.
+
+- **Nether Interface** (`TST_NetherInterface.checkProcessing` :204-263, `initStatics` :265-286): p = min(64,
+  ⌊EU / 7680⌋ − 2), refused under 3 × 7680 EU/t; 1200 t at 7680 × (2 + p) EU/t. A parallel: 16000 L distilled water
+  in, 16000 L Poor Nether Waste out, three weighted picks of the five stacks (weights 1/49/30/10/10, the page's
+  chances, so each stack × 3), 288 L molten Hellish Metal on 30 % of runs (expected value).
+- **Super Water Purifier** (`TST_SuperWaterPurifier.process` :196-287, `initStatics` :291-306): p = min(2,000,000,
+  ⌊EU / RECIPE_UMV⌋), refused under one; 1200 t at RECIPE_UMV × p. A parallel takes 1000 L UU-Matter (1 L
+  Concentrated) and makes 3 (6) picks of 1000 L: each grade 12 %, Stable Baryonic Matter 4 %.
+- **General Ore Processing Factory TST** (`TST_OreProcessingFactory` :183-431, `OP_Logic` :267-363, :488-508): no
+  overclock, 128 t, 30 EU/t an ore. Ores a run: one normal hatch ⌊V × 15/16 / 30⌋ (V its voltage, whatever its amps),
+  several or exotic hatches ⌊EU × 31/32 / 30⌋, wireless every ore in the bus (setting, 64 by default; 3840 EU an ore).
+  3200 L Lubricant every 256 running ticks (:446-452) is 1600 L a run whatever its size: the page's 1 L × 1600 / ores.
+  The pages list the ore only as an ore-dictionary alternative (`mInputs` empty), so `GTProvider` takes each
+  `mOreDictAlt` slot's first stack when a recipe has no `mInputs`.
+- **Extreme Crafting Center** (`TST_MegaCraftingCenter` :291-334, `TickEveryProcess` 20): runs the AE2 patterns pushed
+  into it, no EU, a cycle every 20 t; crafts a cycle = pattern magnification (GUI) × pattern crafts pushed. Each
+  pattern slot's container (the bucket of a lava bucket, :313-326) comes back: the page omits it, so `GTProvider` adds
+  `getContainerItem` × the input's count as an output on this map.
+- **Skypiercer Tower** (`TST_SkypiercerTower` :367-692; `CrystalEssentiaRecipePool`: two aspects → one, 20 t × the
+  aspect's tier, 1920 EU/t). GT's `OverclockCalculator` at 1920 EU/t on the hatches' whole EU with one amp: overclocks
+  = min(log4 ⌊EU / 1920⌋, voltage tiers above EV); EU/t 1920 × 4^oc for the whole run. Crystal Essence Mode (the
+  card's default, its ports are the page's crystals): p = max(6 × rings, 1), (int) (page ticks / 1.2^rings), each
+  overclock ÷2. Essentia Mode: p = max(16 × rings, 1), page ticks, ÷4. Passive Mode: p = max(6 × rings, 1) of output
+  from one of each input, ⌈20 × the tree's seconds / 1.2^rings⌉ (setting, the aspect's own seconds by default), ÷2.
+  Crystal Essence Mode also stops at the smaller of the two crystal stacks (:510-511): a setting, 64 by default.
+- **Strange Matter Aggregator** (`checkProcessingMM` :922-1236, `calculateParameters` :784-866, `setRunning`
+  :908-919; numbers in `Config` :114-140): one run. The maintenance fluid's 576/96/16 L picks the fluid tier.
+  Constrainer factor F = oscillator tier × count × constraintor tier × count × merger tier × count × 256/1024/16384;
+  parallel P = constrainers × F / (1 + streak), streak capped 24/144/384 by the merger tier; rods (long) (P × (1 +
+  streak)); antimatter max(1, (long) (P × (1 + 255/√oscillators))); constrainers ⌈rods / F⌉ (as many Core Elements,
+  an upkeep port, when supplied: all rods then the strange ones); plasma P × input factor × 1000/50/1; tesseracts
+  P × 1.0/0.99/0.90 / F's fluid factor; frames rods × the same rate; maintenance (int) (base × (oscillator tier ×
+  count)^0.8 / constraintors); byproducts mergers × 144 × streak (× 2 with Core Elements). Time constraintor tier ×
+  2400/800/200 by oscillator tier × the speed controller's float; EU/t (long) (power controller float × (long)
+  (merger tier × mergers^0.7 × RECIPE_MAX × 256)) in float arithmetic, gated at the hatches carrying it and
+  RECIPE_MAX × 256 when wired. Wireless (no energy hatches, :787): `setRunning` :909-913 hands the network
+  (long) (EU modifier × draw × the unsped run time) once a run (`addEUToGlobalEnergyMap` with a positive amount, a
+  gain in 0.8.1), so the card's EU/t is that over the run's ticks, negative; no hatch gate.
+- **Dyson Sphere Module Launch Site** (`TST_DSPLauncher.checkProcessing` :340-395, :499-506): one launch at the page's
+  EU/t; time page ticks / motor tier, or with overload left t s: / ((1 + t^(1/(5 + 900000/t))) × 30 × motor tier), ×30
+  flat at t ≤ 1. Wireless pays the page's whole EU up front (EU/t × page ticks over the shorter run). A Space Warper
+  buys 900 s of overload: 1/900 a second while overloaded, an upkeep port.
+- **Bottled Chaos** (`BottledChaosProcessingLogic.processWired` :120-199, :286-341; `BottledChaosOverclock` :137-201;
+  `BottledChaosChainedProcessingSeconds` 20, `MinimumOverclockSeconds` 5). Base B = route EU/t × power controller;
+  fastest speed S from the overclock type (Normal 2/4 without a controller module, Low Speed Perfect 2/2, Perfect
+  4/4, Singularity 8/4) with a fractional last step; budget L = 400 × S / speed bonus; batches N = ⌊L / route
+  ticks⌋ (one when longer); work W = N × route ticks × speed bonus; speed = min(S, max(1, W / 100)); EU/t
+  min(pool, ⌈⌈B⌉ × speed^(ln power / ln time)⌉); ticks 100 when W > 100 and S reaches W / 100, else ⌈W / speed⌉.
+  Gates (wired only): route EU/t over V[UHV + core level] (V[MAX] at level 4), ⌈B⌉ over the group's EU/t. Several
+  groups split the hatches' EU/t by their credential frames' capacity (`BottledChaosPowerAllocator.powerForShare`
+  :6-10): this group's and all groups' capacity are settings (1 of 1). Wireless (`processWireless` :202-259): every
+  batch waiting (setting), folded at V[MAX]; work W = batches × route ticks × (EU/t / V[MAX]) × speed bonus, billed
+  once ⌈V[MAX] × power controller × W × max(1, W / 100)^(ln(power / time) / ln time)⌉ (`wirelessCost` :28-41) over a
+  100 t run, no gates. The installed sources' upkeep (`BottledChaosMachineParameters` :562-710, one fluid at so many
+  L/s while running) and Critical Photons a run (energy-only sources, `roundItemDemands` :669-681) are settings that
+  add upkeep ports. The route time a batch is a setting (the page's reference time by default). The credential and
+  structure pages are workbench crafts: 1 t, no EU.
+- **Eco-Sphere Simulator** (`TST_EcoSphereSimulator.process` :1096-1180; `common/machine/EcoSphere/`). The four maps
+  are NEI-only (`.fake()`, 0 EU/t, 100 t); the execution protocol's mode works each run out and no item is ever used
+  up, so a card's item inputs (circuits, saplings, seeds, focus tokens, all stack 0) are no ports and the medium is.
+  Shared: power tier t = (int) calculateVoltageTier(V × A) (:1112), refused under 1; EU/t 30 × 4^(t−1) for the whole
+  run (`EcoSphereModeSupport` :44-47); 100 t, 20 t with a Speed upgrade (`EcoSphereUpgradeResult` :53). Parallels P
+  (:49-54): 1 at t ≤ 1, 4^(t−1) on the Tier 2 structure (a Fount of Ecology), else ⌊2 × 2^(0.1 (t−1) (8 + ln(25 +
+  e^(25−t)) / ln 5))⌋ (9, 40, 159, 576, 1914, 5834, 16314 from t = 2: Tier 2 passes it at t = 8). The medium a
+  parallel halves (integer, never under 1) per Fluid Reduction or Speed upgrade (:41-46). Each output stack is
+  × 1.5 per Output, Perfect Genetics and Output Pulverization upgrade and × U(0.85, 1), truncated, at least 1
+  (:73-123): the card has that draw's expected value, worked exactly. Settings: structure tier (Tier 1), glass (ZPM
+  to UEV, only for the upgrade slots min(1 + glass × (1 or 2 on Tier 2), 9), gated), upgrade counts (0), Perfect
+  Genetics on the tree and greenhouse, Blood Orb and Output Pulverization on cloning (elsewhere they are an Output or
+  Capacity upgrade); a slot holds min(64, 4^capacity) and there are min(4, 1 + capacity) slots (gated).
+  - Arboreal Genesis (`TreeGrowthSimulatorMode` :55-171): the card runs P × saplings parallels (setting, 1; one kind
+    holds one slot's limit). An output is (long) (product × 20/3/8/1 × P × saplings × focus) where the page already
+    shows product × multiplier; a page output's category is the first of log, sapling, leaves, fruit left whose
+    multiplier divides it. Categories are settings (all selected; the game starts with none and refuses a run without
+    one); fewer selected than the tree has focus the rest by the float 1 + (have − chosen) / chosen / 3. Temporal
+    fluid, death water and unknown water make the special tree's products from any saplings (counted as full slots
+    and the rest). UU matter's four symbols are one random product a category with the multiplier applied twice
+    (400 / 9 / 64 / 1 a parallel), counted as products of one (the picked product's own count is random). Not
+    modelled: Perfect Genetics' Forestry genome on water (the page has the species' default genome only).
+  - Aquatic Simulation (`AquaticZoneSimulatorMode` :58-206): a run rolls every pool member; the card is its page's.
+    Chance = ⌊100000 / pool weight⌋ × the page's stack (its weight): distilled water 156 (all 49 pages' members),
+    unknown water 72 + 18 empty. A roll r in [0, 100000) makes (long) (weight × P × chance × r / 10^8) when r ≤
+    chance × log2(t + 2); the card sums the 100000 rolls. Focus (setting, none): W items of this member multiply its
+    chance by W, of another divide it (at least 1), an Offspring divides distilled water's by 41 W. BoP's lily meta
+    3 is in the pool twice and rolls twice (the game adds both before the scaling; the card is within an item a
+    run). The Offspring (t ≥ 14) has no page.
+  - Artificial Greenhouse (`ArtificialGreenHouseMode` :54-106, `CropsNHFarm`): P × seeds parallels (setting, 1), the
+    page's fertilizer a seed; an output is ⌈yield × P × seeds × 40⌉. Hybrid seed: (stack + (gain + 1) / 100) ×
+    chance × drop chance × 1.03^gain × (100/256) / ⌈growth duration / rate⌉, rate = (6 + growth) × (1200 − 10 ×
+    tier) / 100 (CropsNH 2.0.140), Perfect Genetics 31/31; alternate seed the same at 1/1/1 × 0.25; another plantable
+    the page's stack × chance (its simulated drops, to 4 places) × (100/256) / 15 × 0.25. Settings: seed kind (hybrid
+    where the fertilizer is not 20 L, else another plantable), crop tier, growth duration (the tier whose 600 × tier
+    costs the page's fertilizer, else 1 and 600), drop chance (0.95^tier or one of CropsNH's nine overrides), growth
+    and gain (1). Drops past the page's top nine are no ports.
+  - Directed Mob Cloning (`DirectedMobClonerMode` :60-197): address 0 (blood to Life Essence, either structure)
+    makes 100 L a parallel scaled in 5 L steps. A mob page needs Tier 2 (gated); its Life Essence (⌈4 × health⌉ a
+    parallel) is exact, its soul vial is display only, its first drop is stack × P × (chance + 5000 × Looting) /
+    10000 × 15125 / 1024 / D², D = max(55, (int) (health / 9 × 10)), health the Life Essence / 4; the drop's MobsInfo
+    chance (100 %) and Looting (0; the Tier III protocol is X) are settings. The mob's other drops come from MobsInfo
+    and have no port; an orb paying LP (1 LP for 5 L) is not modelled.
+
+`tst.recipe.AdvCircuitAssemblyLineRecipeMap.name` has no NEI page in the pack
+(`Debug_DisplayAdvCircuitAssemblyLineCurrentRecipe=false`, `GTCMRecipe` :697-712 `disableRegisterNEI`); the Advanced
+Circuit Assembly Line's catalyst is on `bw.recipe.cal` (`TST_AdvCircuitAssemblyLine` :238-241), already done.
 
 ## Generators
 

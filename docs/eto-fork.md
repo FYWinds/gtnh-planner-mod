@@ -23,6 +23,10 @@ package and the save format are upstream's, so plans and the gtnhplanner.com acc
 - **Wire trunks.** Wires from one output port to several cards leave as one line and fork near the cards; wires from
   several cards into one input port join near those cards and come in as one line (`layout/WireTrunks`,
   `docs/design/routing-and-arrange.md`); Settings, Board, "Shared wire trunks" turns both off.
+- **Processing multiblocks.** The Extreme Industrial Greenhouse, the Integrated Ore Factory and the Large Essentia
+  Smeltery are non-recipe machines under Other (`power/sources/NrGreenhouse`, `NrOreFactory`, `NrEssentiaSmeltery`,
+  the game's seeds, recipes and aspects read by `power/game/Nr*Game`; essentia as card readings;
+  `docs/design/nr-process.md`).
 - **TwistSpaceTechnology machines.** 38 TST 0.8.0 multiblocks compute their own speed, power, parallels and
   overclocks on cards (`machines/eto/`, `assets/gtnhplanner/machines/eto-tst.json`, `docs/design/tst-machines.md`);
   TST 0.8.1's Universal Generator is a power source (`power/sources/TstGenerators`).

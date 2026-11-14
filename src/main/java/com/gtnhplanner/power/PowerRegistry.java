@@ -47,6 +47,7 @@ public final class PowerRegistry {
             // The Other column's one source, after its planning cards.
             all.addAll(Railcraft.otherSources());
             all.addAll(com.gtnhplanner.power.sources.NrSources.sources());
+            all.addAll(com.gtnhplanner.power.sources.NrProcess.sources());
             final Map<String, PowerSource> index = new LinkedHashMap<>();
             for (final PowerSource source : all) index.put(source.id(), source);
             sources = Collections.unmodifiableList(all);

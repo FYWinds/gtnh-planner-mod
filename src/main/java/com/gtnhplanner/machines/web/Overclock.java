@@ -63,6 +63,19 @@ public final class Overclock {
                 runtime.eut);
         }
 
+        // A fixed run (a TST machine on the wireless network): its own ticks, no overclock, the table's EU/t a parallel
+        final double fixedTicks = effective.machineType != null ? MachineEffects.fixedTicks(effective, node) : 0;
+        final double fixedEut = fixedTicks > 0 ? MachineEffects.fixedEut(effective, node) : 0;
+        if (fixedTicks > 0) return new Stats(
+            tier,
+            minimumTier,
+            0,
+            0,
+            4,
+            4,
+            fixedTicks,
+            fixedEut > 0 ? fixedEut : effective.eut * MachineEffects.eutMultiplier(effective, node));
+
         final double durationMultiplier = effective.machineType != null
             ? MachineEffects.durationMultiplier(effective, node)
             : 1;

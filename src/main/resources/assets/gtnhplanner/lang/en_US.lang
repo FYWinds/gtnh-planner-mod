@@ -1826,3 +1826,49 @@ gtnhplanner.ui.power.warning_under_a_tick=%s lasts under a tick at %s EU/t: each
 
 ## gen-steam
 gtnhplanner.ui.power.warning_dynamos_carry=The dynamos carry %s EU/t of the %s EU/t the strikes make; the rest is lost.
+
+## tst-wireless
+gtnhplanner.ui.upkeep.uncounted=%s, not counted
+gtnhplanner.ui.upkeep.per_run=%1$s a run (every %2$s t): set Crafts a Run to count it
+gtnhplanner.ui.upkeep.per_second=%s/s while running: set Crafts a Run to count it
+
+## nr-process
+gtnhplanner.ui.card.smelt_item_fluid=SMELT ITEM/FLUID
+gtnhplanner.data.extreme_industrial_greenhouse=Extreme Industrial Greenhouse
+gtnhplanner.data.integrated_ore_factory=Integrated Ore Factory
+gtnhplanner.data.large_essentia_smeltery=Large Essentia Smeltery
+gtnhplanner.data.grows_one_seed_type_on_water_and_power_fertilize_0ddc8b6a=Grows one seed type on water and power. Fertilizer makes it five times as much.
+gtnhplanner.data.runs_an_ore_through_its_mode_s_machines_every_30_adf27bad=Runs an ore through its mode's machines. Every 30 EU/t of its hatches is one ore a run.
+gtnhplanner.data.smelts_what_is_wired_to_it_into_essentia_on_powe_3b1ec28c=Smelts what is wired to it into essentia, on power and vis.
+gtnhplanner.data.seed=Seed
+gtnhplanner.data.seeds_planted_0_fills_it=Seeds planted (0 fills it)
+gtnhplanner.data.energy_hatch_amps=Energy hatch amps
+gtnhplanner.data.ore=Ore
+gtnhplanner.data.bath_fluid=Bath fluid
+gtnhplanner.data.void_stone_dust=Void stone dust
+gtnhplanner.data.length=Length
+gtnhplanner.data.diffusion_cells=Diffusion cells
+gtnhplanner.data.perditio_drawn_per_5_ticks=Perditio drawn per 5 ticks
+gtnhplanner.data.purification=Purification
+gtnhplanner.data.voltage_tier=Voltage tier
+gtnhplanner.data.seed_capacity=Seed capacity
+gtnhplanner.data.seeds_planted=Seeds planted
+gtnhplanner.data.fertilizer_boost=Fertilizer boost
+gtnhplanner.data.flux_gas=Flux gas
+gtnhplanner.data.node_vis=Node vis
+gtnhplanner.data.macerate_ore_washer_thermal_centrifuge_macerate=Macerate -> Ore Washer -> Thermal Centrifuge -> Macerate
+gtnhplanner.data.macerate_ore_washer_macerate_centrifuge=Macerate -> Ore Washer -> Macerate -> Centrifuge
+gtnhplanner.data.macerate_macerate_centrifuge=Macerate -> Macerate -> Centrifuge
+gtnhplanner.data.macerate_ore_washer_sifter=Macerate -> Ore Washer -> Sifter
+gtnhplanner.data.macerate_chemical_bathing_macerate_centrifuge=Macerate -> Chemical Bathing -> Macerate -> Centrifuge
+gtnhplanner.data.macerate_chemical_bathing_thermal_centrifuge_mac_c35b84af=Macerate -> Chemical Bathing -> Thermal Centrifuge -> Macerate
+gtnhplanner.data.forge_hammer_forge_hammer_simple_washer=Forge Hammer -> Forge Hammer -> Simple Washer
+gtnhplanner.data.below_ev_the_greenhouse_has_no_room_for_seeds_so_d53cf398=Below EV the greenhouse has no room for seeds, so it does nothing.
+gtnhplanner.data.that_much_power_is_past_the_game_s_last_voltage__3a3daaba=That much power is past the game's last voltage tier: the greenhouse cannot run.
+gtnhplanner.data.more_seeds_than_the_greenhouse_holds_at_this_vol_83c30bee=More seeds than the greenhouse holds at this voltage: it will not run.
+gtnhplanner.data.the_greenhouse_does_not_take_this_seed=The greenhouse does not take this seed.
+gtnhplanner.data.needs_at_least_30_eu_t_of_energy_hatches_for_one_146d99fb=Needs at least 30 EU/t of energy hatches for one ore a run.
+gtnhplanner.data.no_bath_fluid_for_this_ore_the_chemical_bath_pas_6dbbfe34=No bath fluid for this ore: the chemical bath passes it by.
+gtnhplanner.data.the_game_has_no_such_item_or_fluid=The game has no such item or fluid.
+gtnhplanner.data.the_smeltery_needs_480_eu_t_on_these_hatches_it__25edecc4=The smeltery needs 480 EU/t: on these hatches it stops for lack of power.
+gtnhplanner.data.this_fluid_has_no_block_the_smeltery_uses_it_up__68e125d3=This fluid has no block: the smeltery uses it up and makes no essentia.

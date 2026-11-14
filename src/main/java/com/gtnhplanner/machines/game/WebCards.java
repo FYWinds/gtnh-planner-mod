@@ -85,6 +85,9 @@ public final class WebCards {
         r.metadata.addProperty("specialValue", special);
         if (node.properties.get(GTProvider.FUSION_THRESHOLD) instanceof final Number startup)
             r.metadata.addProperty("fusionStartupEu", startup.doubleValue());
+        // A vat recipe's glass tier: Biosphere III's automation mode scales its fluids by the glass above it.
+        if (MachineModels.isVat(node.properties)) r.metadata
+            .addProperty(com.gtnhplanner.machines.eto.TstCoresVat.RECIPE_GLASS, MachineModels.needs(node).glass());
         r.inputs = resources(node.inputs);
         r.outputs = resources(node.outputs);
         final JsonObject eec = EecCards.metadata(node);
@@ -217,6 +220,14 @@ public final class WebCards {
                     e.getKey()
                         .substring(CONTROL_PREFIX.length()),
                     String.valueOf(e.getValue()));
+        // A vat card's own settings, under the website's keys as its node carries them (FfSettings, PlanExport):
+        // Biosphere III's parallels read the output hatch, its fill and the glass (machines/eto/TstCoresVat).
+        if (MachineModels.isVat(node.properties))
+            for (final String key : com.gtnhplanner.machines.BacterialVat.SETTING_KEYS) {
+                final Object value = cfg.settings.get(key);
+                if (value != null && !String.valueOf(value)
+                    .isEmpty()) tiers.put(key, String.valueOf(value));
+            }
         n.machineConfigTiers = tiers;
         n.machineHandlerId = handlerId(node, recipe);
         if (steam(recipe, n.machineHandlerId)) {

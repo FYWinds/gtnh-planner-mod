@@ -139,8 +139,14 @@ public final class HandlerData {
     @Nullable
     public static MapEntry map(@Nullable final String id) {
         load();
-        return id == null ? null : maps.get(id);
+        return id == null ? null : maps.get(ALIASES.getOrDefault(id, id));
     }
+
+    /**
+     * Game maps NEI shows in place of a map the data has: GregTech's cutters list {@code gt.recipe.fakecuttingsaw}
+     * (FakeCuttingRecipes, one page per cut with every fluid it takes) while they run {@code gt.recipe.cuttingsaw}.
+     */
+    private static final Map<String, String> ALIASES = Map.of("gt.recipe.fakecuttingsaw", "gt.recipe.cuttingsaw");
 
     /** Every map in the file. */
     public static Map<String, MapEntry> maps() {
@@ -296,7 +302,12 @@ public final class HandlerData {
      * Machine data this pack adds beside the website's, in handlers.json's shape (controls and maps): maps the
      * website's data lacks, and more machines for maps it has. Kept out of handlers.json, which stays the website's.
      */
-    private static final List<String> EXTRA_FILES = List.of("/assets/gtnhplanner/machines/eto-tst.json");
+    private static final List<String> EXTRA_FILES = List.of(
+        "/assets/gtnhplanner/machines/eto-tst.json",
+        "/assets/gtnhplanner/machines/eto-tst-wireless.json",
+        "/assets/gtnhplanner/machines/eto-tst-cores.json",
+        "/assets/gtnhplanner/machines/eto-tst-cores-arrays.json",
+        "/assets/gtnhplanner/machines/eto-tst-visual.json");
 
     /** One extra file merged in: its controls, its new maps, and its machines after a known map's own. */
     private static void merge(final String file, final Map<String, MapEntry> byId,

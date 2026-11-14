@@ -72,10 +72,12 @@ public final class BacterialVat {
     public record Setup(int glass, Hatch hatch, double fill, boolean voidExcess, @Nullable Material radio,
         int shutter) {}
 
-    /** The smallest hatch that holds a full x1001 run on top of being half full; the Giant hatch past that. */
-    static Hatch defaultHatch(final long fluidOut) {
-        for (final Hatch h : HATCHES)
-            if (h.capacity() > 0 && h.capacity() / 2.0 >= (MAX_BONUS + 1) * (double) fluidOut) return h;
+    /**
+     * The smallest hatch that holds a run of {@code runOut} litres on top of being half full; the Giant hatch past
+     * that.
+     */
+    public static Hatch defaultHatch(final double runOut) {
+        for (final Hatch h : HATCHES) if (h.capacity() > 0 && h.capacity() / 2.0 >= runOut) return h;
         return hatch("giant");
     }
 
@@ -103,9 +105,18 @@ public final class BacterialVat {
         return new Object[] { null, 0 };
     }
 
-    /** The card's settings as stored (the website's keys and values); missing ones are the recipe's defaults. */
+    /**
+     * The card's settings as stored (the website's keys and values); missing ones are the recipe's defaults, the hatch
+     * the smallest that holds a full x1001 run at half full.
+     */
     public static Setup setup(final Map<String, ?> settings, final Needs needs, final long fluidOut,
         final List<Material> materials) {
+        return setup(settings, needs, materials, defaultHatch((MAX_BONUS + 1) * (double) fluidOut));
+    }
+
+    /** The same, with the output hatch a card of another machine (TstCoresVat's Biosphere III) starts with. */
+    public static Setup setup(final Map<String, ?> settings, final Needs needs, final List<Material> materials,
+        final Hatch defaultHatch) {
         final String glass = TreeGrowthSimulator.string(settings, GLASS),
             fill = TreeGrowthSimulator.string(settings, FILL), shutter = TreeGrowthSimulator.string(settings, SHUTTER),
             radio = TreeGrowthSimulator.string(settings, RADIO);
@@ -117,7 +128,7 @@ public final class BacterialVat {
         final Hatch hatch = hatch(TreeGrowthSimulator.string(settings, OUTPUT_HATCH));
         return new Setup(
             parse(glass, Math.max(3, needs.glass())),
-            hatch != null ? hatch : defaultHatch(fluidOut),
+            hatch != null ? hatch : defaultHatch,
             Math.min(100, Math.max(0, parseDouble(fill, 50))),
             "void".equals(TreeGrowthSimulator.string(settings, VOID)),
             chosen,
@@ -152,10 +163,18 @@ public final class BacterialVat {
     /** The fill's multiplier, whether a run fits on what is stored, and the litres of output a run keeps. */
     public record Fill(long stored, int multiplier, boolean fits, long keptOut) {}
 
+    /** The litres the hatch is kept at: its capacity times the fill, rounded. */
+    public static long stored(final Setup setup) {
+        return Math.round(
+            setup.hatch()
+                .capacity() * setup.fill()
+                / 100);
+    }
+
     public static Fill fill(final Setup setup, final long fluidOut) {
         final long capacity = setup.hatch()
             .capacity();
-        final long stored = Math.round(capacity * setup.fill() / 100);
+        final long stored = stored(setup);
         final int multiplier = multiplierAt(stored, capacity);
         final long room = capacity > 0 ? capacity - stored : Long.MAX_VALUE;
         final boolean fits = (double) multiplier * fluidOut <= room;
@@ -204,19 +223,7 @@ public final class BacterialVat {
         final int overclocks) {
         final Fill fill = fill(setup, fluidOut);
         final List<FormulaLine> lines = new ArrayList<>();
-        if (setup.hatch()
-            .capacity() == 0)
-            lines.add(FormulaLine.of("fill", "1x", FormulaLine.knob("ME", OUTPUT_HATCH), " hatch keeps nothing"));
-        else if (fill.stored() <= 0) lines.add(FormulaLine.of("fill", "1x", "an empty hatch"));
-        else lines.add(
-            FormulaLine.of(
-                "fill",
-                FormulaLine.number(fill.multiplier()) + "x",
-                "⌈1000·(1−(2·",
-                FormulaLine.knob(FormulaLine.number(setup.fill() / 100), FILL),
-                "−1)",
-                FormulaLine.sup("2"),
-                ")⌉+1"));
+        lines.add(fillLine(setup));
         if (fluidIn > 0) lines.add(
             FormulaLine.of(
                 "in",
@@ -259,6 +266,36 @@ public final class BacterialVat {
                 "rate",
                 FormulaLine.number(seconds > 0 ? fill.keptOut() / seconds : 0) + " L/s",
                 FormulaLine.number(fill.keptOut()) + " L ÷ " + FormulaLine.number(seconds) + "s"));
+        lines.addAll(requirements(needs, setup));
+        lines.add(
+            FormulaLine.of(
+                "power",
+                FormulaLine.number(runEut) + " EU/t",
+                FormulaLine.number(baseEut) + "·4",
+                FormulaLine.sup(String.valueOf(overclocks))));
+        return lines;
+    }
+
+    /** The fill's line: the multiplier the stored litres give the first fluid in and out (MTEBioVat.calcMod + 1). */
+    public static FormulaLine fillLine(final Setup setup) {
+        final Fill fill = fill(setup, 0);
+        if (setup.hatch()
+            .capacity() == 0)
+            return FormulaLine.of("fill", "1x", FormulaLine.knob("ME", OUTPUT_HATCH), " hatch keeps nothing");
+        if (fill.stored() <= 0) return FormulaLine.of("fill", "1x", "an empty hatch");
+        return FormulaLine.of(
+            "fill",
+            FormulaLine.number(fill.multiplier()) + "x",
+            "⌈1000·(1−(2·",
+            FormulaLine.knob(FormulaLine.number(setup.fill() / 100), FILL),
+            "−1)",
+            FormulaLine.sup("2"),
+            ")⌉+1");
+    }
+
+    /** The recipe's requirements met or not: the glass, the radio hatch's sieverts and what it burns. */
+    public static List<FormulaLine> requirements(final Needs needs, final Setup setup) {
+        final List<FormulaLine> lines = new ArrayList<>();
         final boolean glassOk = setup.glass() >= needs.glass();
         lines.add(
             FormulaLine.of(
@@ -296,12 +333,6 @@ public final class BacterialVat {
                     FormulaLine.number(burnPerSecond(m)) + "/s",
                     "20 ÷ (" + m.mass() + "·" + FormulaLine.number(decayTicks(m.sievert())) + "t)"));
         }
-        lines.add(
-            FormulaLine.of(
-                "power",
-                FormulaLine.number(runEut) + " EU/t",
-                FormulaLine.number(baseEut) + "·4",
-                FormulaLine.sup(String.valueOf(overclocks))));
         return lines;
     }
 }

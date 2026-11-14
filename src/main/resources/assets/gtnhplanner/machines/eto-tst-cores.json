@@ -1,0 +1,17 @@
+{
+  "format": "gtnhplanner-pack-machines/1",
+  "source": "TwistSpaceTechnology 0.8.1: the execution-core, Thaumcraft and new machines and the missing modes of done ones, on the maps they run (docs/design/tst-machines.md, Cores, arrays and Thaumcraft machines)",
+  "maps": [
+    {"id": "gt.recipe.plasmaforge", "handlers": [{"id": "tst-dimensionally-transcendent-matter-plasma-forge-prototype-mk-ii", "label": "Dimensionally Transcendent Matter Plasma Forge Prototype MK-II", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19054"]}]},
+    {"id": "gtnhlanth.recipe.digester", "handlers": [{"id": "tst-mega-digester", "label": "Mega Digester", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19083"]}]},
+    {"id": "gt.recipe.cuttingsaw", "handlers": [{"id": "tst-holy-separator", "label": "Holy Separator", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19009"]}]},
+    {"id": "bw.recipe.BacteriaVat", "handlers": [{"id": "tst-biosphere-iii", "label": "Biosphere III", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19025"]}]},
+    {"id": "smelting", "handlers": [{"id": "tst-hephaestus-atelier", "label": "Hephaestus' Atelier", "kind": "multiblock", "durationTicks": 512, "eut": 7, "items": ["gregtech:gt.blockmachines@19037"]}]},
+    {"id": "gt.recipe.furnace", "handlers": [{"id": "tst-hephaestus-atelier", "label": "Hephaestus' Atelier", "kind": "multiblock", "durationTicks": 512, "eut": 7, "items": ["gregtech:gt.blockmachines@19037"]}]},
+    {"id": "gt.recipe.fusionreactor", "handlers": [{"id": "tst-balllightning", "label": "BallLightning", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19046"]}]},
+    {"id": "gt.recipe.fluidchemicaleactor", "handlers": [{"id": "tst-intensify-chemical-distorter", "label": "Intensify Chemical Distorter", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19001"]}]},
+    {"id": "tst.recipe.NeutronActivatorWithEURecipeMap.name", "name": "Neutron Oscillator - Electric Neutron Activator", "handlersOnRecipes": true, "handlers": [{"id": "tst-large-neutron-oscillator", "label": "Large Neutron Oscillator", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19055"]}]},
+    {"id": "tst.recipe.IndustrialMagicMatrixRecipeMap.name", "name": "Industrial Infusion Matrix Recipes", "handlersOnRecipes": true, "handlers": [{"id": "tst-industrial-magic-matrix", "label": "Industrial Magic Matrix", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19047"]}]},
+    {"id": "tst.recipe.IndustrialAlchemyTowerRecipeMap.name", "name": "Industrial Alchemy Tower", "handlersOnRecipes": true, "handlers": [{"id": "tst-industrial-alchemy-tower", "label": "Industrial Alchemy Tower", "kind": "multiblock", "items": ["gregtech:gt.blockmachines@19064"]}]}
+  ]
+}

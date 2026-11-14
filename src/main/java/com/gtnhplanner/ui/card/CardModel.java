@@ -387,7 +387,7 @@ public final class CardModel {
         return views;
     }
 
-    /** The machines NEI says run a node's recipe. */
+    /** The machines NEI says run a node's recipe, and the ones it does not list (the Auto Workbench, TST's arrays). */
     public static List<ItemStack> catalystsOf(final Node node) {
         return catalysts(com.gtnhplanner.nei.RecipeRefs.of(node.recipeId));
     }
@@ -400,12 +400,16 @@ public final class CardModel {
         }
         // A crafting-grid recipe also runs on GT++'s Auto Workbench, each tier its own machine, after NEI's own.
         if (com.gtnhplanner.machines.game.AutoWorkbench.crafts(ref.handler))
-            for (final ItemStack awb : com.gtnhplanner.machines.game.AutoWorkbench.stacks()) {
-                boolean listed = false;
-                for (final ItemStack s : out) listed |= ItemStack.areItemStacksEqual(s, awb);
-                if (!listed) out.add(awb);
-            }
+            for (final ItemStack awb : com.gtnhplanner.machines.game.AutoWorkbench.stacks()) addUnlisted(out, awb);
+        // TwistSpaceTechnology's arrays are no catalyst: they join the maps the machines put in them run.
+        for (final ItemStack array : com.gtnhplanner.machines.game.TstArrays.stacks(ref.handler))
+            addUnlisted(out, array);
         return out;
+    }
+
+    private static void addUnlisted(final List<ItemStack> out, final ItemStack machine) {
+        for (final ItemStack s : out) if (ItemStack.areItemStacksEqual(s, machine)) return;
+        out.add(machine);
     }
 
     /** GregTech's programmed circuit is not a port (it is never consumed); read it from NEI's ingredient list. */

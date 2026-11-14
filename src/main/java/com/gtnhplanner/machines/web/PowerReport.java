@@ -72,7 +72,10 @@ public final class PowerReport {
 
         final boolean exoticChip = multiblock && !typedBudget && hatchType.exotic();
         return new Report(
-            gate != null ? OVER_TIER : state(effective, tier, multiblock, poolEuT, singleDrawEuT),
+            // A fixed run's EU comes from no hatch (MachineEffects.fixedTicks): only a gate stops it.
+            gate != null ? OVER_TIER
+                : MachineEffects.fixedTicks(effective, node) > 0 ? OK
+                    : state(effective, tier, multiblock, poolEuT, singleDrawEuT),
             gate,
             tier,
             minimumTier,
@@ -159,7 +162,7 @@ public final class PowerReport {
     /**
      * getNodeSteamReport: a singleblock burns 2 L per EU (a bronze machine the recipe's EU at twice the duration, a
      * high pressure one twice the EU); a steam multiblock 1 L per EU of recipe EU x 1.25 x its pressure tier per
-     * parallel. Smelting bills GT's 4 EU/t furnace recipe.
+     * parallel, or its table entry's own litres per EU. Smelting bills GT's 4 EU/t furnace recipe.
      */
     @Nullable
     public static Steam steam(final Web.Recipe recipe, final Web.Node node) {
@@ -175,6 +178,14 @@ public final class PowerReport {
             final int pressureTier = MachineEffects.context(effective, node)
                 .tier(MachineControls.STEAM_PRESSURE) + 1;
             final double parallels = MachineEffects.parallelMultiplier(effective, node);
+            // A table entry's own rate (the pack's steam machines): its litres per EU of every parallel, rounded once.
+            final MachineTable.Behaviour b = MachineTable.behaviour(effective.machineType);
+            if (b != null && b.steamPerEu != null) return new Steam(
+                Math.ceil(baseEut * parallels * b.steamPerEu),
+                baseEut * b.steamPerEu,
+                parallels,
+                true,
+                false);
             final double single = baseEut * 1.25 * pressureTier;
             return new Steam(Math.ceil(single * parallels), single, parallels, true, pressureTier == 2);
         }

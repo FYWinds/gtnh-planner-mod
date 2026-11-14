@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.Function;
+import java.util.function.ToDoubleBiFunction;
 import java.util.function.ToDoubleFunction;
 import java.util.function.ToIntFunction;
 import java.util.function.UnaryOperator;
@@ -103,6 +104,11 @@ public final class MachineTable {
         @Nullable
         public final Map<String, String> settings;
         public final double poolEuT;
+        /**
+         * The mod's own: the voltage tier the machine runs at (Power.runTier, a multiblock's energy hatches as picked),
+         * -1 where unknown. The pack's machines (machines/eto) read the hatch tier from it.
+         */
+        public final int runTier;
 
         public Context(final ToIntFunction<String> tier, final ToDoubleFunction<String> value, final int voltageTier,
             @Nullable final Integer recipeVoltageTier, @Nullable final Integer recipeSpecialValue,
@@ -124,6 +130,23 @@ public final class MachineTable {
             @Nullable final Integer recipeVoltageTier, @Nullable final Integer recipeSpecialValue,
             @Nullable final String recipeMap, @Nullable final Web.Recipe recipe,
             @Nullable final Map<String, String> settings, final double poolEuT) {
+            this(
+                tier,
+                value,
+                voltageTier,
+                recipeVoltageTier,
+                recipeSpecialValue,
+                recipeMap,
+                recipe,
+                settings,
+                poolEuT,
+                -1);
+        }
+
+        public Context(final ToIntFunction<String> tier, final ToDoubleFunction<String> value, final int voltageTier,
+            @Nullable final Integer recipeVoltageTier, @Nullable final Integer recipeSpecialValue,
+            @Nullable final String recipeMap, @Nullable final Web.Recipe recipe,
+            @Nullable final Map<String, String> settings, final double poolEuT, final int runTier) {
             this.tier = tier;
             this.value = value;
             this.voltageTier = voltageTier;
@@ -133,6 +156,7 @@ public final class MachineTable {
             this.recipe = recipe;
             this.settings = settings;
             this.poolEuT = poolEuT;
+            this.runTier = runTier;
         }
 
         public int tier(final String controlId) {
@@ -171,6 +195,25 @@ public final class MachineTable {
         public DoubleUnaryOperator quantiseDuration;
         @Nullable
         public Integer cycleTicks;
+        /**
+         * A run of this many ticks whatever the power (above 0; else the usual maths) whose EU comes from no hatch (the
+         * pack's wireless machines, machines/eto): no overclock, the pool limits no parallel and stops nothing, and
+         * {@link #power} spreads the run's EU over it. {@link MachineEffects#fixedTicks} reads it.
+         */
+        @Nullable
+        public Coefficient fixedTicks;
+        /** Above 0 with {@link #fixedTicks}: the run's EU/t a parallel, for the recipe's EU/t x {@link #power}. */
+        @Nullable
+        public Coefficient fixedEut;
+        /**
+         * The resources the machine itself adds to its recipe's (a fluid it burns while it runs, an item each run
+         * uses up), for the card's settings; null for none. {@link MachineEffects#upkeep} reads it.
+         */
+        @Nullable
+        public Function<Context, List<Upkeep>> upkeep;
+        /** A steam multiblock's litres of steam per EU of its recipe, in place of the website's 1.25 x pressure. */
+        @Nullable
+        public Double steamPerEu;
         @Nullable
         public Coefficient speed;
         @Nullable
@@ -202,6 +245,17 @@ public final class MachineTable {
         public List<String> hidesControls;
         @Nullable
         public List<String> aliases;
+        /** The pack's own: a multiplier on one recipe input's amount (a catalyst discount); 1 when null. */
+        @Nullable
+        public ToDoubleBiFunction<Context, Web.Resource> inputMultiplier;
+        /** The pack's own: a multiplier on one recipe output's amount, beside the settings' own; 1 when null. */
+        @Nullable
+        public ToDoubleBiFunction<Context, Web.Resource> outputMultiplier;
+        /**
+         * The pack's own: the handler template's durationTicks and eut stand though the entry states a speed or
+         * power (a machine that runs a map at its own fixed recipe, as GT's furnaces do on smelting).
+         */
+        public boolean handlerNumbers;
         @Nullable
         public String note;
 
@@ -319,6 +373,26 @@ public final class MachineTable {
             return this;
         }
 
+        public Behaviour fixedTicks(final Coefficient f) {
+            fixedTicks = f;
+            return this;
+        }
+
+        public Behaviour fixedEut(final Coefficient f) {
+            fixedEut = f;
+            return this;
+        }
+
+        public Behaviour upkeep(final Function<Context, List<Upkeep>> f) {
+            upkeep = f;
+            return this;
+        }
+
+        public Behaviour steamPerEu(final double litres) {
+            steamPerEu = litres;
+            return this;
+        }
+
         public Behaviour hidesControls(final String... ids) {
             hidesControls = List.of(ids);
             return this;
@@ -331,6 +405,21 @@ public final class MachineTable {
 
         public Behaviour note(final String text) {
             note = text;
+            return this;
+        }
+
+        public Behaviour inputMultiplier(final ToDoubleBiFunction<Context, Web.Resource> f) {
+            inputMultiplier = f;
+            return this;
+        }
+
+        public Behaviour outputMultiplier(final ToDoubleBiFunction<Context, Web.Resource> f) {
+            outputMultiplier = f;
+            return this;
+        }
+
+        public Behaviour handlerNumbers() {
+            handlerNumbers = true;
             return this;
         }
     }
@@ -371,7 +460,7 @@ public final class MachineTable {
     /** machineTableSeedsFromBase: the table states this machine's speed or power itself. */
     public static boolean seedsFromBase(@Nullable final String machineType) {
         final Behaviour b = behaviour(machineType);
-        return b != null && (b.speed != null || b.power != null);
+        return b != null && !b.handlerNumbers && (b.speed != null || b.power != null);
     }
 
     /** getMachineTableControls: the settings this machine adds (per recipe where it says so). */

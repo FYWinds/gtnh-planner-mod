@@ -89,6 +89,9 @@ public class GTProvider implements PropertyProvider {
         Node.afterRefresh = node -> {
             com.gtnhplanner.machines.game.WebEffect.forget(node);
             com.gtnhplanner.machines.game.MachineModels.afterRefresh(node);
+            // A table entry's upkeep (machines/web Upkeep), then the Miracle Door's ingot mold.
+            com.gtnhplanner.machines.game.UpkeepPorts.afterRefresh(node);
+            com.gtnhplanner.machines.game.TstWirelessPorts.afterRefresh(node);
         };
         // Every other GregTech card runs on the website's machine maths (machines/web).
         com.gtnhplanner.data.MachineConfig.nodeEffect = com.gtnhplanner.machines.game.WebEffect::effect;
@@ -260,6 +263,13 @@ public class GTProvider implements PropertyProvider {
                     in,
                     r.mInputChances != null ? r.mInputChances[i] / GT_CHANCE_SCALE : 1.f));
         }
+        // A recipe that keeps its items only as alternatives (TwistSpaceTechnology's ore processing page: no inputs,
+        // every accepted ore form in mOreDictAlt): the first form of each slot, as NEI shows it first.
+        if (r.mInputs.length == 0 && r instanceof final GTRecipe.GTRecipe_WithAlt alt && alt.mOreDictAlt != null)
+            for (final ItemStack[] slot : alt.mOreDictAlt) {
+                if (slot == null || slot.length == 0 || slot[0] == null || slot[0].stackSize <= 0) continue;
+                node.inputs.add(new Port<>(RecipePropertyAPI.ITEM, copyOf(slot[0]), 1.f));
+            }
         for (int i = 0; i < r.mOutputs.length; i++) {
             if (r.mOutputs[i] == null) continue;
             node.outputs.add(
@@ -284,6 +294,19 @@ public class GTProvider implements PropertyProvider {
                     copyOf(r.mFluidOutputs[i]),
                     r.mFluidOutputChances != null ? r.mFluidOutputChances[i] / GT_CHANCE_SCALE : 1.f));
         }
+        // TwistSpaceTechnology's Extreme Crafting Center hands back each pattern slot's container (the bucket of a lava
+        // bucket; TST_MegaCraftingCenter :313-326), which its page leaves out: an output a slot of the input.
+        if (gthMap != null && "tst.recipe.VisualExtremeCraftRecipeMap.name".equals(gthMap.unlocalizedName))
+            for (final ItemStack in : r.mInputs) {
+                if (in == null || in.stackSize <= 0 || in.getItem() == null || !in.getItem()
+                    .hasContainerItem(in)) continue;
+                final ItemStack container = in.getItem()
+                    .getContainerItem(in);
+                if (container == null) continue;
+                final ItemStack out = container.copy();
+                out.stackSize = container.stackSize * in.stackSize;
+                node.outputs.add(new Port<>(RecipePropertyAPI.ITEM, out, 1.f));
+            }
 
         node.inputs.removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
         node.outputs.removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);

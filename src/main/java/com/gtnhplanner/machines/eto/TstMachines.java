@@ -18,7 +18,7 @@ import com.gtnhplanner.machines.web.Tiers;
 import com.gtnhplanner.machines.web.Web;
 
 /**
- * TwistSpaceTechnology 0.8.0's recipe-processing multiblocks as machine table entries, beside the website's own
+ * TwistSpaceTechnology 0.8.1's recipe-processing multiblocks as machine table entries, beside the website's own
  * (MachineTable keeps them out of its names): each machine's speed, EU/t, parallels and overclock as its controller
  * computes them, from the pack's config (docs/design/tst-machines.md has the inventory and the source lines). The
  * maps each machine runs, and its item, are in {@code assets/gtnhplanner/machines/eto-tst.json}. A speed is the
@@ -31,7 +31,8 @@ public final class TstMachines {
 
     // region Recipe maps, by the name the data gives them (a formula's Context.recipeMap)
 
-    static final String LCR = "Large Chemical Reactor", LASER_ENGRAVER = "Laser Engraver", EXTRUDER = "Extruder",
+    static final String ICD = "Intense Chemical Distorter", CHEMICAL_PLANT = "Chemical Plant",
+        FUSION = "Fusion Reactor", LASER_ENGRAVER = "Laser Engraver", EXTRUDER = "Extruder",
         CYCLOTRON = "COMET - Compact Cyclotron", EIC = "Electric Implosion Compressor",
         NEUTRONIUM_COMPRESSOR = "Neutronium Compressor", AUTOCLAVE = "Autoclave", CHEMICAL_BATH = "Chemical Bath",
         COMPONENT_ASSEMBLY_LINE = "Component Assembly Line", ASSEMBLER = "Assembler",
@@ -126,19 +127,31 @@ public final class TstMachines {
         MATRIX_GATE = "This recipe needs a higher Energy Sustainment Matrix tier.",
         CASING_GATE = "This recipe needs a higher component casing tier.",
         CORE_GATE = "This recipe needs a higher MultiUse Core tier.",
-        BALL_TIER_GATE = "This mode needs a higher machine tier.";
+        BALL_TIER_GATE = "This mode needs a higher machine tier.",
+        INFINITY_COIL_GATE = "This mode needs Infinity coils or better.";
 
     /** Every machine the inventory marks done, by the label its handler templates carry. */
     public static void register(final Map<String, Behaviour> machines) {
-        // GT_TileEntity_IntensifyChemicalDistorter: 16 parallels at 1x in its own mode, 1024 at 10x as a chemical
-        // reactor, perfect overclocks; a recipe hotter than the coils is refused.
+        TstMachinesVisual.register(machines);
+        // GT_TileEntity_IntensifyChemicalDistorter (0.8.1, :283-351): its own map 16 parallels at 1 / (1 + whole
+        // 900 K steps of coil heat over the recipe's), the chemical reactor and the chemical plant 1024 parallels at
+        // 1 / (coil tier + 1); perfect overclocks; a recipe hotter than the coils is refused, the chemical plant takes
+        // Infinity coils or better.
         put(
             machines,
             "Intensify Chemical Distorter",
             machine().overclock(perfect())
-                .speed(c -> speedOf(on(c, LCR) ? 1F / 10 : 1F / 1))
-                .parallels(c -> on(c, LCR) ? 1024 : 16)
-                .controls(HOT_COIL_CONTROL));
+                .speed(c -> {
+                    if (on(c, ICD)) {
+                        final long heat = 1 + 900L * (coil(c) + 2);
+                        final int excess = (int) Math.max(0, (heat - recipeSpecial(c)) / 900);
+                        return speedOf((double) (1F / 1) / (1 + excess));
+                    }
+                    return speedOf(1F / Math.max(1, coil(c) + 1));
+                })
+                .parallels(c -> on(c, ICD) ? 16 : 1024)
+                .controls(HOT_COIL_CONTROL)
+                .recipeGate(c -> on(c, CHEMICAL_PLANT) && coil(c) < 11 ? INFINITY_COIL_GATE : null));
         // GT_TileEntity_PreciseHighEnergyPhotonicQuantumMaster: 10000 / (10000 + the 25 intensifiers' increments),
         // halved again as a laser engraver; perfect with UMV intensifiers or better.
         put(
@@ -193,14 +206,21 @@ public final class TstMachines {
                 .speed(c -> speedOf((float) Math.pow(0.75F, totalPowerTier(c))))
                 .parallels(c -> (int) Math.min((long) rings(c, 1) * 64, Integer.MAX_VALUE))
                 .controls(count(RINGS, "Rings", 1, null)));
-        // GT_TileEntity_Silksong, with energy hatches (without, from 94 sections, it runs wireless: not modelled).
+        // GT_TileEntity_Silksong; from 94 sections without hatches it runs wireless: 100 batches of its parallels in
+        // 188 ticks (TstMachinesWireless.orWireless).
         put(
             machines,
             "Silksong",
-            machine().overclock(c -> pieces(c) >= 94 ? perfect() : normal())
-                .speed(c -> speedOf((float) (Math.pow(0.85F, totalPowerTier(c)) / ((coil(c) + 1) * 1F))))
-                .parallels(c -> (int) Math.min((long) pieces(c) * (coil(c) + 1) * 32, Integer.MAX_VALUE))
-                .controls(COIL_CONTROL, PIECES_CONTROL));
+            TstMachinesWireless.orWireless(
+                machine().overclock(c -> pieces(c) >= 94 ? perfect() : normal())
+                    .speed(c -> speedOf((float) (Math.pow(0.85F, totalPowerTier(c)) / ((coil(c) + 1) * 1F))))
+                    .parallels(c -> (int) Math.min((long) pieces(c) * (coil(c) + 1) * 32, Integer.MAX_VALUE))
+                    .controls(COIL_CONTROL, PIECES_CONTROL),
+                TstWirelessControls.WIRELESS_CONTROL,
+                c -> 188,
+                c -> 1,
+                null,
+                TstMachinesWireless::silksongGate));
         // GT_TileEntity_HolySeparator: 8 parallels a section, perfect from 16.
         put(
             machines,
@@ -272,14 +292,19 @@ public final class TstMachines {
                 .speed(c -> speedOf((float) Math.pow(0.8D, totalPowerTier(c))))
                 .power(0.6F)
                 .parallels(Integer.MAX_VALUE));
-        // TST_BiosphereIII as a brewery or fermenter: 4x, 1 << (glass * 2 - 6) parallels.
+        // TST_BiosphereIII (0.8.1, :266-282): a brewery or fermenter at 4x, 1 << (glass * 2 - 6) parallels; a bacterial
+        // vat (TstCoresVat) at 2x and 4 parallels a petri dish (mode 0) or 1x and 1 a dish (mode 1), as many as the
+        // output hatch takes. Normal overclocks (:284-287).
         put(
             machines,
             "Biosphere III",
             machine().overclock(normal())
-                .speed(speedOf(0.25f))
-                .parallels(c -> 1 << Math.max(glass(c) * 2 - 6, 0))
-                .controls(GLASS_CONTROL));
+                .speed(c -> speedOf(TstCoresVat.on(c) ? TstCoresVat.speedBonus(c) : 0.25f))
+                .parallels(c -> TstCoresVat.on(c) ? TstCoresVat.parallels(c) : 1 << Math.max(glass(c) * 2 - 6, 0))
+                .controls(GLASS_CONTROL)
+                .controlsFor(
+                    r -> TstCoresVat.MAP.equals(RecipeRules.recipeMapName(r)) ? TstCoresVat.CONTROLS
+                        : List.of(GLASS_CONTROL)));
         // TST_AdvancedMegaOilCracker: 2x, EU / (coil tier + 1), 256 parallels, perfect from Hypogen coils.
         put(
             machines,
@@ -291,27 +316,42 @@ public final class TstMachines {
                 .controls(COIL_CONTROL));
         // TST_IndistinctTentacle with energy hatches: 1x/2x/4x/4x by mode, 256 parallels, perfect on a recipe no
         // higher than the component casing; a recipe two tiers past it (or a component recipe past it) is refused.
+        // With UMV glass and casing and no hatches it runs wireless: 100 unlimited batches in 512 ticks, or in 20 at
+        // 64x the EU with an Astral Array Fabricator in the controller (TstMachinesWireless.orWireless).
         put(
             machines,
             "Indistinct Tentacle",
-            machine().overclock(c -> recipeTier(c) <= c.tier(COMPONENT_CASING) ? perfect() : normal())
-                .speed(
-                    c -> speedOf(
-                        on(c, COMPONENT_ASSEMBLY_LINE) ? 1F / 2
-                            : on(c, ASSEMBLER) || on(c, PRECISE_ASSEMBLER) ? 1F / 4 : 1F / 1))
-                .parallels(256)
-                .controls(COMPONENT_CASING_CONTROL)
-                .recipeGate(TstMachines::tentacleGate));
+            TstMachinesWireless.orWireless(
+                machine().overclock(c -> recipeTier(c) <= c.tier(COMPONENT_CASING) ? perfect() : normal())
+                    .speed(
+                        c -> speedOf(
+                            on(c, COMPONENT_ASSEMBLY_LINE) ? 1F / 2
+                                : on(c, ASSEMBLER) || on(c, PRECISE_ASSEMBLER) ? 1F / 4 : 1F / 1))
+                    .parallels(256)
+                    .controls(COMPONENT_CASING_CONTROL)
+                    .recipeGate(TstMachines::tentacleGate),
+                TstWirelessControls.TENTACLE_POWER_CONTROL,
+                c -> TstMachinesWireless.astralArray(c) ? 20 : 512,
+                c -> TstMachinesWireless.astralArray(c) ? 64 : 1,
+                c -> Integer.MAX_VALUE,
+                TstMachinesWireless::tentacleGate));
         // TST_ThermalEnergyDevourer with energy hatches: high speed 0.5 / k at 1024 parallels, devourer EU / k at
-        // any parallels; k = 1 + the hatches' EU tier, rounded down.
+        // any parallels; k = 1 + the hatches' EU tier, rounded down. With an Energised Tesseract in the controller it
+        // runs wireless: 100 unlimited batches in 128 ticks (TstMachinesWireless.orWireless).
         put(
             machines,
             "Thermal Energy Devourer",
-            machine().overclock(normal())
-                .speed(c -> speedOf(c.tier(DEVOURER_MODE) == 1 ? 1 : 0.5F / devourerCoefficient(c)))
-                .power(c -> c.tier(DEVOURER_MODE) == 0 ? 1 : 1F / devourerCoefficient(c))
-                .parallels(c -> c.tier(DEVOURER_MODE) == 1 ? Integer.MAX_VALUE : 1024)
-                .controls(DEVOURER_MODE_CONTROL));
+            TstMachinesWireless.orWireless(
+                machine().overclock(normal())
+                    .speed(c -> speedOf(c.tier(DEVOURER_MODE) == 1 ? 1 : 0.5F / devourerCoefficient(c)))
+                    .power(c -> c.tier(DEVOURER_MODE) == 0 ? 1 : 1F / devourerCoefficient(c))
+                    .parallels(c -> c.tier(DEVOURER_MODE) == 1 ? Integer.MAX_VALUE : 1024)
+                    .controls(DEVOURER_MODE_CONTROL),
+                TstWirelessControls.DEVOURER_POWER_CONTROL,
+                c -> 128,
+                c -> 1,
+                c -> Integer.MAX_VALUE,
+                null));
         // TST_VacuumFilterExtractor: 1 / (1 + total power tier), 0.5 EU, perfect as a distillery.
         put(
             machines,
@@ -333,18 +373,20 @@ public final class TstMachines {
                 })
                 .controls(GLASS_CONTROL, MACERATOR_BLOCK_CONTROL)
                 .recipeGate(TstMachines::glassGate));
-        // TST_HephaestusAtelier as an alloy smelter with Molecular Coils (higher coils run wireless: not modelled).
-        put(
-            machines,
-            "Hephaestus' Atelier",
-            machine().overclock(perfect())
-                .parallels(Integer.MAX_VALUE));
-        // TST_DeployedNanoCore with energy hatches.
+        // TST_HephaestusAtelier: TstMachinesCores (both modes, every coil).
+        // TST_DeployedNanoCore with energy hatches; without any it runs wireless: 100 unlimited batches in 128 ticks
+        // (TstMachinesWireless.orWireless).
         put(
             machines,
             "Deployed Nano Core",
-            machine().overclock(perfect())
-                .parallels(Integer.MAX_VALUE));
+            TstMachinesWireless.orWireless(
+                machine().overclock(perfect())
+                    .parallels(Integer.MAX_VALUE),
+                TstWirelessControls.WIRELESS_CONTROL,
+                c -> 128,
+                c -> 1,
+                null,
+                null));
         // TST_CoreDeviceOfHumanPowerGenerationFacility: 1 / (coil tier + 1), perfect.
         put(
             machines,
@@ -353,30 +395,7 @@ public final class TstMachines {
                 .speed(c -> speedOf(1F / (1 + coil(c))))
                 .parallels(Integer.MAX_VALUE)
                 .controls(COIL_CONTROL));
-        // TST_BallLightning, arc furnace mode 0 and star kernel mode 3 with energy hatches: 0.25^(tier - mode - 1),
-        // 2^(compact coil x coil tier) arc parallels, star kernel EU 1 - 0.099 per field tier past the first.
-        put(
-            machines,
-            "BallLightning",
-            machine().overclock(c -> !on(c, STAR_KERNEL) && field(c, BALL_FIELD) > 2 ? perfect() : normal())
-                .speed(c -> {
-                    final int lead = ballTier(c) - (on(c, STAR_KERNEL) ? 3 : 0);
-                    return speedOf(lead > 1 ? (float) Math.pow(0.25, lead - 1) : 1);
-                })
-                .power(c -> on(c, STAR_KERNEL) ? (float) (1 - 0.099 * (field(c, BALL_FIELD) - 1)) : 1)
-                .parallels(
-                    c -> on(c, STAR_KERNEL) ? Integer.MAX_VALUE
-                        : (int) Math.pow(2, (c.tier(FUSION_COIL) + 1) * coil(c)))
-                .controls(
-                    BALL_TIER_CONTROL,
-                    FUSION_COIL_CONTROL,
-                    INFINITY_COIL_CONTROL,
-                    BALL_FIELD_CONTROL,
-                    GLASS_CONTROL)
-                .recipeGate(c -> {
-                    if (on(c, STAR_KERNEL) && ballTier(c) < 4) return BALL_TIER_GATE;
-                    return glassGate(c);
-                }));
+        // TST_BallLightning: TstMachinesCores (arc furnace, fusion and star kernel modes).
         // TST_LargeCanner.
         put(
             machines,
@@ -490,14 +509,20 @@ public final class TstMachines {
                 .speed(c -> speedOf(1F / (c.tier(COMPONENT_CASING) + 1)))
                 .parallels(Integer.MAX_VALUE)
                 .controls(COMPONENT_CASING_CONTROL));
+
+        TstMachinesWireless.register(machines);
+        TstMachinesCores.register(machines);
     }
 
     /**
-     * An entry, its parallels as the game's ParallelHelper pays for them ({@link #paid}), the maps' settings hidden.
+     * An entry, its parallels as the game's ParallelHelper pays for them ({@link #paid}; a fixed run on the wireless
+     * network pays nothing from hatches), the maps' settings hidden.
      */
-    private static void put(final Map<String, Behaviour> machines, final String name, final Behaviour behaviour) {
-        final Coefficient structure = behaviour.parallels, power = behaviour.power;
-        behaviour.parallels(c -> paid(c, MachineTable.resolve(structure, c, 1), MachineTable.resolve(power, c, 1)));
+    static void put(final Map<String, Behaviour> machines, final String name, final Behaviour behaviour) {
+        final Coefficient structure = behaviour.parallels, power = behaviour.power, fixed = behaviour.fixedTicks;
+        behaviour.parallels(
+            c -> MachineTable.resolve(fixed, c, 0) > 0 ? MachineTable.resolve(structure, c, 1)
+                : paid(c, MachineTable.resolve(structure, c, 1), MachineTable.resolve(power, c, 1)));
         machines.put(name, behaviour.hidesControls(MAP_CONTROLS));
     }
 
@@ -535,8 +560,9 @@ public final class TstMachines {
         return c.tier(id) + 1;
     }
 
-    private static int ballTier(final Context c) {
-        return c.tier(BALL_TIER) + 1;
+    /** GTRecipe.mSpecialValue: the recipe's heat on the coil machines' maps, 0 where NEI shows none. */
+    static long recipeSpecial(final Context c) {
+        return c.recipeSpecialValue != null ? c.recipeSpecialValue : 0;
     }
 
     /** The Thermal Energy Devourer's k: 1 + the hatches' EU tier, rounded down. */
@@ -545,7 +571,7 @@ public final class TstMachines {
     }
 
     /** glassTier < 12 && glassTier < GTUtility.getTier(recipe.mEUt) refuses the recipe. */
-    private static String glassGate(final Context c) {
+    static String glassGate(final Context c) {
         return glass(c) < 12 && glass(c) < recipeTier(c) ? GLASS_GATE : null;
     }
 

@@ -30,4 +30,10 @@ public final class SettingsReader {
     public boolean on(final String id) {
         return byId.get(id) instanceof final PowerSetting.Toggle toggle && toggle.value(values.get(id));
     }
+
+    /** A stored value no setting declares, as stored ("" when absent): what a holder card holds. */
+    public String raw(final String id) {
+        final String value = values.get(id);
+        return value == null ? "" : value;
+    }
 }

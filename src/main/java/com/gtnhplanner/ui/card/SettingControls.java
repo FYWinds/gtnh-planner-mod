@@ -120,6 +120,25 @@ public final class SettingControls {
                 true,
                 Type.READING,
                 false));
+        // What the machine uses up a run that no craft can carry (no limit to a run's crafts), read out, on the card.
+        for (final com.gtnhplanner.machines.game.UpkeepPorts.Uncounted u : m.web == null
+            ? List.<com.gtnhplanner.machines.game.UpkeepPorts.Uncounted>of()
+            : com.gtnhplanner.machines.game.UpkeepPorts.uncounted(m.node)) {
+            final String amount = com.gtnhplanner.machines.FormulaLine.number(u.amount()) + (u.fluid() ? " L" : "");
+            out.add(
+                new Control(
+                    "reading:upkeep:" + u.id(),
+                    UiText.tr("settingcontrols.settings"),
+                    UiText.tr("upkeep.uncounted", u.name()),
+                    u.perRun()
+                        ? UiText.tr("upkeep.per_run", amount, com.gtnhplanner.machines.FormulaLine.number(u.runTicks()))
+                        : UiText.tr("upkeep.per_second", amount),
+                    null,
+                    false,
+                    true,
+                    Type.READING,
+                    true));
+        }
         for (final com.gtnhplanner.machines.game.MachineModels.Setting s : com.gtnhplanner.machines.game.MachineModels
             .settings(m.node)) {
             // The machines word their settings in English (the website's); the sheet and the chips show them

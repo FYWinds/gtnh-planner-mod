@@ -48,7 +48,8 @@ public final class MachineEffects {
             recipe.source != null && recipe.source.recipeMap != null ? recipe.source.recipeMap : recipe.machineType,
             recipe,
             node.machineConfigTiers,
-            Power.poolEuT(recipe, node, runTier));
+            Power.poolEuT(recipe, node, runTier),
+            Tiers.index(runTier));
     }
 
     @Nullable
@@ -63,7 +64,9 @@ public final class MachineEffects {
         return -1;
     }
 
-    /** getMachineOutputMultiplier: every setting's output multiplier, multiplied. */
+    /**
+     * getMachineOutputMultiplier: every setting's output multiplier, multiplied, and the entry's own for the output.
+     */
     public static double outputMultiplier(final Web.Recipe recipe, final Web.Node node, final Web.Resource output,
         final String tier) {
         if (ExtremeEntityCrusher.isRecipe(recipe)) return ExtremeEntityCrusher
@@ -71,7 +74,17 @@ public final class MachineEffects {
         double multiplier = 1;
         for (final RecipeRules.TierControl c : RecipeRules.configTierControls(recipe, node.machineConfigTiers))
             multiplier *= c.current().outputMultiplier != null ? c.current().outputMultiplier : 1;
+        final MachineTable.Behaviour b = MachineTable.behaviour(recipe.machineType);
+        if (b != null && b.outputMultiplier != null)
+            multiplier *= b.outputMultiplier.applyAsDouble(context(recipe, node), output);
         return multiplier;
+    }
+
+    /** The entry's multiplier on one input's amount (the pack's own machines); 1 without one. */
+    public static double inputMultiplier(final Web.Recipe recipe, final Web.Node node, final Web.Resource input) {
+        final MachineTable.Behaviour b = MachineTable.behaviour(recipe.machineType);
+        return b != null && b.inputMultiplier != null ? b.inputMultiplier.applyAsDouble(context(recipe, node), input)
+            : 1;
     }
 
     /** getMachineParallelMultiplier: the structure's parallels, as many as the power pays for. */
@@ -103,10 +116,39 @@ public final class MachineEffects {
     }
 
     /**
+     * A table entry's fixed run ({@link MachineTable.Behaviour#fixedTicks}): its ticks for this card, 0 when the usual
+     * maths run it. Such a run draws its EU from no hatch.
+     */
+    public static double fixedTicks(final Web.Recipe recipe, final Web.Node node) {
+        final MachineTable.Behaviour b = MachineTable.behaviour(recipe.machineType);
+        if (b == null || b.fixedTicks == null) return 0;
+        final double ticks = b.fixedTicks.apply(context(recipe, node));
+        return ticks > 0 ? ticks : 0;
+    }
+
+    /** A fixed run's own EU/t a parallel ({@link MachineTable.Behaviour#fixedEut}), 0 when the recipe's sets it. */
+    public static double fixedEut(final Web.Recipe recipe, final Web.Node node) {
+        final MachineTable.Behaviour b = MachineTable.behaviour(recipe.machineType);
+        if (b == null || b.fixedEut == null) return 0;
+        final double eut = b.fixedEut.apply(context(recipe, node));
+        return eut > 0 ? eut : 0;
+    }
+
+    /** The resources the card's machine adds to its recipe ({@link MachineTable.Behaviour#upkeep}); none by default. */
+    public static List<Upkeep> upkeep(final Web.Recipe recipe, final Web.Node node) {
+        final Web.Recipe effective = recipe.machineType != null ? RecipeRules.applyHandler(recipe, node) : recipe;
+        final MachineTable.Behaviour b = MachineTable.behaviour(effective.machineType);
+        if (b == null || b.upkeep == null) return List.of();
+        final List<Upkeep> flows = b.upkeep.apply(context(effective, node));
+        return flows != null ? flows : List.of();
+    }
+
+    /**
      * getPoweredParallelLimit: how many parallels the pool carries. Energy and heat discounts land first
      * (ParallelHelper folds them into the recipe's draw), so a discounted recipe fits more.
      */
     private static double poweredParallelLimit(final Web.Recipe recipe, final Web.Node node) {
+        if (fixedTicks(recipe, node) > 0) return Double.POSITIVE_INFINITY;
         final String runTier = Power.runTier(recipe, node);
         final double available = Power.poolEuT(recipe, node, runTier);
         if (!Double.isFinite(available)) return Double.POSITIVE_INFINITY;

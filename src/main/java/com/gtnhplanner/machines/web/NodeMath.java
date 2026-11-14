@@ -16,8 +16,9 @@ public final class NodeMath {
 
     /** A card's nameplate, for {@code machineCount} machines of {@code parallel} each (both 1 for one machine). */
     public record Result(Web.Recipe effectiveRecipe, Overclock.Stats overclock, double machineParallels,
-        double operationsPerSecond, List<Double> inputsPerSecond, List<Double> outputMultipliers,
-        List<Double> outputsPerSecond, double euT, @Nullable PowerReport.Report power, @Nullable String stall) {
+        double operationsPerSecond, List<Double> inputsPerSecond, List<Double> inputMultipliers,
+        List<Double> outputMultipliers, List<Double> outputsPerSecond, double euT, @Nullable PowerReport.Report power,
+        @Nullable String stall) {
 
         /** The game would refuse to start it: GT has no slow mode, so it makes nothing. */
         public boolean stalled() {
@@ -48,12 +49,20 @@ public final class NodeMath {
         final double machineParallels = runtime != null && runtime.parallel != null ? runtime.parallel
             : MachineEffects.parallelMultiplier(effective, node);
         final List<Web.Resource> runtimeOutputs = RuntimeCalculation.outputs(effective, node);
-        final PowerReport.Report power = PowerReport.has(recipe) ? PowerReport.report(recipe, node) : null;
+        // A fixed run (MachineEffects.fixedTicks) is reported, for its gates, even where the recipe lists no EU/t.
+        final boolean reported = PowerReport.has(recipe)
+            || effective.machineType != null && MachineEffects.fixedTicks(effective, node) > 0;
+        final PowerReport.Report power = reported ? PowerReport.report(recipe, node) : null;
         final String stall = power != null && power.stalled() ? PowerReport.describeStall(power) : null;
         final double rate = machineCount * parallel * machineParallels * 20 / stats.durationTicks();
 
         final List<Double> inputs = new ArrayList<>();
-        for (final Web.Resource input : recipe.inputs) inputs.add(input.isConsumed() ? input.amount * rate : 0);
+        final List<Double> inputMultipliers = new ArrayList<>();
+        for (final Web.Resource input : recipe.inputs) {
+            final double multiplier = MachineEffects.inputMultiplier(effective, node, input);
+            inputMultipliers.add(multiplier);
+            inputs.add(input.isConsumed() ? input.amount * multiplier * rate : 0);
+        }
         final List<Double> multipliers = new ArrayList<>();
         final List<Double> outputs = new ArrayList<>();
         for (final Web.Resource output : runtimeOutputs != null ? runtimeOutputs : effective.outputs) {
@@ -63,6 +72,17 @@ public final class NodeMath {
             outputs.add(output.amount * (output.chance != null ? output.chance : 1) * multiplier * rate);
         }
         final double euT = stats.eut() * machineCount * parallel * machineParallels;
-        return new Result(effective, stats, machineParallels, rate, inputs, multipliers, outputs, euT, power, stall);
+        return new Result(
+            effective,
+            stats,
+            machineParallels,
+            rate,
+            inputs,
+            inputMultipliers,
+            multipliers,
+            outputs,
+            euT,
+            power,
+            stall);
     }
 }

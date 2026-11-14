@@ -25,10 +25,16 @@ import com.gtnhplanner.data.flowchart.Port;
 import com.gtnhplanner.data.properties.RecipeProperty;
 import com.gtnhplanner.data.provider.GTKeys;
 import com.gtnhplanner.data.provider.GTProvider;
+import com.gtnhplanner.importer.game.GameIds;
 import com.gtnhplanner.machines.BacterialVat;
 import com.gtnhplanner.machines.FormulaLine;
 import com.gtnhplanner.machines.TreeGrowthSimulator;
 import com.gtnhplanner.machines.TreeGrowthSimulator.Mode;
+import com.gtnhplanner.machines.eto.TstCoresVat;
+import com.gtnhplanner.machines.web.MachineEffects;
+import com.gtnhplanner.machines.web.NodeMath;
+import com.gtnhplanner.machines.web.Web;
+import com.gtnhplanner.machines.web.Working;
 
 import bartworks.API.recipe.BartWorksRecipeMaps;
 import cpw.mods.fml.common.registry.GameRegistry;
@@ -44,7 +50,9 @@ import gregtech.common.tileentities.machines.multi.MTETreeFarm;
  * The game's side of the modelled machines (machines/: the Tree Growth Simulator and the Bacterial Vat, as the website
  * models them): what GregTech's recipes say about them, the solver's per-port multipliers after every refresh, the
  * radio hatch's burned material as an input, and the card's settings, formulas and icons. Settings are kept under the
- * website's own keys and values, so plans go between the two unchanged.
+ * website's own keys and values, so plans go between the two unchanged. A vat card whose machine is
+ * TwistSpaceTechnology's Biosphere III keeps the same settings and runs its vat modes (machines/eto/TstCoresVat), its
+ * time and EU/t from the machine maths.
  */
 public final class MachineModels {
 
@@ -329,13 +337,30 @@ public final class MachineModels {
                 : (long) node.outputs.get(out)
                     .amount();
             final BacterialVat.Needs needs = needs(node);
-            final BacterialVat.Setup setup = BacterialVat.setup(cfg.settings, needs, fluidOut, materials());
+            final Biosphere bio = biosphere(node, cfg, needs);
+            final BacterialVat.Setup setup = bio != null ? bio.run()
+                .setup() : BacterialVat.setup(cfg.settings, needs, fluidOut, materials());
             final BacterialVat.Fill fill = BacterialVat.fill(setup, fluidOut);
-            if (BacterialVat.gate(needs, setup, fluidOut) != null) {
+            if (bio != null ? TstCoresVat.gate(bio.run(), needs) != null
+                : BacterialVat.gate(needs, setup, fluidOut) != null) {
                 // Glass too low, radiation not met, or a run that never fits: the vat holds, as on the website (its
                 // recipe gate). Its radio hatch still burns, below.
                 for (int i = 0; i < node.inputs.size(); i++) cfg.inputConsumption.put(i, 0f);
                 for (int i = 0; i < node.outputs.size(); i++) cfg.outputProductivity.put(i, 0f);
+            } else if (bio != null) {
+                // Biosphere III: each parallel's first fluid in and out times the mode's multiplier, less what a
+                // voiding hatch cannot take (void protection already cut the parallels to what fits).
+                if (in >= 0) cfg.inputConsumption.put(
+                    in,
+                    (float) bio.run()
+                        .multiplier());
+                if (out >= 0 && fluidOut > 0) cfg.outputProductivity.put(
+                    out,
+                    (float) TstCoresVat.outputMultiplier(
+                        bio.run(),
+                        fluidOut,
+                        bio.result()
+                            .machineParallels()));
             } else {
                 if (in >= 0) cfg.inputConsumption.put(in, (float) fill.multiplier());
                 if (out >= 0 && fluidOut > 0) cfg.outputProductivity.put(out, (float) fill.keptOut() / fluidOut);
@@ -347,7 +372,12 @@ public final class MachineModels {
                 final EffectResult effect = cfg.computeEffect(node.properties);
                 if (stack != null && effect.durationTicks() > 0) {
                     final Port<ItemStack> port = new Port<>(RecipePropertyAPI.ITEM, stack.copy(), 1f);
-                    port.setExactAmount(BacterialVat.burnPerSecond(setup.radio()) * effect.durationTicks() / 20.0);
+                    // The hatch burns all the time: a Biosphere III craft of many parallels burns its time's share.
+                    port.setExactAmount(
+                        BacterialVat.burnPerSecond(setup.radio())
+                            * (bio != null ? effect.duration() / Math.max(1, effect.throughputFactor())
+                                : effect.durationTicks())
+                            / 20.0);
                     port.fromModel = true;
                     node.inputs.add(port);
                     burned.put(node, port);
@@ -360,6 +390,28 @@ public final class MachineModels {
         for (int i = 0; i < ports.size(); i++) if (ports.get(i)
             .getValue() instanceof net.minecraftforge.fluids.FluidStack) return i;
         return -1;
+    }
+
+    /** A Biosphere III vat card's run (TstCoresVat), the machine maths' numbers for it, and its recipe and node. */
+    private record Biosphere(TstCoresVat.Run run, NodeMath.Result result, Web.Recipe recipe, Web.Node web) {}
+
+    /**
+     * The card's Biosphere III run when its machine is TwistSpaceTechnology's Biosphere III (by the controller's item),
+     * read from the same context its machine table entry reads; null for bartworks' Bacterial Vat.
+     */
+    @Nullable
+    private static Biosphere biosphere(final Node node, final MachineConfig cfg, final BacterialVat.Needs needs) {
+        final ItemStack machine = WebCards.machineStack(node);
+        if (machine == null || !TstCoresVat.CONTROLLER.equals(GameIds.itemId(machine))) return null;
+        final NodeMath.Result r = WebEffect.result(node, cfg);
+        final Web.Recipe recipe = WebEffect.recipe(node);
+        if (r == null || recipe == null) return null;
+        final Web.Node web = WebCards.node(node, cfg, recipe);
+        return new Biosphere(
+            TstCoresVat.run(MachineEffects.context(r.effectiveRecipe(), web), needs, materials()),
+            r,
+            recipe,
+            web);
     }
 
     // endregion
@@ -400,6 +452,23 @@ public final class MachineModels {
                 : (long) node.outputs.get(out)
                     .amount();
             final BacterialVat.Needs needs = needs(node);
+            final Biosphere bio = biosphere(node, cfg, needs);
+            if (bio != null) {
+                // The vat's own lines, then the machine maths' power, parallels and time.
+                final List<FormulaLine> lines = new ArrayList<>(
+                    TstCoresVat.formulas(
+                        bio.run(),
+                        needs,
+                        fluidIn,
+                        fluidOut,
+                        bio.result()
+                            .machineParallels(),
+                        bio.result()
+                            .overclock()
+                            .durationTicks()));
+                lines.addAll(Working.lines(bio.recipe(), bio.web(), bio.result()));
+                return lines;
+            }
             final BacterialVat.Setup setup = BacterialVat.setup(cfg.settings, needs, fluidOut, materials());
             final Object ticks = node.properties.get(RecipePropertyAPI.DURATION_TICKS),
                 eut = node.properties.get(GTKeys.EU_PER_TICK);
@@ -490,9 +559,15 @@ public final class MachineModels {
                 : (long) node.outputs.get(out1)
                     .amount();
             final BacterialVat.Needs needs = needs(node);
-            final BacterialVat.Setup setup = BacterialVat.setup(cfg.settings, needs, fluidOut, materials());
+            final Biosphere bio = biosphere(node, cfg, needs);
+            // Biosphere III's mode and petri dishes first (its machine table entry's own, machine:<id>); its glass is
+            // the vat's, up to UXV.
+            if (bio != null) out.addAll(WebSettings.settings(node));
+            final BacterialVat.Setup setup = bio != null ? bio.run()
+                .setup() : BacterialVat.setup(cfg.settings, needs, fluidOut, materials());
             final List<Option> glass = new ArrayList<>();
-            for (int g = 3; g <= 12; g++) glass.add(new Option(String.valueOf(g), TIERS[g] + " glass", null));
+            for (int g = 3; g <= (bio != null ? TstCoresVat.MAX_GLASS : 12); g++)
+                glass.add(new Option(String.valueOf(g), TIERS[g] + " glass", null));
             out.add(
                 choice(
                     BacterialVat.GLASS,
@@ -510,7 +585,8 @@ public final class MachineModels {
                     setup.hatch()
                         .key(),
                     hatches,
-                    !fill.fits() && !setup.voidExcess()));
+                    bio != null ? bio.run()
+                        .full() : !fill.fits() && !setup.voidExcess()));
             out.add(
                 new Setting(
                     BacterialVat.FILL,
