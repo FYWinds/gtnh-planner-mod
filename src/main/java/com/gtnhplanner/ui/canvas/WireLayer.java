@@ -19,6 +19,7 @@ import com.gtnhplanner.data.flowchart.balancer.Balancer;
 import com.gtnhplanner.data.flowchart.balancer.PortRef;
 import com.gtnhplanner.layout.WireHops;
 import com.gtnhplanner.layout.WireRouter;
+import com.gtnhplanner.layout.WireTrunks;
 import com.gtnhplanner.ui.BoardSession;
 import com.gtnhplanner.ui.Resources;
 import com.gtnhplanner.ui.card.CardLayout;
@@ -28,8 +29,10 @@ import com.gtnhplanner.ui.theme.Hyb;
 
 /**
  * The board's wires, Factory Flow style: one per resource between two objects, routed around cards and drawers
- * ({@link WireRouter}), drawn in the resource's colour, thicker with more flow, with arrowheads along the run.
- * Everything is in world space; the canvas draws this under the cards with its pan and zoom applied.
+ * ({@link WireRouter}), drawn in the resource's colour, thicker with more flow, with arrowheads along the run. Wires
+ * leaving one port for several cards share a trunk (the setting's default): drawn once, as thick as all it carries,
+ * with a dot where each branch leaves it. Everything is in world space; the canvas draws this under the cards with
+ * its pan and zoom applied.
  */
 final class WireLayer {
 
@@ -45,10 +48,15 @@ final class WireLayer {
 
     /**
      * A wire on the board: an edge, or a drawer's link; its route ({@code path}) and the dots steering it
-     * ({@code stops}, the website's waypoints: the plan's, or those of a dot being dragged on it).
+     * ({@code stops}, the website's waypoints: the plan's, or those of a dot being dragged on it); and the port it
+     * leaves ({@code trunk}, a {@link Source}): wires leaving one port share a trunk, null when trunks are off.
      */
     record Wire(UUID key, Kind kind, @Nullable Edge edge, @Nullable Drawer drawer, @Nullable Drawer.Link link,
-        int color, float width, double perSecond, List<int[]> path, String resource, List<int[]> stops) {}
+        int color, float width, double perSecond, List<int[]> path, String resource, List<int[]> stops,
+        @Nullable Object trunk) {}
+
+    /** The port a wire leaves: a card's output ({@code index} its place), or a drawer that gives ({@code index} -1). */
+    private record Source(UUID owner, int index) {}
 
     private final BoardSession session;
     private List<Wire> wires = List.of();
@@ -237,6 +245,7 @@ final class WireLayer {
         k = k * 31 + System.identityHashCode(ghostEdge);
         k = k * 31 + System.identityHashCode(ghostLink);
         k = k * 31 + draftMoves;
+        k = k * 31 + (com.gtnhplanner.ui.PlannerSettings.sharedTrunks() ? 1 : 0);
         return k;
     }
 
@@ -303,10 +312,12 @@ final class WireLayer {
         return ends;
     }
 
-    /** Where the wires go: every card's and drawer's place and size, and what is wired to what. */
+    /**
+     * Where the wires go: every card's and drawer's place and size, what is wired to what, and whether trunks share.
+     */
     private long geometry(final Map<UUID, RecipeCard> cards) {
         final Graph graph = session.graph();
-        long sig = 17;
+        long sig = com.gtnhplanner.ui.PlannerSettings.sharedTrunks() ? 19 : 17;
         for (final RecipeCard card : cards.values()) {
             if (card.layout() != null) sig = sig * 31 + card.layout().height;
         }
@@ -397,6 +408,7 @@ final class WireLayer {
         final List<int[]> between = new ArrayList<>();
         final List<Wire> pending = new ArrayList<>();
         final BalanceResult result = session.result();
+        final boolean trunks = com.gtnhplanner.ui.PlannerSettings.sharedTrunks();
         for (final Edge e : edges()) {
             final Node src = graph.nodes.get(e.sourceNodeId), dst = graph.nodes.get(e.targetNodeId);
             if (src == null || dst == null
@@ -422,7 +434,8 @@ final class WireLayer {
                     edgeFlow(result, e),
                     null,
                     Resources.key(port),
-                    stopsOf(e.id, e.waypoints)));
+                    stopsOf(e.id, e.waypoints),
+                    trunks ? new Source(src.id, e.sourceOutputIndex) : null));
         }
         for (final Drawer d : drawerList) {
             Integer drawerAt = drawerBox.get(d.getId());
@@ -459,7 +472,8 @@ final class WireLayer {
                             : linkFlow(result, n, source, link.portIndex()),
                         null,
                         Resources.key(port),
-                        stopsOf(key, link.waypoints())));
+                        stopsOf(key, link.waypoints()),
+                        !trunks ? null : source ? new Source(d.getId(), -1) : new Source(n.id, link.portIndex())));
             }
         }
 
@@ -472,10 +486,18 @@ final class WireLayer {
         for (int i = 0; i < sized.size(); i++) {
             final int a = between.get(i)[0], b = between.get(i)[1];
             final Wire w = sized.get(i);
-            // Steered through its dots, when it has any (the website's waypoints).
+            // Steered through its dots, when it has any (the website's waypoints); wires leaving one port on a trunk.
             requests.add(
                 a == b ? new WireRouter.Wire(w.key(), a, b, WireRouter.RIGHT, WireRouter.LEFT, w.width(), w.stops())
-                    : new WireRouter.Wire(w.key(), a, b, WireRouter.ANY, WireRouter.ANY, w.width(), w.stops()));
+                    : new WireRouter.Wire(
+                        w.key(),
+                        a,
+                        b,
+                        WireRouter.ANY,
+                        WireRouter.ANY,
+                        w.width(),
+                        w.stops(),
+                        w.trunk()));
             final WireRouter.Box from = boxes.get(a), to = boxes.get(b);
             ends.add(new int[] { from.x(), from.y(), from.w(), from.h(), to.x(), to.y(), to.w(), to.h() });
         }
@@ -509,7 +531,8 @@ final class WireLayer {
                     w.perSecond(),
                     path,
                     w.resource(),
-                    w.stops()));
+                    w.stops(),
+                    w.trunk()));
         }
         return withWidths(built);
     }
@@ -594,38 +617,53 @@ final class WireLayer {
      * Factory Flow does: heat = 0.62 x rank + 0.38 x log share, then 2 px (least) to 7 px (most).
      */
     private static List<Wire> withWidths(final List<Wire> wires) {
-        final java.util.Map<Wire, Float> width = new java.util.IdentityHashMap<>();
+        final double[] flows = new double[wires.size()];
+        final boolean[] fluid = new boolean[wires.size()];
+        for (int i = 0; i < flows.length; i++) {
+            flows[i] = wires.get(i)
+                .perSecond();
+            fluid[i] = Resources.isFluid(
+                wires.get(i)
+                    .resource());
+        }
+        final float[] width = widths(flows, fluid);
+        final List<Wire> out = new ArrayList<>(wires.size());
+        for (int i = 0; i < flows.length; i++) {
+            final Wire w = wires.get(i);
+            out.add(
+                new Wire(
+                    w.key(),
+                    w.kind(),
+                    w.edge(),
+                    w.drawer(),
+                    w.link(),
+                    w.color(),
+                    width[i],
+                    w.perSecond(),
+                    w.path(),
+                    w.resource(),
+                    w.stops(),
+                    w.trunk()));
+        }
+        return out;
+    }
+
+    /** Widths for what each of a list carries ({@code flows}, items or {@code fluid}), as {@link #withWidths}. */
+    private static float[] widths(final double[] flows, final boolean[] fluid) {
+        final float[] width = new float[flows.length];
+        java.util.Arrays.fill(width, WIDTH * 1.5f);
         for (final boolean fluids : new boolean[] { false, true }) {
-            final List<Wire> kind = new ArrayList<>();
-            for (final Wire w : wires) if (w.perSecond() > 0 && Resources.isFluid(w.resource()) == fluids) kind.add(w);
-            kind.sort(java.util.Comparator.comparingDouble(Wire::perSecond));
-            final double max = kind.isEmpty() ? 0
-                : kind.get(kind.size() - 1)
-                    .perSecond();
+            final List<Integer> kind = new ArrayList<>();
+            for (int i = 0; i < flows.length; i++) if (flows[i] > 0 && fluid[i] == fluids) kind.add(i);
+            kind.sort(java.util.Comparator.comparingDouble(i -> flows[i]));
+            final double max = kind.isEmpty() ? 0 : flows[kind.getLast()];
             for (int i = 0; i < kind.size(); i++) {
                 final double rank = kind.size() == 1 ? 1 : (double) i / (kind.size() - 1);
-                final double share = Math.log1p(
-                    kind.get(i)
-                        .perSecond())
-                    / Math.log1p(max);
-                width.put(kind.get(i), (float) (WIDTH * (2 + 5 * (0.62 * rank + 0.38 * share))));
+                final double share = Math.log1p(flows[kind.get(i)]) / Math.log1p(max);
+                width[kind.get(i)] = (float) (WIDTH * (2 + 5 * (0.62 * rank + 0.38 * share)));
             }
         }
-        final List<Wire> out = new ArrayList<>(wires.size());
-        for (final Wire w : wires) out.add(
-            new Wire(
-                w.key(),
-                w.kind(),
-                w.edge(),
-                w.drawer(),
-                w.link(),
-                w.color(),
-                width.getOrDefault(w, WIDTH * 1.5f),
-                w.perSecond(),
-                w.path(),
-                w.resource(),
-                w.stops()));
-        return out;
+        return width;
     }
 
     // region Drawing
@@ -643,9 +681,9 @@ final class WireLayer {
         return Math.max(width, LEAST_PX / pixels);
     }
 
-    /** A wire's casing, at least a pixel wider than its core. */
-    private float casing(final Wire w) {
-        return Math.max(w.width() + Math.max(2, 0.22f * w.width()), atLeast(w.width()) + 1 / pixels);
+    /** A wire's casing, at least a pixel wider than its core ({@code width} wide). */
+    private float casing(final float width) {
+        return Math.max(width + Math.max(2, 0.22f * width), atLeast(width) + 1 / pixels);
     }
 
     /** Whether something this long on the board is long enough on the screen to be worth drawing. */
@@ -659,28 +697,32 @@ final class WireLayer {
         draw(wires, lit);
     }
 
-    /** Draws every wire; those {@code lit} (what the mouse is on, or wired to it) get a faint highlight halo first. */
+    /**
+     * Draws every wire, a trunk once ({@link #strands}); those {@code lit} (what the mouse is on, or wired to it) get a
+     * faint highlight halo first, along the whole of each lit wire, trunk and branch.
+     */
     void draw(final List<Wire> wires, final com.gtnhplanner.ui.HoverScope lit) {
+        final List<Strand> strands = strands(wires);
         // Thickest first, so thinner wires lie on top and do the hopping, as in Factory Flow: a thin line survives
         // being drawn over a fat pipe, and a small bump on it reads at once where a fat pipe rearing up is a blob.
         // The sort is stable, so equal widths keep the route order.
-        if (wires != orderFor) {
-            final List<Wire> sorted = new ArrayList<>(wires);
+        if (strands != orderFor) {
+            final List<Strand> sorted = new ArrayList<>(strands);
             sorted.sort((a, b) -> Float.compare(b.width(), a.width()));
             order = sorted;
-            orderFor = wires;
+            orderFor = strands;
         }
-        final List<Wire> order = this.order;
-        final Map<Wire, WireHops.Hopped> hopped = hops(wires, order);
+        final List<Strand> order = this.order;
+        final Map<Strand, WireHops.Hopped> hopped = hops(strands, order);
         Hyb.beginBatch();
         if (!lit.isEmpty()) {
             // Steady: a crisp gold edge just outside the casing, and a faint glow past it.
             final int edge = 0xD8000000 | Hyb.LIT & 0xFFFFFF, glow = 0x2C000000 | Hyb.LIT & 0xFFFFFF;
-            for (final Wire w : wires) {
-                if (!lit.wire(w.edge(), w.drawer(), w.link(), w.resource())) continue;
-                final float casing = casing(w);
-                drawHopped(hopped.get(w), casing + 7, glow, 0, 0);
-                drawHopped(hopped.get(w), casing + 3, edge, 0, 0);
+            for (final Strand s : strands) {
+                if (!lit(s, lit)) continue;
+                final float casing = casing(s.width());
+                drawHopped(hopped.get(s), casing + 7, glow, 0, 0);
+                drawHopped(hopped.get(s), casing + 3, edge, 0, 0);
             }
         }
         Hyb.endBatch();
@@ -692,16 +734,22 @@ final class WireLayer {
             if (listId == 0) listId = org.lwjgl.opengl.GL11.glGenLists(1);
             org.lwjgl.opengl.GL11.glNewList(listId, org.lwjgl.opengl.GL11.GL_COMPILE);
             Hyb.beginBatch();
-            drawStill(wires, order, hopped);
+            drawStill(strands, order, hopped);
             Hyb.endBatch();
             org.lwjgl.opengl.GL11.glEndList();
             listFor = wires;
         }
         com.cleanroommc.modularui.utils.Platform.setupDrawColor();
         org.lwjgl.opengl.GL11.glCallList(listId);
-        drawRings(wires, hopped);
+        drawRings(strands, hopped);
         // The dots are for steering on the board: a picture of the plan leaves them out.
         if (!PlanPicture.drawing()) drawStops(wires);
+    }
+
+    /** Whether any wire along a stretch glows. */
+    private static boolean lit(final Strand s, final com.gtnhplanner.ui.HoverScope lit) {
+        for (final Wire w : s.wires()) if (lit.wire(w.edge(), w.drawer(), w.link(), w.resource())) return true;
+        return false;
     }
 
     // region Steering dots
@@ -823,67 +871,79 @@ final class WireLayer {
      * The wires a dead loop or a clog lock runs along ({@link BoardSession#loopWires}): lit steady in its tone over the
      * core, a little wider than it (the website's {@code cc-loop-wire}), the arrows on top again.
      */
-    private void drawRings(final List<Wire> wires, final Map<Wire, WireHops.Hopped> hopped) {
+    private void drawRings(final List<Strand> strands, final Map<Strand, WireHops.Hopped> hopped) {
         final Map<UUID, com.gtnhplanner.ui.Loops.Tone> rings = session.loopWires();
         if (rings.isEmpty()) return;
         Hyb.beginBatch();
-        for (final Wire w : wires) {
-            final com.gtnhplanner.ui.Loops.Tone tone = w.edge() == null ? null : rings.get(w.edge().id);
+        for (final Strand s : strands) {
+            com.gtnhplanner.ui.Loops.Tone tone = null;
+            for (final Wire w : s.wires()) if (tone == null && w.edge() != null) tone = rings.get(w.edge().id);
             if (tone == null) continue;
-            final WireHops.Hopped h = hopped.get(w);
-            drawHopped(h, atLeast(w.width()) + 4, 0xCC000000 | tone.colour & 0xFFFFFF, 0, 0);
-            if (w.perSecond() > 0 && shows(8)) arrows(w.path(), w.color(), w.width(), h.spans());
+            final WireHops.Hopped h = hopped.get(s);
+            drawHopped(h, atLeast(s.width()) + 4, 0xCC000000 | tone.colour & 0xFFFFFF, 0, 0);
+            if (s.perSecond() > 0 && shows(8)) arrows(s.path(), s.color(), s.width(), h.spans());
         }
         Hyb.endBatch();
     }
 
-    /** The wires thickest first, and the wires they were sorted for. */
-    private List<Wire> order = List.of(), orderFor;
+    /** The stretches thickest first, and the stretches they were sorted for. */
+    private List<Strand> order = List.of(), orderFor;
 
     /** The display list of the wires' shadows, casings, cores and arrows, and the wires it was made for. */
     private int listId;
     private List<Wire> listFor;
     private float listPixels = -1;
 
-    private void drawStill(final List<Wire> wires, final List<Wire> order, final Map<Wire, WireHops.Hopped> hopped) {
+    private void drawStill(final List<Strand> strands, final List<Strand> order,
+        final Map<Strand, WireHops.Hopped> hopped) {
         // The shadow the wire layer casts (Factory Flow: 4 right, 5 down, soft, 35%), under every wire.
-        if (shows(5)) for (final Wire w : wires) {
-            if (w.perSecond() <= 0) continue;
-            drawHopped(hopped.get(w), casing(w) + 2, 0x3C000000, 4, 5);
+        if (shows(5)) for (final Strand s : strands) {
+            if (s.perSecond() <= 0) continue;
+            drawHopped(hopped.get(s), casing(s.width()) + 2, 0x3C000000, 4, 5);
         }
-        for (final Wire w : order) {
-            if (w.perSecond() <= 0) {
-                dotted(w.path(), w.color(), w.width(), pixels);
+        // A junction's dark rim goes under the wires, so it shows only between the branches leaving it.
+        final boolean dots = shows(4);
+        if (dots) for (final Junction j : junctions)
+            disc(j.x(), j.y(), junctionRadius(j) + casing(j.width()) / 2 - atLeast(j.width()) / 2, CASING);
+        for (final Strand s : order) {
+            if (s.perSecond() <= 0) {
+                dotted(s.path(), s.color(), s.width(), pixels);
                 continue;
             }
-            final WireHops.Hopped h = hopped.get(w);
-            drawHopped(h, casing(w), CASING, 0, 0);
-            drawHopped(h, atLeast(w.width()), w.color(), 0, 0);
-            if (shows(8)) arrows(w.path(), w.color(), w.width(), h.spans());
+            final WireHops.Hopped h = hopped.get(s);
+            drawHopped(h, casing(s.width()), CASING, 0, 0);
+            drawHopped(h, atLeast(s.width()), s.color(), 0, 0);
+            if (shows(8)) arrows(s.path(), s.color(), s.width(), h.spans());
         }
+        if (dots) for (final Junction j : junctions) disc(j.x(), j.y(), junctionRadius(j), j.color());
     }
 
-    /** Hops worked out for the wire list they were made for: it is only rebuilt when something moves. */
-    private List<Wire> hopsFor;
-    private Map<Wire, WireHops.Hopped> hopsMade;
+    /** A junction dot's radius: a little wider than the trunk it sits on. */
+    private float junctionRadius(final Junction j) {
+        return atLeast(j.width()) / 2 + 2;
+    }
+
+    /** Hops worked out for the stretches they were made for: only rebuilt when something moves. */
+    private List<Strand> hopsFor;
+    private Map<Strand, WireHops.Hopped> hopsMade;
 
     /**
-     * Each flowing wire hops the wires drawn behind it (the thicker ones, and equal ones routed before it), so exactly
-     * one side of every crossing bumps and it is the side you can see. A wire nothing flows through is dotted and
-     * does not hop.
+     * Each flowing stretch hops the stretches drawn behind it (the thicker ones, and equal ones routed before it), so
+     * exactly one side of every crossing bumps and it is the side you can see; the stretches of one trunk never hop
+     * each other. A wire nothing flows through is dotted and does not hop.
      */
-    private Map<Wire, WireHops.Hopped> hops(final List<Wire> wires, final List<Wire> order) {
-        if (wires == hopsFor && hopsMade != null) return hopsMade;
-        final Map<Wire, WireHops.Hopped> out = new java.util.IdentityHashMap<>();
+    private Map<Strand, WireHops.Hopped> hops(final List<Strand> strands, final List<Strand> order) {
+        if (strands == hopsFor && hopsMade != null) return hopsMade;
+        final Map<Strand, WireHops.Hopped> out = new java.util.IdentityHashMap<>();
         // Only a run that comes near a wire can cross it: the rest are never tried. In the order they would have been.
-        final SegmentGrid grid = new SegmentGrid(order, w -> 2);
+        final SegmentGrid grid = new SegmentGrid(order, Strand::path, s -> 2);
         for (int k = 0; k < order.size(); k++) {
-            final Wire w = order.get(k);
+            final Strand s = order.get(k);
             final List<WireHops.Crossed> crossed = new ArrayList<>();
-            final int before = k;
-            if (w.perSecond() > 0) {
+            final int before = k, trunk = s.trunk();
+            if (s.perSecond() > 0) {
                 final java.util.Set<Long> near = new java.util.HashSet<>();
-                final List<int[]> path = w.path();
+                final List<int[]> path = s.path();
                 for (int i = 1; i < path.size(); i++) {
                     final int[] a = path.get(i - 1), b = path.get(i);
                     near.addAll(
@@ -895,11 +955,13 @@ final class WireLayer {
                 }
                 final long[] runs = near.stream()
                     .mapToLong(Long::longValue)
-                    .filter(r -> SegmentGrid.wire(r) < before)
+                    .filter(
+                        r -> SegmentGrid.wire(r) < before && (trunk < 0 || order.get(SegmentGrid.wire(r))
+                            .trunk() != trunk))
                     .sorted()
                     .toArray();
                 for (final long r : runs) {
-                    final Wire o = order.get(SegmentGrid.wire(r));
+                    final Strand o = order.get(SegmentGrid.wire(r));
                     final int[] c = o.path()
                         .get(SegmentGrid.run(r) - 1),
                         d = o.path()
@@ -907,9 +969,9 @@ final class WireLayer {
                     crossed.add(new WireHops.Crossed(c[0], c[1], d[0], d[1], o.width()));
                 }
             }
-            out.put(w, WireHops.build(w.path(), crossed, w.width()));
+            out.put(s, WireHops.build(s.path(), crossed, s.width()));
         }
-        hopsFor = wires;
+        hopsFor = strands;
         hopsMade = out;
         return out;
     }
@@ -1125,48 +1187,193 @@ final class WireLayer {
 
     // endregion
 
-    /** The wire within a few world pixels of a point, topmost first. */
+    // region Trunks as drawn
+
+    /**
+     * A stretch of wire as drawn: a wire on its own, whole; or a stretch of a trunk (wires leaving one port, as the
+     * router ran them together), drawn once and as wide as all it carries, or of a branch off one. {@code wires} are
+     * those running along it, first the one it is a stretch of (what a click on it means); {@code trunk} its trunk's
+     * number in this drawing (-1 for none), so the stretches of one trunk never hop each other.
+     */
+    record Strand(List<int[]> path, int color, float width, double perSecond, List<Wire> wires, int trunk) {}
+
+    /** Where a branch leaves a trunk: a dot in the trunk's colour, as wide as the stretch running into it. */
+    private record Junction(int x, int y, int color, float width) {}
+
+    /** The wires as last drawn, their junctions, and the wires they were worked out for. */
+    private List<Strand> strands = List.of();
+    private List<Junction> junctions = List.of();
+    private List<Wire> strandsFor;
+
+    /**
+     * The wires as they are drawn: each on its own whole, in their order; the wires on a trunk (those leaving one port)
+     * where the first of them comes, split where they part ({@link WireTrunks#tree}), each stretch once, carrying all
+     * that runs along it, with a junction where each branch leaves. The widths are worked out over the stretches, so a
+     * trunk is as wide as the sum it carries; with no trunks, these are the wires themselves.
+     */
+    private List<Strand> strands(final List<Wire> wires) {
+        if (wires == strandsFor) return strands;
+        final Map<Object, List<Wire>> byTrunk = new HashMap<>();
+        for (final Wire w : wires) if (w.trunk() != null) byTrunk.computeIfAbsent(w.trunk(), k -> new ArrayList<>())
+            .add(w);
+        final List<List<int[]>> paths = new ArrayList<>();
+        final List<Double> flows = new ArrayList<>();
+        final List<List<Wire>> carried = new ArrayList<>();
+        final List<Integer> trunkOf = new ArrayList<>();
+        // Junctions as {x, y, stretch running into it}.
+        final List<int[]> joints = new ArrayList<>();
+        final java.util.Set<Object> done = new java.util.HashSet<>();
+        int trunks = 0;
+        for (final Wire w : wires) {
+            final List<Wire> trunk = w.trunk() == null ? null : byTrunk.get(w.trunk());
+            if (trunk == null || trunk.size() < 2) {
+                paths.add(w.path());
+                flows.add(w.perSecond());
+                carried.add(List.of(w));
+                trunkOf.add(-1);
+                continue;
+            }
+            if (!done.add(w.trunk())) continue;
+            final int number = trunks++;
+            final List<List<int[]>> own = new ArrayList<>(trunk.size());
+            for (final Wire t : trunk) own.add(t.path());
+            final WireTrunks.Branch[] tree = WireTrunks.tree(own);
+            final int n = trunk.size();
+            // What each wire's branch carries on, itself and every wire branching off it further on, theirs too.
+            final double[] below = new double[n];
+            final List<List<Wire>> beneath = new ArrayList<>(n);
+            final List<List<Integer>> kids = new ArrayList<>(n);
+            for (int k = 0; k < n; k++) {
+                kids.add(new ArrayList<>());
+                beneath.add(new ArrayList<>(List.of(trunk.get(k))));
+                below[k] = trunk.get(k)
+                    .perSecond();
+            }
+            for (int k = 0; k < n; k++) if (tree[k].parent() >= 0) kids.get(tree[k].parent())
+                .add(k);
+            // A wire's parent comes before it, so its branch's sum is done first from the last.
+            for (int k = n - 1; k >= 0; k--) for (final int c : kids.get(k)) {
+                below[k] += below[c];
+                beneath.get(k)
+                    .addAll(beneath.get(c));
+            }
+            for (int j = 0; j < n; j++) {
+                final List<int[]> path = own.get(j);
+                final double end = WireTrunks.length(path);
+                double from = tree[j].length();
+                int[] fromAt = tree[j].at();
+                if (from >= end - 1e-6) continue;
+                final List<Integer> off = kids.get(j);
+                off.sort(java.util.Comparator.comparingDouble(c -> tree[c].length()));
+                int next = 0;
+                while (true) {
+                    final boolean last = next >= off.size();
+                    final double to = last ? end : tree[off.get(next)].length();
+                    final int[] toAt = last ? null : tree[off.get(next)].at();
+                    // This stretch carries the wire and every branch leaving it at or past its end.
+                    double flow = trunk.get(j)
+                        .perSecond();
+                    final List<Wire> along = new ArrayList<>(List.of(trunk.get(j)));
+                    for (int q = next; q < off.size(); q++) {
+                        flow += below[off.get(q)];
+                        along.addAll(beneath.get(off.get(q)));
+                    }
+                    paths.add(WireTrunks.between(path, from, fromAt, to, toAt));
+                    flows.add(flow);
+                    carried.add(along);
+                    trunkOf.add(number);
+                    if (last) break;
+                    joints.add(new int[] { toAt[0], toAt[1], paths.size() - 1 });
+                    while (next < off.size() && tree[off.get(next)].length() <= to + 1e-6) next++;
+                    from = to;
+                    fromAt = toAt;
+                }
+            }
+        }
+        final double[] flow = new double[flows.size()];
+        final boolean[] fluid = new boolean[flow.length];
+        for (int i = 0; i < flow.length; i++) {
+            flow[i] = flows.get(i);
+            fluid[i] = Resources.isFluid(
+                carried.get(i)
+                    .getFirst()
+                    .resource());
+        }
+        final float[] width = widths(flow, fluid);
+        final List<Strand> out = new ArrayList<>(flow.length);
+        for (int i = 0; i < flow.length; i++) {
+            final Wire first = carried.get(i)
+                .getFirst();
+            out.add(new Strand(paths.get(i), first.color(), width[i], flow[i], carried.get(i), trunkOf.get(i)));
+        }
+        final List<Junction> dots = new ArrayList<>(joints.size());
+        final java.util.Set<Long> at = new java.util.HashSet<>();
+        for (final int[] j : joints) {
+            if (!at.add((long) j[0] << 32 | j[1] & 0xFFFFFFFFL)) continue;
+            final Strand into = out.get(j[2]);
+            dots.add(new Junction(j[0], j[1], into.color(), into.width()));
+        }
+        strands = out;
+        junctions = dots;
+        strandsFor = wires;
+        return out;
+    }
+
+    // endregion
+
+    /**
+     * The wire within a few world pixels of a point, topmost first: on a trunk's stretch, the wire it is a stretch of.
+     */
     @Nullable
     Wire hit(final float wx, final float wy) {
-        final List<Wire> wires = this.wires;
-        if (wires == hitFor && wx == hitX && wy == hitY) return hitWire;
-        if (wires != gridFor) {
-            hitGrid = new SegmentGrid(wires, WireLayer::tolerance);
-            gridFor = wires;
+        final Strand s = strandAt(wx, wy);
+        return s == null ? null
+            : s.wires()
+                .getFirst();
+    }
+
+    /** The stretch of wire within a few world pixels of a point, topmost first ({@link #strands}). */
+    @Nullable
+    Strand strandAt(final float wx, final float wy) {
+        final List<Strand> strands = strands(this.wires);
+        if (strands == hitFor && wx == hitX && wy == hitY) return hitStrand;
+        if (strands != gridFor) {
+            hitGrid = new SegmentGrid(strands, Strand::path, WireLayer::tolerance);
+            gridFor = strands;
         }
-        // The last wire in the list that passes near the point: the one drawn on top.
-        Wire best = null;
+        // The last stretch in the list that passes near the point: the one drawn on top.
+        Strand best = null;
         int bestAt = -1;
         for (final long r : hitGrid.at(wx, wy)) {
             final int i = SegmentGrid.wire(r);
             if (i <= bestAt) continue;
-            final Wire w = wires.get(i);
-            final int[] a = w.path()
+            final Strand s = strands.get(i);
+            final int[] a = s.path()
                 .get(SegmentGrid.run(r) - 1),
-                b = w.path()
+                b = s.path()
                     .get(SegmentGrid.run(r));
             // Distance from the point to the run, diagonal runs included.
             final float vx = b[0] - a[0], vy = b[1] - a[1], len2 = vx * vx + vy * vy;
             final float t = len2 == 0 ? 0 : Math.max(0, Math.min(1, ((wx - a[0]) * vx + (wy - a[1]) * vy) / len2));
-            if (Math.hypot(wx - (a[0] + vx * t), wy - (a[1] + vy * t)) <= tolerance(w)) {
-                best = w;
+            if (Math.hypot(wx - (a[0] + vx * t), wy - (a[1] + vy * t)) <= tolerance(s)) {
+                best = s;
                 bestAt = i;
             }
         }
-        hitFor = wires;
+        hitFor = strands;
         hitX = wx;
         hitY = wy;
-        hitWire = best;
+        hitStrand = best;
         return best;
     }
 
-    /** How near a wire a point is still on it. */
-    private static double tolerance(final Wire w) {
-        return Math.max(3, w.width() / 2 + 2);
+    /** How near a stretch of wire a point is still on it. */
+    private static double tolerance(final Strand s) {
+        return Math.max(3, s.width() / 2 + 2);
     }
 
     private SegmentGrid hitGrid;
-    private List<Wire> gridFor, hitFor;
+    private List<Strand> gridFor, hitFor;
     private float hitX, hitY;
-    private Wire hitWire;
+    private Strand hitStrand;
 }

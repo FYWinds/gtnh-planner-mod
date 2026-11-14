@@ -121,6 +121,25 @@ public final class BenchRender {
                 new int[] { (int) ty, (int) (ty - al * Math.sin(ang - 0.45)), (int) (ty - al * Math.sin(ang + 0.45)) },
                 3);
         }
+        // Where a wire branches off a trunk it shares: a dot.
+        final Map<List<Object>, List<List<int[]>>> trunks = new java.util.LinkedHashMap<>();
+        for (final BenchBoard.Link l : b.links()) {
+            final Object key = BenchRun.trunk(l);
+            final List<int[]> p = r.routes()
+                .get(l.id());
+            if (key == null || p == null || p.size() < 2) continue;
+            trunks.computeIfAbsent(List.of(key, l.from()), k -> new java.util.ArrayList<>())
+                .add(p);
+        }
+        for (final List<List<int[]>> paths : trunks.values()) {
+            for (final com.gtnhplanner.layout.WireTrunks.Branch branch : com.gtnhplanner.layout.WireTrunks
+                .tree(paths)) {
+                if (branch.parent() < 0) continue;
+                final int x = (int) X.applyAsDouble(branch.at()[0]), y = (int) Y.applyAsDouble(branch.at()[1]);
+                g.setColor(Color.WHITE);
+                g.fillOval(x - 4, y - 4, 8, 8);
+            }
+        }
         // Crossings.
         g.setColor(new Color(0xFF4040));
         g.setStroke(new BasicStroke(1.5f));

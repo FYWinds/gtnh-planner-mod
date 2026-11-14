@@ -22,8 +22,21 @@ public final class BenchRun {
 
     private static final WireRouter NEW_ROUTER = new WireRouter();
 
+    /**
+     * Whether wires from one port share a trunk, as on the board by default: {@code -Prouter.trunks=false} for none.
+     */
+    static final boolean TRUNKS = !"false".equals(System.getProperty("gtnhplanner.router.trunks"));
+
     public static Routed route(final BenchBoard board) {
         return routeNew(board);
+    }
+
+    /**
+     * A wire's trunk, as the board keys it ({@link WireRouter.Wire#trunk()}): its source box's port and resource; null
+     * with trunks off.
+     */
+    static Object trunk(final BenchBoard.Link l) {
+        return TRUNKS ? l.from() + "#" + l.fromPort() + "#" + l.resource() : null;
     }
 
     /** The board's router: boxes and wires box to box, a loop from a card back to itself right side to left side. */
@@ -39,7 +52,7 @@ public final class BenchRun {
             final int a = index.get(l.from()), b = index.get(l.to());
             wires.add(
                 a == b ? new WireRouter.Wire(l.id(), a, b, WireRouter.RIGHT, WireRouter.LEFT, 0)
-                    : new WireRouter.Wire(l.id(), a, b, 0));
+                    : new WireRouter.Wire(l.id(), a, b, WireRouter.ANY, WireRouter.ANY, 0, List.of(), trunk(l)));
         }
         final List<UUID> fellBack = new ArrayList<>();
         NEW_ROUTER.route(boxes, wires, new ArrayList<>(), true);
@@ -78,7 +91,7 @@ public final class BenchRun {
         for (final BenchBoard.Link l : board.links()) {
             final List<int[]> p = routes.get(l.id());
             if (p == null) continue;
-            wires.add(new RouteMetrics.Wire(index.get(l.from()), index.get(l.to()), p));
+            wires.add(new RouteMetrics.Wire(index.get(l.from()), index.get(l.to()), p, trunk(l)));
         }
         return RouteMetrics.measure(boxes, wires);
     }

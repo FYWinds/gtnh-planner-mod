@@ -1702,28 +1702,53 @@ public final class BoardCanvas extends ParentWidget<BoardCanvas> implements Inte
         return out;
     }
 
-    /** The wire under the mouse, by its key, or null: what a wire's tip waits on. */
+    /**
+     * The wire under the mouse, by its key and what the stretch under it carries, or null: what a wire's tip waits on.
+     */
     public Object wireKeyUnderMouse() {
         // A steering dot has its own tip.
         final WireLayer.Dot dot = hoveredDot();
         if (dot != null) return dot.wire()
             .key() + "#"
             + dot.index();
-        final WireLayer.Wire wire = wires.hit(worldX(getContext().getAbsMouseX()), worldY(getContext().getAbsMouseY()));
-        return wire == null ? null : wire.key();
+        final WireLayer.Strand s = wires
+            .strandAt(worldX(getContext().getAbsMouseX()), worldY(getContext().getAbsMouseY()));
+        return s == null ? null
+            : s.wires()
+                .getFirst()
+                .key() + "@"
+                + s.wires()
+                    .size()
+                + "@"
+                + s.perSecond();
     }
 
+    /**
+     * The tip for the wire under the mouse: what it carries and how much; on a trunk's stretch, the sum of the wires
+     * running along it, and how many they are.
+     */
     public List<String> wireLines() {
-        final WireLayer.Wire wire = wires.hit(worldX(getContext().getAbsMouseX()), worldY(getContext().getAbsMouseY()));
-        if (wire == null) return null;
+        final WireLayer.Strand s = wires
+            .strandAt(worldX(getContext().getAbsMouseX()), worldY(getContext().getAbsMouseY()));
+        if (s == null) return null;
+        final WireLayer.Wire wire = s.wires()
+            .getFirst();
         final boolean fluid = com.gtnhplanner.ui.Resources.isFluid(wire.resource());
-        return List.of(
-            com.gtnhplanner.ui.Resources.name(wire.resource()),
-            "§7" + (wire.perSecond() > 0
-                ? com.gtnhplanner.ui.theme.Fmt.rate(wire.perSecond(), session.rateUnit(), fluid)
-                : UiText.tr("canvas.nothing_flows_yet")),
-            UiText.tr("canvas.8right_click_add_a_drawer_here_or_delete_it"),
-            UiText.tr("canvas.8double_click_pin_a_dot_to_steer_it"));
+        final List<String> lines = new ArrayList<>();
+        lines.add(com.gtnhplanner.ui.Resources.name(wire.resource()));
+        lines.add(
+            "§7" + (s.perSecond() > 0 ? com.gtnhplanner.ui.theme.Fmt.rate(s.perSecond(), session.rateUnit(), fluid)
+                : UiText.tr("canvas.nothing_flows_yet")));
+        if (s.wires()
+            .size() > 1)
+            lines.add(
+                UiText.tr(
+                    "canvas.trunk_of_wires",
+                    s.wires()
+                        .size()));
+        lines.add(UiText.tr("canvas.8right_click_add_a_drawer_here_or_delete_it"));
+        lines.add(UiText.tr("canvas.8double_click_pin_a_dot_to_steer_it"));
+        return lines;
     }
 
     // region Carrying a leftover

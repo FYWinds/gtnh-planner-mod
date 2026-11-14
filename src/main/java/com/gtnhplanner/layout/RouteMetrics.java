@@ -26,6 +26,10 @@ import java.util.Locale;
  * <li>{@code sharedEnds}: wires meeting a box at the same point as another wire.</li>
  * </ul>
  *
+ * Wires that share a trunk ({@link Wire#trunk()}) are measured as drawn: the trunk once, each wire from where it
+ * branches off it (the turn there included), so running together on the trunk is not overlap and leaving the port as
+ * one is not a shared end; a wire's excess is still its whole length, trunk and branch, against the shortest.
+ *
  * {@link Result#points()} folds them into one number, lower better, in pixels of wire: Factory Flow's route points
  * (length, bends and crossings at its prices) and, for what those miss, overlap, boxes run through, jogs, wrong sides
  * and doubling back.
@@ -37,9 +41,15 @@ public final class RouteMetrics {
 
     /**
      * A routed wire: its two boxes (indexes into the box list, or -1) and its corners, first at its source, last at its
-     * target.
+     * target; and its trunk ({@link WireRouter.Wire#trunk()}: wires from the same box with equal trunks share one, null
+     * for none).
      */
-    public record Wire(int from, int to, List<int[]> points) {}
+    public record Wire(int from, int to, List<int[]> points, Object trunk) {
+
+        public Wire(final int from, final int to, final List<int[]> points) {
+            this(from, to, points, null);
+        }
+    }
 
     /** The numbers; see the class comment. */
     public record Result(int wires, int crossings, double overlap, int bends45, int bends90, int sharp, double length,
@@ -103,16 +113,20 @@ public final class RouteMetrics {
         int crossings = 0, b45 = 0, b90 = 0, sharp = 0, shared = 0, jogs = 0, wrong = 0;
         double overlap = 0, length = 0, excess = 0, backtrack = 0, hits = 0;
         final int n = wires.size();
+        // What each wire draws itself: from where it leaves its trunk (all of it for a wire on its own), how far along
+        // the trunk that is, and the way the trunk runs into it.
+        final List<List<int[]>> drawn = new java.util.ArrayList<>(n);
+        final double[] along = new double[n];
+        final double[][] into = new double[n][];
+        branches(wires, drawn, along, into);
         // Each wire's bounding box, so pairs far apart are skipped at once.
         final int[][] bb = new int[n][];
-        for (int i = 0; i < n; i++) bb[i] = bounds(
-            wires.get(i)
-                .points());
+        for (int i = 0; i < n; i++) bb[i] = bounds(drawn.get(i));
         for (int i = 0; i < n; i++) {
             final Wire w = wires.get(i);
-            final List<int[]> p = w.points();
-            if (p.size() < 2) continue;
-            final int[] s = p.get(0), t = p.get(p.size() - 1);
+            final List<int[]> whole = w.points(), p = drawn.get(i);
+            if (whole.size() < 2 || p.size() < 2) continue;
+            final int[] s = whole.get(0), t = whole.get(whole.size() - 1);
             final int gx = Integer.signum(t[0] - s[0]), gy = Integer.signum(t[1] - s[1]);
             double own = 0;
             for (int k = 0; k + 1 < p.size(); k++) {
@@ -125,9 +139,9 @@ public final class RouteMetrics {
                 for (int bi = 0; bi < boxes.size(); bi++) hits += inside(boxes.get(bi), a, b);
             }
             length += own;
-            // Bends by angle, skipping runs too short to have a direction.
-            double px = 0, py = 0;
-            boolean have = false;
+            // Bends by angle, skipping runs too short to have a direction; a branch's turn off its trunk is one.
+            double px = into[i] == null ? 0 : into[i][0], py = into[i] == null ? 0 : into[i][1];
+            boolean have = into[i] != null;
             for (int k = 0; k + 1 < p.size(); k++) {
                 final double dx = p.get(k + 1)[0] - p.get(k)[0], dy = p.get(k + 1)[1] - p.get(k)[1];
                 final double len = Math.hypot(dx, dy);
@@ -152,20 +166,20 @@ public final class RouteMetrics {
                 final long cross = (long) (b[0] - a[0]) * (d[1] - c[1]) - (long) (b[1] - a[1]) * (d[0] - c[0]);
                 if (dot > 0 && cross == 0) jogs++;
             }
-            // Excess and wrong sides, against the two boxes.
+            // Excess (the whole wire, trunk and branch) and wrong sides, against the two boxes; a branch's source end
+            // is its trunk's.
             final Box from = w.from() >= 0 && w.from() < boxes.size() ? boxes.get(w.from()) : null;
             final Box to = w.to() >= 0 && w.to() < boxes.size() ? boxes.get(w.to()) : null;
             if (from != null && to != null && from != to) {
-                excess += Math.max(0, own - shortest(from, to));
-                if (facesAway(from, s, p.get(1), to)) wrong++;
+                excess += Math.max(0, along[i] + own - shortest(from, to));
+                if (along[i] == 0 && facesAway(from, s, p.get(1), to)) wrong++;
                 if (facesAway(to, t, p.get(p.size() - 2), from)) wrong++;
             }
             for (int j = i + 1; j < n; j++) {
                 if (bb[i][2] < bb[j][0] || bb[j][2] < bb[i][0] || bb[i][3] < bb[j][1] || bb[j][3] < bb[i][1]) {
                     continue;
                 }
-                final List<int[]> q = wires.get(j)
-                    .points();
+                final List<int[]> q = drawn.get(j);
                 for (int k = 0; k + 1 < p.size(); k++) for (int m = 0; m + 1 < q.size(); m++) {
                     final int[] a = p.get(k), b = p.get(k + 1), c = q.get(m), d = q.get(m + 1);
                     if (crosses(a, b, c, d)) {
@@ -173,10 +187,42 @@ public final class RouteMetrics {
                         if (crossed != null) crossed.add(new int[] { i, j });
                     } else overlap += collinearOverlap(a, b, c, d);
                 }
-                if (sameEnd(w, wires.get(j))) shared++;
+                if (sameEnd(w, wires.get(j), along[i] > 0, along[j] > 0)) shared++;
             }
         }
         return new Result(n, crossings, overlap, b45, b90, sharp, length, excess, backtrack, jogs, wrong, hits, shared);
+    }
+
+    /**
+     * Each wire's own stretch: past where it leaves the trunk it shares with wires before it in the list (its whole
+     * path when it shares none), how far along the trunk that is, and the trunk's heading there (null for none).
+     */
+    private static void branches(final List<Wire> wires, final List<List<int[]>> drawn, final double[] along,
+        final double[][] into) {
+        final java.util.Map<List<Object>, List<Integer>> trunks = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < wires.size(); i++) {
+            final Wire w = wires.get(i);
+            drawn.add(w.points());
+            if (w.trunk() != null && w.points()
+                .size() >= 2) trunks.computeIfAbsent(List.of(w.trunk(), w.from()), k -> new java.util.ArrayList<>())
+                    .add(i);
+        }
+        for (final List<Integer> members : trunks.values()) {
+            if (members.size() < 2) continue;
+            final List<List<int[]>> paths = new java.util.ArrayList<>(members.size());
+            for (final int i : members) paths.add(
+                wires.get(i)
+                    .points());
+            final WireTrunks.Branch[] tree = WireTrunks.tree(paths);
+            for (int k = 0; k < members.size(); k++) {
+                final WireTrunks.Branch b = tree[k];
+                if (b.parent() < 0) continue;
+                final int i = members.get(k);
+                along[i] = b.length();
+                drawn.set(i, WireTrunks.between(paths.get(k), b.length(), b.at(), 0, null));
+                into[i] = WireTrunks.headingBefore(paths.get(k), b.length());
+            }
+        }
     }
 
     private static int[] bounds(final List<int[]> p) {
@@ -224,13 +270,16 @@ public final class RouteMetrics {
         return d * goal < 0 ? Math.abs(d) : 0;
     }
 
-    /** Whether two wires end on the same point: two wires drawn into one. */
-    private static boolean sameEnd(final Wire a, final Wire b) {
+    /**
+     * Whether two wires end on the same point: two wires drawn into one. A branch ({@code aBranch}, {@code bBranch})
+     * leaves from its trunk, not its box, so its source end is not counted.
+     */
+    private static boolean sameEnd(final Wire a, final Wire b, final boolean aBranch, final boolean bBranch) {
         final List<int[]> p = a.points(), q = b.points();
         final int[] a0 = p.get(0), a1 = p.get(p.size() - 1), b0 = q.get(0), b1 = q.get(q.size() - 1);
-        return same(a0, b0) && a.from() == b.from() || same(a1, b1) && a.to() == b.to()
-            || same(a0, b1) && a.from() == b.to()
-            || same(a1, b0) && a.to() == b.from();
+        return !aBranch && !bBranch && same(a0, b0) && a.from() == b.from() || same(a1, b1) && a.to() == b.to()
+            || !aBranch && same(a0, b1) && a.from() == b.to()
+            || !bBranch && same(a1, b0) && a.to() == b.from();
     }
 
     private static boolean same(final int[] a, final int[] b) {

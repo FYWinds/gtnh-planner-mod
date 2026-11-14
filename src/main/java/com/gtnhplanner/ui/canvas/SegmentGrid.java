@@ -4,13 +4,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
 
 /**
  * Wires' straight runs by where they are on the board, in square cells: what lies near a point, or near another wire,
  * without going through every run of every wire (a plan of thousands of wires made the hover test and the hops the
  * frame's cost). Each run is filed under every cell its box, grown by its wire's margin, touches; a run is named by its
- * wire's place in the list and its own place in the wire's path, packed as {@code wire << 32 | run}.
+ * wire's place in the list and its own place in the wire's path, packed as {@code wire << 32 | run}. A "wire" is
+ * anything drawn along a path: a whole wire, or a stretch of a trunk.
  */
 final class SegmentGrid {
 
@@ -19,16 +21,17 @@ final class SegmentGrid {
     private final Map<Long, long[]> cells = new HashMap<>();
 
     /**
+     * @param path   each one's corners
      * @param margin how far around each of a wire's runs it counts as there (a hover's tolerance, a crossing's slack)
      */
-    SegmentGrid(final List<WireLayer.Wire> wires, final ToDoubleFunction<WireLayer.Wire> margin) {
+    <T> SegmentGrid(final List<T> wires, final Function<T, List<int[]>> path, final ToDoubleFunction<T> margin) {
         final Map<Long, List<Long>> filing = new HashMap<>();
         for (int i = 0; i < wires.size(); i++) {
-            final WireLayer.Wire w = wires.get(i);
+            final T w = wires.get(i);
             final double m = margin.applyAsDouble(w);
-            final List<int[]> path = w.path();
-            for (int k = 1; k < path.size(); k++) {
-                final int[] a = path.get(k - 1), b = path.get(k);
+            final List<int[]> corners = path.apply(w);
+            for (int k = 1; k < corners.size(); k++) {
+                final int[] a = corners.get(k - 1), b = corners.get(k);
                 final long run = (long) i << 32 | k;
                 for (int cx = cell(Math.min(a[0], b[0]) - m); cx <= cell(Math.max(a[0], b[0]) + m); cx++)
                     for (int cy = cell(Math.min(a[1], b[1]) - m); cy <= cell(Math.max(a[1], b[1]) + m); cy++)

@@ -107,6 +107,18 @@ public final class PlannerSettings {
     }
 
     /**
+     * "Shared trunks": wires that leave one port for several cards leave it as one line and branch off near each card,
+     * the line as wide as all it carries. On by default; off, each wire is routed and drawn on its own.
+     */
+    public static boolean sharedTrunks() {
+        return bool("board.sharedTrunks", true);
+    }
+
+    public static void setSharedTrunks(final boolean on) {
+        set("board.sharedTrunks", on);
+    }
+
+    /**
      * "Zoomed-out view": the board zoom, in percent of a 1:1 view, below which cards turn to their glance faces
      * ({@code RecipeCard.glanceAt}); from {@value #ZOOMED_OUT_MIN} to {@value #ZOOMED_OUT_MAX} in steps of
      * {@value #ZOOMED_OUT_STEP}. Lower, a full card's lettering is unreadable before the glance face arrives.

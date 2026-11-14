@@ -28,17 +28,20 @@ class DragBench {
     @Test
     void drag() throws IOException {
         final List<BenchBoard> corpus = LayoutBenchmark.corpus();
-        for (final String want : BOARDS) {
-            BenchBoard board = null;
+        // -PbenchOnly='<regex>': every placed board whose name matches, for a checkout without the named ones.
+        final String only = System.getProperty("gtnhplanner.bench.only", "");
+        final List<BenchBoard> picked = new ArrayList<>();
+        if (only.isEmpty()) for (final String want : BOARDS) {
             for (final BenchBoard b : corpus) if (b.name()
-                .contains(want)
-                && b.items()
-                    .stream()
-                    .anyMatch(i -> i.x() != 0 || i.y() != 0)) {
-                        board = b;
-                        break;
-                    }
-            if (board == null) continue;
+                .contains(want) && placed(b)) {
+                    picked.add(b);
+                    break;
+                }
+        }
+        else for (final BenchBoard b : corpus) if (placed(b) && java.util.regex.Pattern.compile(only)
+            .matcher(b.name())
+            .find()) picked.add(b);
+        for (final BenchBoard board : picked) {
             // Wires per box, to pick the busiest and a quiet one.
             final Map<UUID, Integer> count = new HashMap<>();
             for (final BenchBoard.Link l : board.links()) {
@@ -51,6 +54,13 @@ class DragBench {
                 drag(board, moving, count.getOrDefault(moving.id(), 0));
             }
         }
+    }
+
+    /** Whether a board has places of its own (a gtnh-flow chart has none until arranged). */
+    private static boolean placed(final BenchBoard b) {
+        return b.items()
+            .stream()
+            .anyMatch(i -> i.x() != 0 || i.y() != 0);
     }
 
     private static void drag(final BenchBoard board, final BenchBoard.Item moving, final int wiresAt) {
@@ -132,7 +142,15 @@ class DragBench {
             final int a = index.get(l.from()), b = index.get(l.to());
             wires.add(
                 a == b ? new WireRouter.Wire(l.id(), a, b, WireRouter.RIGHT, WireRouter.LEFT, 0)
-                    : new WireRouter.Wire(l.id(), a, b, 0));
+                    : new WireRouter.Wire(
+                        l.id(),
+                        a,
+                        b,
+                        WireRouter.ANY,
+                        WireRouter.ANY,
+                        0,
+                        List.of(),
+                        BenchRun.trunk(l)));
         }
         return wires;
     }

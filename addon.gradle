@@ -6,7 +6,7 @@ test {
         if (!project.hasProperty('bench')) excludeTags 'bench'
     }
     systemProperty 'gtnhplanner.bench', project.findProperty('bench') ?: ''
-    for (String k : ['near', 'wide', 'run', 'turn45', 'turn90', 'cross', 'nearCost', 'rounds']) if (project.hasProperty('router.' + k)) systemProperty 'gtnhplanner.router.' + k, project.property('router.' + k)
+    for (String k : ['near', 'wide', 'run', 'turn45', 'turn90', 'cross', 'nearCost', 'rounds', 'alone', 'fork', 'trunks']) if (project.hasProperty('router.' + k)) systemProperty 'gtnhplanner.router.' + k, project.property('router.' + k)
     systemProperty 'java.awt.headless', 'true'
     // The solver's goldens (SolverGoldenTest): -PwriteGoldens writes them afresh from the solver as it is.
     if (project.hasProperty('writeGoldens')) systemProperty 'gtnhplanner.solver.writeGoldens', 'true'

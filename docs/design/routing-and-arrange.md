@@ -108,6 +108,53 @@ A player can pin dots on a wire that its route must pass through, in order: the 
   in and goes back out to the same corner, while a dot the game put on every other line comes back from a plan link,
   code or post one cell over (checked in the GT dev game: pinned at 375,575, posted as 380,580, back at 385,585).
 
+### Trunks (2026-11-13)
+
+One card's output feeding five cards used to leave its port as five parallel wires of one colour. Wires that leave
+one port with one resource now share a trunk: one line out of the port, each wire branching off near its own card.
+Only the fan-out at a source: wires of one resource from different ports stay apart, and wires meeting at an input
+stay as they were.
+
+- **Keyed** by `WireRouter.Wire.trunk` (the board's `WireLayer.Source`: a card's output port, or a drawer that
+  gives); wires from one box with equal keys, two or more, are a trunk (`WireRouter.trunks`). A wire back into its
+  own box is never on one.
+- **Planned once**: the trunk has one place on its box, planned for the wire that routes first on it (`plan`), so
+  the box's other wires space round one end, not five.
+- **Routed in turn**, as one unit where the first of them falls in the router's order: unsteered wires first, then
+  the nearest box first (gap between the boxes, then centre distance, then key). The first routes as any wire. Each
+  next one is searched from every cell of the routes before it (near its two boxes), free and heading the way the
+  trunk runs there (`trunkStarts`): the search finds the cheapest way from the trunk to its box, so it runs along the
+  trunk at no cost and leaves it where it turns toward its own box, near it (Prim's way to a Steiner tree). It may also
+  leave its box on its own (aimed at its box as a plan would) at 600 px more (`ALONE`, `-Prouter.alone`), which only
+  a box behind the port is worth; and leaving where another branch already leaves is 25 px cheaper (`FORK`,
+  `-Prouter.fork`), so two forks a cell apart come out as one where the geometry lets them. Nearest first means the
+  trunk heads straight for the nearest card and the rest leave it a little before the column they sit in (a card
+  feeding a column of six: one line across, a fork, two short buses down the column).
+- **On the board once**: a route remembers how many of its first cells are the trunk's (`Route.shared`); those are on
+  the board as the wires' that ran them first, so crossings, running alongside and docks are counted once
+  (`occupy`, `conflicts`), and the wire's corners are the whole way from the port (trunk, then branch).
+- **Kept and re-routed as one**: `reroute` keeps a trunk only when every wire on it is kept and it lost none; else
+  all of it routes again (a card at one end of a trunk dragged re-routes that trunk's wires, a handful). The rip-up
+  pass takes a trunk off and routes it again whole, kept when it crosses less.
+- **Steering dots**: a steered wire routes after the unsteered ones of its trunk, its first leg from the trunk, so a
+  dot pulls only its own wire off the trunk; the trunk does not follow it.
+- **Read back** from the routes alone (`layout/WireTrunks`): two paths from one point run together until they part;
+  each wire hangs off the one before it in the list it runs along longest. So it holds for whatever paths the board
+  has (a dragged card's wires stretched before their route is back too).
+- **Drawn** (`WireLayer.strands`): each stretch once, as wide as the sum of what runs along it (widths ranked over the
+  stretches, as over the wires before), each branch its own flow; a dot in the trunk's colour, a little wider than it,
+  where a branch leaves (under a dark rim that shows between the branches); the stretches of one trunk never hop
+  each other; arrows per stretch. Hovering or selecting a wire lights every stretch it runs along, port to card. A
+  stretch of trunk under the mouse means the wire it is a stretch of (its menu, its dots, its glow); its tip gives the
+  sum on it and how many wires share it.
+- **Measured as drawn** (`RouteMetrics`, given each wire's trunk): the trunk once, each wire from where it leaves it
+  (its turn off it a bend), so running together is not overlap and leaving the port as one is not a shared end;
+  excess is still the whole wire.
+- **Off**: the settings' "Shared wire trunks" (`PlannerSettings.sharedTrunks`, on by default) keys no wire, and the
+  board routes and draws exactly as before (the corpus measures the same with `-Prouter.trunks=false`). Nothing is
+  saved: routes are the board's own and steering dots are what plans, posts and shared plans carry, as before.
+  Arrange still judges its candidates without trunks.
+
 ### Where it stands (2026-10-08, `build/bench/router-v1`)
 
 Totals over the corpus; "placed" is 1024 wires on the website's own placements, "arranged" 1857 wires after the

@@ -242,6 +242,11 @@ public final class SettingsPanel extends Widget<SettingsPanel> implements Intera
                         PlannerSettings::problemOutlines,
                         PlannerSettings::setProblemOutlines).about(tr("settings.problem_outlines_tip")),
                     toggle(
+                        tr("settings.shared_trunks"),
+                        null,
+                        PlannerSettings::sharedTrunks,
+                        PlannerSettings::setSharedTrunks).about(tr("settings.shared_trunks_tip")),
+                    toggle(
                         tr("settings.scroll_values"),
                         null,
                         PlannerSettings::scrollChangesValues,

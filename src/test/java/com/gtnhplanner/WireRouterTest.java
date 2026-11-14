@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnhplanner.layout.WireRouter;
 import com.gtnhplanner.layout.WireRouter.Box;
 import com.gtnhplanner.layout.WireRouter.Wire;
+import com.gtnhplanner.layout.WireTrunks;
 
 /**
  * The wire router: straight where boxes face, eight directions only, clear of every box, on the boxes' edges, the same
@@ -252,8 +254,187 @@ class WireRouterTest {
         assertTrue(along(routes.get(plain.key()), dot) >= 0, () -> describe(routes.get(plain.key())));
     }
 
+    // endregion
+
+    // region Trunks: wires from one port share one
+
+    @Test
+    void wiresFromOnePortShareATrunkAndBranchNearTheirBoxes() {
+        final List<Box> boxes = fanOut();
+        final List<Wire> wires = fanWires(boxes.size(), i -> "port");
+        final Set<UUID> fellBack = new HashSet<>();
+        final Map<UUID, List<int[]>> routes = new WireRouter().route(boxes, null, wires, fellBack, true);
+        assertTrue(fellBack.isEmpty());
+        final List<List<int[]>> paths = new ArrayList<>();
+        for (final Wire w : wires) paths.add(routes.get(w.key()));
+        final String all = describeAll(paths);
+        // One place on the port's box, for all of them.
+        for (final List<int[]> p : paths) {
+            assertTrue(
+                Arrays.equals(
+                    paths.getFirst()
+                        .getFirst(),
+                    p.getFirst()),
+                () -> "splayed at the port: " + all);
+            assertTrue(octilinear(p), all);
+            assertTrue(clear(p, boxes), () -> "through a box: " + all);
+        }
+        // Each runs along the trunk past half way across before it branches off.
+        final WireTrunks.Branch[] tree = WireTrunks.tree(paths);
+        for (int k = 0; k < tree.length; k++) {
+            if (tree[k].parent() < 0) continue;
+            final int x = tree[k].at()[0];
+            assertTrue(x >= 560, () -> "branches off near the port: " + all);
+        }
+        // Drawn once, the trunk saves most of what five wires side by side would take.
+        double whole = 0, drawn = 0;
+        for (int k = 0; k < paths.size(); k++) {
+            whole += WireTrunks.length(paths.get(k));
+            drawn += WireTrunks.length(paths.get(k)) - tree[k].length();
+        }
+        final double saved = 1 - drawn / whole;
+        assertTrue(saved > 0.3, () -> "saves only " + saved + ": " + all);
+    }
+
+    @Test
+    void wiresFromDifferentPortsDoNotMerge() {
+        final List<Box> boxes = fanOut();
+        // Each wire its own port (or resource): five wires, five places on the box, nothing run together.
+        final List<Wire> wires = fanWires(boxes.size(), i -> "port" + i);
+        final Map<UUID, List<int[]>> routes = new WireRouter().route(boxes, wires);
+        final List<List<int[]>> paths = new ArrayList<>();
+        for (final Wire w : wires) paths.add(routes.get(w.key()));
+        for (int i = 0; i < paths.size(); i++) for (int j = i + 1; j < paths.size(); j++) {
+            assertFalse(
+                Arrays.equals(
+                    paths.get(i)
+                        .getFirst(),
+                    paths.get(j)
+                        .getFirst()),
+                describeAll(paths));
+            assertEquals(null, WireTrunks.parting(paths.get(i), paths.get(j)), describeAll(paths));
+        }
+        // And the same wires with no trunk at all route exactly so: a trunk of one wire is no trunk.
+        final Map<UUID, List<int[]>> none = new WireRouter().route(boxes, fanWires(boxes.size(), i -> null));
+        for (final Wire w : wires) assertEquals(describe(none.get(w.key())), describe(routes.get(w.key())));
+    }
+
+    @Test
+    void withoutTrunksTheBoardRoutesAsItDid() {
+        // The grid board with every wire given a trunk of its own routes exactly as with none; the fan-out with none
+        // leaves its box at five places, as before trunks.
+        final List<Box> boxes = grid();
+        final List<Wire> plain = wiresOf(boxes.size()), keyed = new ArrayList<>();
+        for (final Wire w : plain) keyed.add(withTrunk(w, w.key()));
+        final Map<UUID, List<int[]>> a = new WireRouter().route(boxes, plain), b = new WireRouter().route(boxes, keyed);
+        for (final Wire w : plain) assertEquals(describe(a.get(w.key())), describe(b.get(w.key())));
+
+        final List<Box> fan = fanOut();
+        final Map<UUID, List<int[]>> off = new WireRouter().route(fan, fanWires(fan.size(), i -> null));
+        final Set<String> starts = new HashSet<>();
+        for (final List<int[]> p : off.values()) starts.add(p.getFirst()[0] + "," + p.getFirst()[1]);
+        assertEquals(fan.size() - 1, starts.size(), () -> describeAll(new ArrayList<>(off.values())));
+    }
+
+    @Test
+    void movingAConsumerKeepsTheTrunkAndLeavesOtherWiresAlone() {
+        final List<Box> boxes = new ArrayList<>(fanOut());
+        // A wire elsewhere, far from the fan-out.
+        boxes.add(new Box(0, 1400, 320, 200));
+        boxes.add(new Box(800, 1400, 320, 200));
+        final List<Wire> wires = new ArrayList<>(fanWires(6, i -> "port"));
+        final Wire far = wire("far", 6, 7);
+        wires.add(far);
+        final WireRouter router = new WireRouter();
+        final Map<UUID, List<int[]>> before = router.route(boxes, wires);
+        final List<Box> moved = new ArrayList<>(boxes);
+        final Box last = boxes.get(5);
+        moved.set(5, new Box(last.x() + 40, last.y() + 30, last.w(), last.h()));
+        final Map<UUID, List<int[]>> after = router.reroute(moved, wires, null, true);
+        assertSame(before.get(far.key()), after.get(far.key()));
+        final List<List<int[]>> paths = new ArrayList<>();
+        for (final Wire w : wires.subList(0, 5)) paths.add(after.get(w.key()));
+        for (final List<int[]> p : paths) {
+            assertTrue(
+                Arrays.equals(
+                    paths.getFirst()
+                        .getFirst(),
+                    p.getFirst()),
+                describeAll(paths));
+            assertTrue(clear(p, moved), describeAll(paths));
+        }
+        assertTrue(
+            onEdge(
+                paths.getLast()
+                    .getLast(),
+                moved.get(5)),
+            describeAll(paths));
+        // As routing the moved board afresh would.
+        final Map<UUID, List<int[]>> fresh = new WireRouter().route(moved, wires);
+        for (final Wire w : wires.subList(0, 5))
+            assertEquals(describe(fresh.get(w.key())), describe(after.get(w.key())));
+    }
+
+    @Test
+    void aSteeredWireLeavesTheTrunkForItsDot() {
+        final List<Box> boxes = fanOut();
+        final List<Wire> wires = new ArrayList<>(fanWires(boxes.size(), i -> "port"));
+        // The wire to the middle box steered down below the fan.
+        final int[] dot = { 555, 905 };
+        wires.set(2, withStops(wires.get(2), dot));
+        final Map<UUID, List<int[]>> routes = new WireRouter().route(boxes, wires);
+        final List<List<int[]>> paths = new ArrayList<>();
+        for (final Wire w : wires) paths.add(routes.get(w.key()));
+        assertTrue(along(paths.get(2), dot) >= 0, describeAll(paths));
+        for (final List<int[]> p : paths) assertTrue(
+            Arrays.equals(
+                paths.getFirst()
+                    .getFirst(),
+                p.getFirst()),
+            describeAll(paths));
+        assertTrue(clear(paths.get(2), boxes), describeAll(paths));
+    }
+
+    @Test
+    void aTrunkRoutesTheSameEveryTime() {
+        final List<Box> boxes = fanOut();
+        final List<Wire> wires = fanWires(boxes.size(), i -> "port");
+        final List<Wire> reversed = new ArrayList<>(wires);
+        java.util.Collections.reverse(reversed);
+        final Map<UUID, List<int[]>> a = new WireRouter().route(boxes, wires),
+            b = new WireRouter().route(boxes, reversed);
+        for (final Wire w : wires) assertEquals(describe(a.get(w.key())), describe(b.get(w.key())));
+    }
+
+    /** A card and a column of five to its right, the middle one level with it. */
+    private static List<Box> fanOut() {
+        final List<Box> out = new ArrayList<>();
+        out.add(new Box(0, 0, 320, 200));
+        for (int k = 0; k < 5; k++) out.add(new Box(800, -500 + 250 * k, 320, 200));
+        return out;
+    }
+
+    /** A wire from box 0 to each other box, with the trunk key given for each. */
+    private static List<Wire> fanWires(final int n, final java.util.function.IntFunction<Object> trunk) {
+        final List<Wire> out = new ArrayList<>();
+        for (int i = 1; i < n; i++)
+            out.add(new Wire(id("fan" + i), 0, i, WireRouter.ANY, WireRouter.ANY, 1, List.of(), trunk.apply(i)));
+        return out;
+    }
+
+    private static Wire withTrunk(final Wire w, final Object trunk) {
+        return new Wire(w.key(), w.from(), w.to(), w.fromSides(), w.toSides(), w.weight(), w.stops(), trunk);
+    }
+
+    private static String describeAll(final List<List<int[]>> paths) {
+        final StringBuilder s = new StringBuilder();
+        for (final List<int[]> p : paths) s.append("\n  ")
+            .append(p == null ? "null" : describe(p));
+        return s.toString();
+    }
+
     private static Wire withStops(final Wire w, final int[]... stops) {
-        return new Wire(w.key(), w.from(), w.to(), w.fromSides(), w.toSides(), w.weight(), List.of(stops));
+        return new Wire(w.key(), w.from(), w.to(), w.fromSides(), w.toSides(), w.weight(), List.of(stops), w.trunk());
     }
 
     /** How far along the path the point is, or -1 when the path does not pass through it. */
