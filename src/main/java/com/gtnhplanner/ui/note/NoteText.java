@@ -4,10 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.ToIntFunction;
 
+import com.gtnhplanner.ui.TextWrap;
+
 /**
- * A note's text laid out in lines: each paragraph (between newlines) wrapped at word breaks to a width, a word wider
- * than the line broken where it must. Lines keep their place in the whole text, so the editor can map a caret to a
- * line and a point on it, and a click back to a caret. Pure: the font's width comes in as a function.
+ * A note's text laid out in lines: each paragraph (between newlines) wrapped to a width where {@link TextWrap} breaks
+ * a line (at a space, between Chinese characters), a word wider than the line broken where it must. Lines keep their
+ * place in the whole text, so the editor can map a caret to a line and a point on it, and a click back to a caret.
+ * Pure: the font's width comes in as a function.
  */
 public final class NoteText {
 
@@ -38,30 +41,23 @@ public final class NoteText {
         return new NoteText(text, lines, width);
     }
 
-    /** One paragraph, {@code from} to {@code to}, into lines. */
+    /** One paragraph, {@code from} to {@code to}, into lines; a line keeps the spaces at its break. */
     private static void wrap(final String text, final int from, final int to, final float maxWidth,
         final ToIntFunction<String> width, final List<Line> out) {
-        if (from == to) {
-            out.add(new Line(from, to));
-            return;
-        }
-        int start = from;
-        while (start < to) {
-            int end = start;
-            int lastSpace = -1;
-            while (end < to && width.applyAsInt(text.substring(start, end + 1)) <= maxWidth) {
-                if (text.charAt(end) == ' ') lastSpace = end;
-                end++;
+        int start = from, at = from;
+        boolean first = true;
+        for (final String shown : TextWrap.wrap(text.substring(from, to), maxWidth, width::applyAsInt)) {
+            if (shown.isEmpty()) break;
+            // Only spaces lie between where the last line's text ends and this one's begins.
+            final int begin = text.indexOf(shown, at);
+            if (!first) {
+                out.add(new Line(start, begin));
+                start = begin;
             }
-            if (end >= to) {
-                out.add(new Line(start, to));
-                return;
-            }
-            // Break after the last space that fits, keeping the space on this line; else mid-word, one letter at least.
-            final int cut = lastSpace >= start ? lastSpace + 1 : Math.max(end, start + 1);
-            out.add(new Line(start, cut));
-            start = cut;
+            first = false;
+            at = begin + shown.length();
         }
+        out.add(new Line(start, to));
     }
 
     public List<Line> lines() {

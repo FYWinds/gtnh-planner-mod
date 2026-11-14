@@ -79,16 +79,18 @@ public final class PlanFileMenu {
                 .size();
             session.flash(
                 missing == 0 ? Severity.INFO : Severity.WARN,
-                "Opened '" + result.graph()
-                    .getName()
-                    + "': "
-                    + result.report()
-                        .summary());
+                UiText.tr(
+                    "import.opened_plan",
+                    result.graph()
+                        .getName(),
+                    result.report()
+                        .shownSummary()));
             Sfx.SWEEP.play();
         } catch (final IOException | FfImportException e) {
             session.flash(
                 Severity.WARN,
-                e.getMessage() == null ? UiText.tr("planfile.that_plan_file_could_not_be_opened") : e.getMessage());
+                e.getMessage() == null ? UiText.tr("planfile.that_plan_file_could_not_be_opened")
+                    : UiText.data(e.getMessage()));
             Sfx.DENY.play();
         } catch (final RuntimeException e) {
             GtnhPlanner.LOG.warn(UiText.tr("planfile.could_not_open_the_plan_file"), file, e);

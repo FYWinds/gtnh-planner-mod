@@ -24,6 +24,7 @@ import com.gtnhplanner.cloud.sync.LiveState;
 import com.gtnhplanner.data.flowchart.Graph;
 import com.gtnhplanner.importer.ImportReport;
 import com.gtnhplanner.library.PlanExport;
+import com.gtnhplanner.ui.UiText;
 
 /**
  * One cloud plan on this device as the board holds it: its live copy ({@link LiveState}: the plan as the service last
@@ -374,7 +375,7 @@ public final class LiveDoc {
                     ? op.toJson()
                         .get("id")
                     : "");
-        session.notice("A card is too big to share and stays on this device only");
+        session.notice(UiText.data("A card is too big to share and stays on this device only"));
     }
 
     boolean commit() {
@@ -609,7 +610,7 @@ public final class LiveDoc {
         session.cache()
             .ack(key, cid);
         behind = true;
-        session.notice("An edit could not be saved");
+        session.notice(UiText.data("An edit could not be saved"));
     }
 
     void presence(final LiveClient.Presence p) {

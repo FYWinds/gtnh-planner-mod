@@ -312,14 +312,14 @@ public final class WorldView {
         if (node.isPower()) {
             // Its source's name ("Fluid Tank"), never its id.
             final com.gtnhplanner.power.PowerSource source = com.gtnhplanner.power.PowerRegistry.get(node.powerSource);
-            return source != null ? com.gtnhplanner.ui.UiText.data(source.name()) : node.powerSource;
+            return source != null ? UiText.data(source.name()) : node.powerSource;
         }
         // A card of a plan not open since: its machine is saved as an item key.
         if (node.machineName != null && node.machineName.startsWith("item:")) {
             final net.minecraft.item.ItemStack machine = com.gtnhplanner.ui.Resources.item(node.machineName);
             if (machine != null) return machine.getDisplayName();
         }
-        return node.machineName != null ? node.machineName : "Machine";
+        return node.machineName != null ? UiText.data(node.machineName) : UiText.tr("world.machine");
     }
 
     /** At the top of the screen, a passing note. */

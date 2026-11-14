@@ -22,6 +22,7 @@ import com.gtnhplanner.library.CommunityApi;
 import com.gtnhplanner.library.Reports;
 import com.gtnhplanner.ui.BoardSession;
 import com.gtnhplanner.ui.PlannerScale;
+import com.gtnhplanner.ui.TextWrap;
 import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.canvas.BoardCanvas;
 import com.gtnhplanner.ui.canvas.PlanPicture;
@@ -50,8 +51,10 @@ public final class FeedbackPanel extends ParentWidget<FeedbackPanel> implements 
     private static final int CONTROL = 0xFF2A2C31, CONTROL_HOVER = 0xFF33363C, CYAN = 0xFF22D3EE, WELL = 0xFF16171A,
         DISCORD = 0xFF8EA1FF;
     private static final int[] MOOD_INK = { 0xFF5EE9B5, 0xFFE7C35A, 0xFFE57373 };
-    private static final String[] KINDS = { UiText.tr("feedback.bug"), UiText.tr("feedback.idea"),
-        UiText.tr("feedback.help") };
+
+    private static String[] kinds() {
+        return new String[] { UiText.tr("feedback.bug"), UiText.tr("feedback.idea"), UiText.tr("feedback.help") };
+    }
 
     private final BoardSession session;
     private final BoardCanvas canvas;
@@ -140,12 +143,13 @@ public final class FeedbackPanel extends ParentWidget<FeedbackPanel> implements 
     }
 
     private int[] kindRect(final int i) {
+        final String[] kinds = kinds();
         int total = 0;
-        for (final String k : KINDS) total += chipW(k);
+        for (final String k : kinds) total += chipW(k);
         total += 2 * 8;
         int x = (W - total) / 2;
-        for (int k = 0; k < i; k++) x += chipW(KINDS[k]) + 8;
-        return new int[] { x, KINDS_Y, chipW(KINDS[i]), CHIP_H };
+        for (int k = 0; k < i; k++) x += chipW(kinds[k]) + 8;
+        return new int[] { x, KINDS_Y, chipW(kinds[i]), CHIP_H };
     }
 
     private int[] discordRect() {
@@ -199,14 +203,15 @@ public final class FeedbackPanel extends ParentWidget<FeedbackPanel> implements 
             face(i, r[0], r[1], mood != null && mood.ordinal() == i, !sending && in(r, mx, my), FACE_SCALE);
         }
         // What it is.
-        for (int i = 0; i < KINDS.length; i++) {
+        final String[] kinds = kinds();
+        for (int i = 0; i < kinds.length; i++) {
             final int[] r = kindRect(i);
             final boolean picked = kind.ordinal() == i, hot = !sending && in(r, mx, my);
             // Each kind in its own colour, a little softer until it is picked or hovered.
             final int colour = kindColour(i);
             chip(r, colour, picked, hot);
             kindIcon(i, r[0] + 7, r[1] + 4, picked || hot ? colour : Hyb.mix(colour, CONTROL, 0.75f));
-            Hyb.text(KINDS[i], r[0] + 7 + 10 + 5, r[1] + 5, picked || hot ? Hyb.INK : Hyb.MUTED);
+            Hyb.text(kinds[i], r[0] + 7 + 10 + 5, r[1] + 5, picked || hot ? Hyb.INK : Hyb.MUTED);
         }
         // What to write, and for help, the Discord first.
         final String prompt = switch (kind) {
@@ -246,29 +251,25 @@ public final class FeedbackPanel extends ParentWidget<FeedbackPanel> implements 
     private String sends() {
         final List<String> parts = new ArrayList<>();
         final Graph g = plan();
-        if (g != null) parts.add("the open plan '" + g.getName() + "'");
+        if (g != null) parts.add(UiText.tr("feedback.the_open_plan", g.getName()));
         parts.add(UiText.tr("feedback.the_game_log"));
         if (crash != null) parts.add(UiText.tr("feedback.the_crash_report"));
-        final String last = parts.remove(parts.size() - 1);
-        return UiText.tr("feedback.sent_with_it") + (parts.isEmpty() ? last : String.join(", ", parts) + " and " + last)
-            + ".";
+        return switch (parts.size()) {
+            case 1 -> UiText.tr("feedback.sent_with_one", parts.get(0));
+            case 2 -> UiText.tr("feedback.sent_with_two", parts.get(0), parts.get(1));
+            default -> UiText.tr("feedback.sent_with_three", parts.get(0), parts.get(1), parts.get(2));
+        };
     }
 
     private static List<String> wrap(final String text, final int width) {
-        final List<String> lines = new ArrayList<>();
-        StringBuilder line = new StringBuilder();
-        for (final String word : text.split(" ")) {
-            final String next = line.length() == 0 ? word : line + " " + word;
-            if (Hyb.width(next) <= width || line.length() == 0) line = new StringBuilder(next);
-            else {
-                lines.add(line.toString());
-                line = new StringBuilder(word);
-            }
-        }
-        lines.add(line.toString());
-        if (lines.size() > 2)
-            lines.set(1, Hyb.fit(lines.get(1) + " " + String.join(" ", lines.subList(2, lines.size())), width));
-        return lines;
+        final List<String> lines = TextWrap.wrap(text, width, Hyb::width);
+        if (lines.size() <= 2) return lines;
+        final String rest = text.stripLeading()
+            .substring(
+                lines.get(0)
+                    .length())
+            .strip();
+        return List.of(lines.get(0), Hyb.fit(rest, width));
     }
 
     /** Sent: a happy face, its issue, and keys to open it or copy its link. */
@@ -427,7 +428,7 @@ public final class FeedbackPanel extends ParentWidget<FeedbackPanel> implements 
             (mood != null ? Sfx.TOGGLE_ON : Sfx.TOGGLE_OFF).play();
             return Result.SUCCESS;
         }
-        for (int i = 0; i < KINDS.length; i++) if (in(kindRect(i), mx, my)) {
+        for (int i = 0; i < kinds().length; i++) if (in(kindRect(i), mx, my)) {
             if (kind.ordinal() != i) {
                 kind = Reports.Kind.values()[i];
                 Sfx.TICK.play(1f + 0.1f * i);
@@ -447,7 +448,8 @@ public final class FeedbackPanel extends ParentWidget<FeedbackPanel> implements 
         final String text = words.text()
             .trim();
         String first = text.isEmpty() ? "" : text.split("\n", 2)[0].trim();
-        if (first.isEmpty() && crash != null) first = UiText.tr("feedback.the_game_crashed") + crash.summary();
+        // The issue goes to GitHub, where it is read in English whatever the game's language.
+        if (first.isEmpty() && crash != null) first = "The game crashed: " + crash.summary();
         if (first.length() > 100) {
             final int cut = first.lastIndexOf(' ', 97);
             first = first.substring(0, cut > 40 ? cut : 97) + "...";
@@ -496,7 +498,7 @@ public final class FeedbackPanel extends ParentWidget<FeedbackPanel> implements 
         }, why -> {
             sending = false;
             words.unlock();
-            error = UiText.tr("feedback.couldn_t_send_it") + why;
+            error = UiText.tr("feedback.couldn_t_send_it_why", why);
         });
     }
 

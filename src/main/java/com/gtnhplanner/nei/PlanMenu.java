@@ -19,6 +19,7 @@ import com.gtnhplanner.data.flowchart.Node;
 import com.gtnhplanner.data.flowchart.Plan;
 import com.gtnhplanner.ui.BoardScreen;
 import com.gtnhplanner.ui.Planner;
+import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.card.MachineChoices;
 import com.gtnhplanner.ui.card.MachinePicks;
 import com.gtnhplanner.ui.popup.Tip;
@@ -77,12 +78,18 @@ public final class PlanMenu implements IContainerDrawHandler, IContainerInputHan
     private void offerPlans(final PlanButton button) {
         final Plan plan = Plan.getInstance();
         final List<Row> list = new ArrayList<>();
-        list.add(new Row(null, "+ New plan", "", false, NEW_INK, () -> offerMachines(button, -1)));
+        list.add(new Row(null, UiText.tr("planmenu.new_plan"), "", false, NEW_INK, () -> offerMachines(button, -1)));
         for (final int i : plan.byRecency()) {
             final boolean open = i == plan.getActiveIndex();
-            list.add(new Row(null, planName(i), open ? "current" : "", open, () -> offerMachines(button, i)));
+            list.add(
+                new Row(
+                    null,
+                    planName(i),
+                    open ? UiText.tr("planmenu.current") : "",
+                    open,
+                    () -> offerMachines(button, i)));
         }
-        open(button, "Which plan to add to?", list);
+        open(button, UiText.tr("planmenu.which_plan"), list);
     }
 
     private void offerMachines(final PlanButton button, final int plan) {
@@ -95,12 +102,12 @@ public final class PlanMenu implements IContainerDrawHandler, IContainerInputHan
         final MachineChoices.Choice last = lastPick(button);
         final List<Row> list = new ArrayList<>();
         for (final MachineChoices.Choice c : choices) {
-            list.add(new Row(c.machine(), c.label(), c.detail(), c == last, () -> {
+            list.add(new Row(c.machine(), c.label(), UiText.data(c.detail()), c == last, () -> {
                 MachinePicks.put(ref.handler, c.key());
                 add(button, plan, c);
             }));
         }
-        open(button, "Which machine to use?", list);
+        open(button, UiText.tr("planmenu.which_machine"), list);
     }
 
     /** The machine the tab was last added on, else the first. */
@@ -114,7 +121,7 @@ public final class PlanMenu implements IContainerDrawHandler, IContainerInputHan
         final List<Graph> plans = Plan.getInstance()
             .getGraphs();
         return plan >= 0 && plan < plans.size() ? plans.get(plan)
-            .getName() : "Plan " + (plans.size() + 1);
+            .getName() : UiText.tr("audit.default_plan_name", plans.size() + 1);
     }
 
     /**
@@ -157,16 +164,17 @@ public final class PlanMenu implements IContainerDrawHandler, IContainerInputHan
         final Plan p = Plan.getInstance();
         final boolean machines = button.choices()
             .size() > 1;
-        lines.add("Add to a plan");
-        lines.add("§7Click: choose the plan (or a new one)" + (machines ? " and the machine" : ""));
-        String quick = "add to " + planName(p.getActiveIndex());
-        if (machines) {
+        lines.add(UiText.tr("planmenu.add_to_a_plan"));
+        lines.add("§7" + UiText.tr(machines ? "planmenu.click_choose_plan_and_machine" : "planmenu.click_choose_plan"));
+        final String plan = planName(p.getActiveIndex());
+        if (!machines) lines.add("§7" + UiText.tr("planmenu.shift_click_add_to", plan));
+        else {
             final MachineChoices.Choice last = lastPick(button);
-            quick += ", using " + last.label()
-                + (last.detail()
-                    .isEmpty() ? "" : " (" + last.detail() + ")");
+            final String machine = last.detail()
+                .isEmpty() ? last.label()
+                    : UiText.tr("planmenu.machine_and_detail", last.label(), UiText.data(last.detail()));
+            lines.add("§7" + UiText.tr("planmenu.shift_click_add_to_using", plan, machine));
         }
-        lines.add("§7Shift-click: " + quick);
         return lines;
     }
 

@@ -19,7 +19,6 @@ import com.gtnhplanner.ui.theme.Hyb;
 final class SelectionBar extends Widget<SelectionBar> implements Interactable {
 
     private static final int H = 18, PAD = 8, ICON = 10, GAP = 6;
-    private static final String GROUP = "Group";
 
     private final BoardSession session;
     private final BoardCanvas canvas;
@@ -59,7 +58,8 @@ final class SelectionBar extends Widget<SelectionBar> implements Interactable {
     }
 
     private int groupW() {
-        return groupable() ? tight > 1 ? 2 * PAD + ICON : Hyb.width(GROUP) + 2 * PAD + ICON + 4 : 0;
+        return groupable() ? tight > 1 ? 2 * PAD + ICON : Hyb.width(UiText.tr("selection.group")) + 2 * PAD + ICON + 4
+            : 0;
     }
 
     private int barW(final List<UUID> cards) {
@@ -134,7 +134,7 @@ final class SelectionBar extends Widget<SelectionBar> implements Interactable {
             final int ix = x + PAD, iy = (H - ICON) / 2;
             Hyb.ring(ix, iy, ICON, ICON, 1, Hyb.INK);
             Hyb.rect(ix, iy, ICON, 3, Hyb.INK);
-            if (tight < 2) Hyb.text(GROUP, x + PAD + ICON + 4, (H - 8) / 2f + 0.5f, Hyb.INK);
+            if (tight < 2) Hyb.text(UiText.tr("selection.group"), x + PAD + ICON + 4, (H - 8) / 2f + 0.5f, Hyb.INK);
         }
     }
 

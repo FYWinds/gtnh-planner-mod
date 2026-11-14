@@ -216,7 +216,7 @@ public final class Minimap {
         Hyb.rect(tx - 2, ty - 1, Hyb.width(title) + 4, 10, 0xB0000000);
         Hyb.text(title, tx, ty, Hyb.INK);
         if (stale) {
-            final String note = "Changed: open the planner to update";
+            final String note = UiText.tr("minimap.changed_open_planner");
             final float nx = x0 + (size - Hyb.width(note)) / 2f, ny = circle ? ty + 10 : y0 + size - 11;
             Hyb.rect(nx - 2, ny - 1, Hyb.width(note) + 4, 10, 0xB0000000);
             Hyb.text(note, nx, ny, Hyb.AMBER_INK);

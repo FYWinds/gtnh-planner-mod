@@ -244,7 +244,7 @@ public final class AccountForms {
             buttonY = linkY - 24;
             int y = buttonY - 13;
             if (error != null) {
-                Hyb.text(Hyb.fit(error, W - 2 * PAD), PAD, y, Hyb.AMBER_INK);
+                Hyb.text(Hyb.fit(UiText.data(error), W - 2 * PAD), PAD, y, Hyb.AMBER_INK);
                 y -= 11;
             }
             final String note = note();
@@ -574,7 +574,11 @@ public final class AccountForms {
             final int tx = drawIcon(icon, PAD + 8, y + 10, 24) ? PAD + 38 : PAD + 8;
             final Posting.Face f = face();
             Hyb.text(Hyb.fit(f.title(), W - PAD - 6 - tx), tx, y + 10, 0xFFFFFFFF);
-            Hyb.text(Hyb.fit("by " + Account.username(), W - PAD - 6 - tx), tx, y + 24, Hyb.MUTED);
+            Hyb.text(
+                Hyb.fit(UiText.tr("account.by_user", Account.username()), W - PAD - 6 - tx),
+                tx,
+                y + 24,
+                Hyb.MUTED);
         }
 
         @Override
@@ -593,7 +597,7 @@ public final class AccountForms {
         String link() {
             if (posted) return null;
             return update ? UiText.tr("account.publish_it_as_a_new_one_instead")
-                : "Not " + Account.username() + UiText.tr("account.sign_out");
+                : UiText.tr("account.not_you_sign_out", Account.username());
         }
 
         @Override
@@ -761,6 +765,6 @@ public final class AccountForms {
     public static void signOut(final Consumer<String> told) {
         final String who = Account.username();
         Account.signOut();
-        told.accept(who == null ? UiText.tr("account.signed_out") : "Signed out of " + who);
+        told.accept(who == null ? UiText.tr("account.signed_out") : UiText.tr("account.signed_out_of", who));
     }
 }

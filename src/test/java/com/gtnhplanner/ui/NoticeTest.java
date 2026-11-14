@@ -59,23 +59,20 @@ class NoticeTest {
         assertEquals(NoticeRow.LEFT + chip + NoticeRow.CHIP_GAP, wide.textX());
         assertEquals(
             1,
-            wide.text()
-                .lines()
+            wide.lines()
                 .size());
         // A narrow one: the chip and Show me on the first line, the sentence under them in whole words.
         final NoticeRow narrow = NoticeRow.of(alarm, 220, SIX);
         assertTrue(narrow.under());
         assertEquals(NoticeRow.LEFT, narrow.textX());
         assertEquals(220, narrow.width());
-        final int lines = narrow.text()
-            .lines()
+        final int lines = narrow.lines()
             .size();
         assertTrue(lines >= 2, "wraps");
         assertEquals(NoticeRow.ROW + lines * NoticeRow.LINE, narrow.height());
         for (int l = 0; l < lines; l++) {
-            final String line = narrow.text()
-                .shown(l)
-                .strip();
+            final String line = narrow.lines()
+                .get(l);
             assertTrue(SIX.applyAsInt(line) <= narrow.width() - NoticeRow.LEFT - 8, line);
             for (final String word : line.split(" "))
                 assertTrue(sentence.contains(word + " ") || sentence.endsWith(word), word);

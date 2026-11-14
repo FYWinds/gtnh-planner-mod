@@ -2360,7 +2360,7 @@ public final class BoardCanvas extends ParentWidget<BoardCanvas> implements Inte
         Popup.open(
             getPanel(),
             com.gtnhplanner.ui.popup.NumberPopup.create(
-                p.name() + " rate in " + (p.isFluid() ? "L" : "") + unit.suffix + " (empty: the plan decides)",
+                UiText.tr("canvas.port_rate_title", p.name(), (p.isFluid() ? "L" : "") + unit.suffix),
                 "2.5k, 1/3",
                 UiText.tr("canvas.type_2_5k_1m_or_1_3"),
                 set == null ? 0 : set * unit.perSecond,
@@ -2388,8 +2388,8 @@ public final class BoardCanvas extends ParentWidget<BoardCanvas> implements Inte
         if (com.gtnhplanner.ui.Planner.lookUp(stack.copy(), uses)) return;
         session.disarmLookup();
         final Node n = card.model().node;
-        final String none = (uses ? UiText.tr("canvas.nothing_uses") : UiText.tr("canvas.nothing_makes"))
-            + stack.getDisplayName();
+        final String none = UiText
+            .tr(uses ? "canvas.nothing_uses_it" : "canvas.nothing_makes_it", stack.getDisplayName());
         Popup.open(
             getPanel(),
             PickList.popup(

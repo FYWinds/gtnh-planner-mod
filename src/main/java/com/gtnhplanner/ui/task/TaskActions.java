@@ -178,10 +178,10 @@ public final class TaskActions {
         PlanAPI.save();
         Sfx.NOTE_STICK.play();
         final String what = cards.size() == 1 ? cards.get(0)
-            .name() : cards.size() + UiText.tr("taskactions.machines");
+            .name() : UiText.tr("taskactions.n_machines", cards.size());
         session.flash(
             Severity.INFO,
-            "Added " + what + " to '" + title + "'",
+            UiText.tr("taskactions.added_to_task", what, title),
             UiText.tr("taskactions.open"),
             () -> session.openTask(board, id),
             10);
@@ -194,9 +194,9 @@ public final class TaskActions {
         for (final Card c : cards) names.add(c.name());
         final List<String> n = new ArrayList<>(names);
         final String title = switch (n.size()) {
-            case 1 -> UiText.tr("taskactions.build") + " " + n.get(0);
-            case 2 -> UiText.tr("taskactions.build") + " " + n.get(0) + " and " + n.get(1);
-            default -> UiText.tr("taskactions.build") + " " + n.get(0) + " and " + (n.size() - 1) + " more";
+            case 1 -> UiText.tr("taskactions.build_one", n.get(0));
+            case 2 -> UiText.tr("taskactions.build_two", n.get(0), n.get(1));
+            default -> UiText.tr("taskactions.build_more", n.get(0), n.size() - 1);
         };
         return TaskEdits.clip(title, TaskEdits.TITLE_MAX);
     }

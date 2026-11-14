@@ -8,6 +8,7 @@ import javax.annotation.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import com.gtnhplanner.ui.PlannerSettings;
+import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.card.CardPaint;
 import com.gtnhplanner.ui.card.CleanCardView;
 import com.gtnhplanner.ui.theme.Fmt;
@@ -273,8 +274,9 @@ final class SettingsPreview {
 
     /** The keys list, small, its bottom right at (right, bottom). */
     private static void keys(final float right, final float bottom) {
-        final String[][] lines = { { PlannerKeys.held(PlannerKeys.ROTATE), "Rotate" },
-            { PlannerKeys.held(PlannerKeys.FOCUS), "Focus" }, { PlannerKeys.held(PlannerKeys.LABELS), "Labels" } };
+        final String[][] lines = { { PlannerKeys.held(PlannerKeys.ROTATE), UiText.tr("placement.rotate") },
+            { PlannerKeys.held(PlannerKeys.FOCUS), UiText.tr("placement.focus") },
+            { PlannerKeys.held(PlannerKeys.LABELS), UiText.tr("placement.labels") } };
         final float scale = 0.5f;
         int keysW = 0, whatW = 0;
         for (final String[] l : lines) {

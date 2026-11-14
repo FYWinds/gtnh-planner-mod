@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.event.ClickEvent;
 import net.minecraft.event.HoverEvent;
 import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.ChatComponentTranslation;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.IChatComponent;
 
@@ -19,6 +20,7 @@ import com.gtnhplanner.importer.game.FactoryFlowImport;
 import com.gtnhplanner.library.CommunityApi;
 import com.gtnhplanner.ui.BoardScreen;
 import com.gtnhplanner.ui.Planner;
+import com.gtnhplanner.ui.UiText;
 
 /**
  * Plans the website sends with its "Open in the mod" ({@link WebsiteListener}): never opened unasked. The newest one
@@ -96,20 +98,28 @@ public final class WebsiteInbox {
 
     /** The chat line while playing: the plan's name, Open and Not now. */
     private static IChatComponent line(final Pending p) {
-        final IChatComponent out = new ChatComponentText("The website sent the plan ");
-        out.getChatStyle()
-            .setColor(EnumChatFormatting.GRAY);
         final IChatComponent name = new ChatComponentText(
             p.arrival()
                 .name());
         name.getChatStyle()
             .setColor(EnumChatFormatting.WHITE);
-        out.appendSibling(name);
+        final IChatComponent out = new ChatComponentTranslation("gtnhplanner.ui.website.sent_the_plan", name);
+        out.getChatStyle()
+            .setColor(EnumChatFormatting.GRAY);
         out.appendSibling(new ChatComponentText(" "));
         out.appendSibling(
-            key("[Open]", EnumChatFormatting.AQUA, "Add it to your plans and open it", "open " + p.key()));
+            key(
+                "[" + UiText.tr("chat.open") + "]",
+                EnumChatFormatting.AQUA,
+                UiText.tr("website.add_and_open"),
+                "open " + p.key()));
         out.appendSibling(new ChatComponentText(" "));
-        out.appendSibling(key("[Not now]", EnumChatFormatting.GRAY, "Leave it", "drop " + p.key()));
+        out.appendSibling(
+            key(
+                "[" + UiText.tr("website.not_now") + "]",
+                EnumChatFormatting.GRAY,
+                UiText.tr("website.leave_it"),
+                "drop " + p.key()));
         return out;
     }
 
@@ -133,7 +143,7 @@ public final class WebsiteInbox {
     @Nullable
     public static String open(@Nullable final String key) {
         final Pending p = pending;
-        if (p == null || key != null && !key.equals(p.key())) return "That plan is gone: send it again";
+        if (p == null || key != null && !key.equals(p.key())) return UiText.tr("website.plan_gone_send_again");
         pending = null;
         final FfConverter.Result result;
         try {
@@ -142,7 +152,7 @@ public final class WebsiteInbox {
                     .code());
         } catch (final RuntimeException e) {
             GtnhPlanner.LOG.warn("Could not open the plan the website sent", e);
-            return "That plan could not be read";
+            return UiText.tr("chat.plan_could_not_be_read");
         }
         // On the board already, it follows the new plan by itself (as a paste does); else the planner opens on it.
         final BoardScreen open = (BoardScreen) Planner.screenOf(Minecraft.getMinecraft().currentScreen);
@@ -154,11 +164,12 @@ public final class WebsiteInbox {
         if (missing > 0) board.session()
             .flash(
                 com.gtnhplanner.data.flowchart.balancer.Severity.WARN,
-                "Opened '" + result.graph()
-                    .getName()
-                    + "': "
-                    + result.report()
-                        .summary());
+                UiText.tr(
+                    "import.opened_plan",
+                    result.graph()
+                        .getName(),
+                    result.report()
+                        .shownSummary()));
         return null;
     }
 

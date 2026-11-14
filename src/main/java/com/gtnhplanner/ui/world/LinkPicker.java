@@ -329,16 +329,11 @@ public final class LinkPicker {
         // The first spot this time replaces where the card was; the rest are its other machines.
         final WorldLinks.Hit was = WorldLinks.assign(graph, node, dim, at[0], at[1], at[2], facing(), size, placed > 0);
         placed++;
+        final String said = max > 1 ? UiText.tr("linkpicker.placed_n_at", name, placed, max, at[0], at[1], at[2])
+            : UiText.tr("linkpicker.placed_at", name, at[0], at[1], at[2]);
         WorldView.say(
-            "Placed " + name
-                + (max > 1 ? " " + placed + " of " + max : "")
-                + " at "
-                + at[0]
-                + ", "
-                + at[1]
-                + ", "
-                + at[2]
-                + (was == null || was.node() == node ? "" : ". Taken from " + WorldView.cardName(was.node())));
+            was == null || was.node() == node ? said
+                : UiText.tr("linkpicker.taken_from", said, WorldView.cardName(was.node())));
         if (placed >= max) finishing = true;
     }
 
@@ -386,9 +381,10 @@ public final class LinkPicker {
         final Minecraft mc = Minecraft.getMinecraft();
         if (mc.currentScreen != null || mc.gameSettings.hideGUI) return;
         final StructureGhosts.Ghost g = ghost();
-        final String title = (moving != null ? "Move " : "Place ") + name
-            + (max > 1 ? ": " + (placed + 1) + " of " + max : "")
-            + (g == null ? "" : "   " + dimensions(g));
+        final String what = max > 1
+            ? UiText.tr(moving != null ? "linkpicker.move_n" : "linkpicker.place_n", name, placed + 1, max)
+            : UiText.tr(moving != null ? "linkpicker.move" : "linkpicker.place", name);
+        final String title = what + (g == null ? "" : "   " + dimensions(g));
         final String turns = PlannerKeys.label(PlannerKeys.ROTATE) + UiText.tr("linkpicker.turns_it");
         final String how = placed > 0
             ? UiText.tr("linkpicker.click_for_the_next_one") + " "

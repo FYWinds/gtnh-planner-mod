@@ -312,7 +312,7 @@ public final class GroupCard extends Widget<GroupCard> implements Interactable, 
         for (final String[] tag : NoteColors.MENU) rows.add(
             new PickList.Entry(
                 null,
-                "■ " + tag[1],
+                "■ " + UiText.tr("note.color." + tag[0]),
                 "",
                 NoteColors.swatch(tag[0]),
                 tag[0].equals(g.colorTag()),

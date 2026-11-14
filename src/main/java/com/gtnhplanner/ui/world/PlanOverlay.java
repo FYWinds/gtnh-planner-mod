@@ -24,6 +24,7 @@ import org.lwjgl.util.glu.GLU;
 
 import com.gtnhplanner.data.flowchart.Node;
 import com.gtnhplanner.ui.PlannerSettings;
+import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.card.RecipeCard;
 import com.gtnhplanner.ui.theme.Hyb;
 
@@ -134,7 +135,7 @@ public final class PlanOverlay {
     private record Conn(Placed from, Placed to, PlanSnapshot.Line line, @Nullable PlanSnapshot.Flow flow) {
 
         String what() {
-            return flow != null ? flow.name() : "Wire";
+            return flow != null ? flow.name() : UiText.tr("overlay.wire");
         }
 
         boolean same(@Nullable final Conn o) {

@@ -764,7 +764,7 @@ final class Script {
             .until(() -> side != null && hasDrawer(side), 3000)
             .pause(200)
             .opens(sidePart(DrawerCard.Part.RULE))
-            .click(Targets.popupRow(DrawerCard.TO_TRASH))
+            .click(Targets.popupRow(DrawerCard.toTrash()))
             .until(() -> sideIs(com.gtnhplanner.data.flowchart.Drawer.Kind.TRASH), 2000)
             .until(Script::solved, 3000)
             .rest()
@@ -774,7 +774,7 @@ final class Script {
                 () -> !sideIs(com.gtnhplanner.data.flowchart.Drawer.Kind.PRODUCT),
                 Steps.seq(
                     Steps.clickOpens(sidePart(DrawerCard.Part.RULE), 0),
-                    Steps.click(Targets.popupRow(DrawerCard.TO_PRODUCT))))
+                    Steps.click(Targets.popupRow(DrawerCard.toProduct()))))
             .until(() -> sideIs(com.gtnhplanner.data.flowchart.Drawer.Kind.PRODUCT), 2000)
             .until(Script::solved, 3000)
             .rest()

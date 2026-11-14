@@ -47,7 +47,9 @@ public final class ScreenshotPanel extends Widget<ScreenshotPanel> implements In
     private static final int WELL = 0xFF0E0F11, CONTROL = 0xFF2A2C31, CONTROL_HOVER = 0xFF33363C,
         CONTROL_PICKED = 0xFF4A4D55, TRACK = 0xFF3A3C42, SWITCH_ON = 0xFF3E8F72, CYAN = 0xFF22D3EE;
 
-    private static final String[] DETAILS = { UiText.tr("screenshot.detailed"), UiText.tr("screenshot.simple") };
+    private static String[] details() {
+        return new String[] { UiText.tr("screenshot.detailed"), UiText.tr("screenshot.simple") };
+    }
 
     /** What was chosen last, kept while the game runs. */
     private static PlanPicture.Options chosen = new PlanPicture.Options(PlanPicture.Detail.DETAILED, false, false);
@@ -156,7 +158,7 @@ public final class ScreenshotPanel extends Widget<ScreenshotPanel> implements In
             session.pictureJson(),
             file -> {
                 keeping = false;
-                said("Saved as " + file.getName(), true);
+                said(UiText.tr("screenshot.saved_as", file.getName()), true);
                 session.flash(
                     Severity.INFO,
                     UiText.tr("screenshot.saved_the_picture_in_screenshots") + " " + file.getName());
@@ -207,11 +209,12 @@ public final class ScreenshotPanel extends Widget<ScreenshotPanel> implements In
 
     /** One of the detail's choices. */
     private int[] detailRect(final int i) {
+        final String[] details = details();
         int w = 1;
-        for (final String n : DETAILS) w += choiceWidth(n) + 1;
+        for (final String n : details) w += choiceWidth(n) + 1;
         int x = right - w + 1;
-        for (int k = 0; k < i; k++) x += choiceWidth(DETAILS[k]) + 1;
-        return new int[] { x, rowY(0) + (ROW - CHOICE_H) / 2 + 1, choiceWidth(DETAILS[i]), CHOICE_H - 2 };
+        for (int k = 0; k < i; k++) x += choiceWidth(details[k]) + 1;
+        return new int[] { x, rowY(0) + (ROW - CHOICE_H) / 2 + 1, choiceWidth(details[i]), CHOICE_H - 2 };
     }
 
     private int[] saveRect() {
@@ -261,13 +264,14 @@ public final class ScreenshotPanel extends Widget<ScreenshotPanel> implements In
         final PlanPicture.Options o = chosen;
         label(0, UiText.tr("screenshot.cards"));
         Hyb.rect(detailRect(0)[0] - 1, detailRect(0)[1] - 1, right - detailRect(0)[0] + 1, CHOICE_H, CardPaint.EDGE);
-        for (int i = 0; i < DETAILS.length; i++) {
+        final String[] details = details();
+        for (int i = 0; i < details.length; i++) {
             final int[] r = detailRect(i);
             final boolean picked = o.detail()
                 .ordinal() == i, hot = in(r, mx, my);
             Hyb.rect(r[0], r[1], r[2], r[3], picked ? CONTROL_PICKED : hot ? CONTROL_HOVER : CONTROL);
             Hyb.textCentered(
-                DETAILS[i],
+                details[i],
                 r[0] + r[2] / 2f,
                 r[1] + (r[3] - 8) / 2f + 1,
                 picked || hot ? Hyb.INK : Hyb.MUTED);
@@ -278,8 +282,14 @@ public final class ScreenshotPanel extends Widget<ScreenshotPanel> implements In
         // How big it comes out, and what Save or Copy did.
         final int infoY = rowY(3) + 6;
         Hyb.rect(col, rowY(3), right - col, 1, CardPaint.HAIR);
-        if (picture != null && taking == null)
-            Hyb.text(String.format("%,d x %,d pixels", picture.getWidth(), picture.getHeight()), col, infoY, Hyb.MUTED);
+        if (picture != null && taking == null) Hyb.text(
+            UiText.tr(
+                "screenshot.size_pixels",
+                String.format("%,d", picture.getWidth()),
+                String.format("%,d", picture.getHeight())),
+            col,
+            infoY,
+            Hyb.MUTED);
         if (status != null)
             Hyb.text(Hyb.fit(status, right - col), col, infoY + 12, statusGood ? Hyb.OK_INK : Hyb.AMBER_INK);
 
@@ -364,7 +374,7 @@ public final class ScreenshotPanel extends Widget<ScreenshotPanel> implements In
         } else if (mx >= col && mx < right && my >= rowY(0) && my < rowY(3)) {
             final int row = (my - rowY(0)) / ROW;
             if (row == 0) {
-                for (int i = 0; i < DETAILS.length; i++) if (in(detailRect(i), mx, my) && i != o.detail()
+                for (int i = 0; i < details().length; i++) if (in(detailRect(i), mx, my) && i != o.detail()
                     .ordinal()) {
                         chosen = new PlanPicture.Options(PlanPicture.Detail.values()[i], o.name(), o.flows());
                         Sfx.TICK.play(i > 0 ? 1.12f : 0.9f);

@@ -3190,7 +3190,8 @@ public final class BoardSession {
         for (final MachineLine m : totals.machines()) if (m.pinned() && reach.contains(m.nodeId())) out.add(
             new Pin(
                 m.name() + " *"
-                    + m.rule().label.toLowerCase(java.util.Locale.ROOT)
+                    + UiText.data(m.rule().label)
+                        .toLowerCase(java.util.Locale.ROOT)
                     + " "
                     + CardFace.setText(m.set())
                     + "*",
@@ -3220,18 +3221,14 @@ public final class BoardSession {
                 h.link()
                     .nodeId());
             if (!linked) continue;
-            final String rule = switch (d.rule) {
-                case AT_LEAST -> "at least ";
-                case AT_MOST -> "at most ";
-                default -> "";
+            final String rate = pinRate(d.drawer.getResourceKey(), d.target, d.fluid != null, unit);
+            final String label = switch (d.rule) {
+                case AT_LEAST -> UiText.tr("pins.drawer_at_least", d.label, rate);
+                case AT_MOST -> UiText.tr("pins.drawer_at_most", d.label, rate);
+                default -> UiText.tr("pins.drawer_rate", d.label, rate);
             };
             final String key = d.drawer.getResourceKey();
-            out.add(
-                new Pin(
-                    d.label + ", " + rule + "*" + pinRate(key, d.target, d.fluid != null, unit) + "*",
-                    d.item,
-                    d.fluid,
-                    Resources.isPower(key)));
+            out.add(new Pin(label, d.item, d.fluid, Resources.isPower(key)));
         }
         return out;
     }
@@ -3566,7 +3563,7 @@ public final class BoardSession {
                 .getName();
             flash(
                 missing == 0 ? Severity.INFO : Severity.WARN,
-                String.format(UiText.tr("audit.imported_plan"), name, report.summary()));
+                String.format(UiText.tr("audit.imported_plan"), name, report.shownSummary()));
             Sfx.SWEEP.play();
         } catch (final RuntimeException e) {
             flash(Severity.WARN, UiText.tr("session.the_clipboard_does_not_hold_a_plan_link_or_code"));

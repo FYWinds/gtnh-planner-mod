@@ -42,9 +42,16 @@ public final class DrawerCard extends Widget<DrawerCard> implements Interactable
     public static final int H = DrawerPaint.H;
     /** The row's middle, level with the port a drawer is made for when it is placed beside a card. */
     public static final int ANCHOR_Y = DrawerPaint.BAR + com.gtnhplanner.ui.card.CardLayout.BOX_H / 2;
-    /** The rule menu's rows that turn a product into trash, and trash back into a product. */
-    public static final String TO_TRASH = UiText.tr("drawer.void_it_trash"),
-        TO_PRODUCT = UiText.tr("drawer.keep_it_product");
+
+    /** The rule menu's row that turns a product into trash. */
+    public static String toTrash() {
+        return UiText.tr("drawer.void_it_trash");
+    }
+
+    /** The rule menu's row that turns trash back into a product. */
+    public static String toProduct() {
+        return UiText.tr("drawer.keep_it_product");
+    }
 
     public enum Part {
         DELETE,
@@ -619,7 +626,7 @@ public final class DrawerCard extends Widget<DrawerCard> implements Interactable
         if (model.kind == Drawer.Kind.PRODUCT || model.kind == Drawer.Kind.TRASH) rows.add(
             new PickList.Entry(
                 null,
-                model.kind == Drawer.Kind.TRASH ? TO_PRODUCT : TO_TRASH,
+                model.kind == Drawer.Kind.TRASH ? toProduct() : toTrash(),
                 "",
                 Hyb.MUTED,
                 false,
@@ -636,7 +643,7 @@ public final class DrawerCard extends Widget<DrawerCard> implements Interactable
         Popup.open(
             panel,
             NumberPopup.create(
-                "Rate in " + model.suffix(unit, true) + " (empty: no rule)",
+                UiText.tr("drawer.rate_title", model.suffix(unit, true)),
                 "2.5k, 1/3",
                 UiText.tr("drawer.type_2_5k_1m_or_1_3"),
                 current,

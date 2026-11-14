@@ -30,6 +30,7 @@ import com.gtnhplanner.GtnhPlanner;
 import com.gtnhplanner.data.flowchart.Graph;
 import com.gtnhplanner.data.flowchart.Plan;
 import com.gtnhplanner.data.flowchart.Serializer;
+import com.gtnhplanner.ui.UiText;
 
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.NEIClientUtils;
@@ -99,8 +100,8 @@ public final class ChatShare {
     @Nullable
     public static String send(final Graph graph) {
         final Minecraft mc = Minecraft.getMinecraft();
-        if (mc.theWorld == null || mc.thePlayer == null) return "Join a world to share a plan in chat";
-        if (!NEIClientConfig.hasSMPCounterPart()) return "This server can't pass plans through chat";
+        if (mc.theWorld == null || mc.thePlayer == null) return UiText.tr("chat.join_a_world_to_share");
+        if (!NEIClientConfig.hasSMPCounterPart()) return UiText.tr("chat.server_cannot_pass_plans");
         final String name = nameOf(graph);
         final String data = Serializer.encodeShared(graph);
         final ItemStack paper = paper(name);
@@ -109,11 +110,11 @@ public final class ChatShare {
                 .toNBT();
             payload.setString(DATA_KEY, data);
             payload.setString(NAME_KEY, name);
-            if (bytes(payload) > MAX_PAYLOAD_BYTES) return "This plan is too big for chat: copy its code instead";
+            if (bytes(payload) > MAX_PAYLOAD_BYTES) return UiText.tr("chat.plan_too_big_for_chat");
             NEIClientUtils.sendChatItemLink(payload);
             return null;
         }
-        if (data.length() > MAX_ITEM_PLAN_CHARS) return "This plan is too big for chat: copy its code instead";
+        if (data.length() > MAX_ITEM_PLAN_CHARS) return UiText.tr("chat.plan_too_big_for_chat");
         paper.getTagCompound()
             .setString(DATA_KEY, data);
         try {
@@ -122,7 +123,7 @@ public final class ChatShare {
             return null;
         } catch (final ReflectiveOperationException e) {
             GtnhPlanner.LOG.warn("[compat] this NEI cannot link items in chat", e);
-            return "This NEI can't pass plans through chat";
+            return UiText.tr("chat.nei_cannot_pass_plans");
         }
     }
 
@@ -158,16 +159,19 @@ public final class ChatShare {
 
     /** The line players with the planner see: who shared which plan, the name a link that opens it. */
     private static IChatComponent line(final String sender, final String name, final String key) {
-        final IChatComponent hover = new ChatComponentText("Click to open it in your planner");
+        final IChatComponent hover = new ChatComponentText(UiText.tr("chat.click_to_open_in_planner"));
         final IChatComponent link = new ChatComponentText("[" + name + "]");
         link.getChatStyle()
             .setColor(EnumChatFormatting.AQUA)
             .setChatHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hover))
             .setChatClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, ImportCommand.command(key)));
-        final IChatComponent out = new ChatComponentText(sender + " shared the plan ");
+        final IChatComponent out = new ChatComponentTranslation(
+            "gtnhplanner.ui.chat.shared_the_plan",
+            new ChatComponentText(sender),
+            link);
         out.getChatStyle()
             .setColor(EnumChatFormatting.GRAY);
-        return out.appendSibling(link);
+        return out;
     }
 
     /**
@@ -178,7 +182,7 @@ public final class ChatShare {
     @Nullable
     public static String open(final String key) {
         final Shared shared = SHARED.get(key);
-        if (shared == null) return "That plan is gone: ask for it again";
+        if (shared == null) return UiText.tr("chat.plan_gone_ask_again");
         final Plan plans = Plan.getInstance();
         final int already = indexOf(plans, shared.opened);
         if (already >= 0) {
@@ -191,7 +195,7 @@ public final class ChatShare {
             graph = Serializer.decode(shared.data);
         } catch (final RuntimeException e) {
             GtnhPlanner.LOG.warn("Could not read a plan shared in chat", e);
-            return "That plan could not be read";
+            return UiText.tr("chat.plan_could_not_be_read");
         }
         if (graph.getName() == null || graph.getName()
             .isBlank()) graph.setName(shared.name);
@@ -239,7 +243,7 @@ public final class ChatShare {
 
     private static String nameOr(final String name) {
         final String plain = EnumChatFormatting.getTextWithoutFormattingCodes(name);
-        return plain == null || plain.isBlank() ? "Shared plan" : plain;
+        return plain == null || plain.isBlank() ? UiText.tr("chat.shared_plan_name") : plain;
     }
 
     /**
@@ -251,7 +255,7 @@ public final class ChatShare {
                 .replace('"', '\'')
                 .replace('\\', '/')
                 .trim();
-        if (name.isEmpty()) return "Shared plan";
+        if (name.isEmpty()) return UiText.tr("chat.shared_plan_name");
         return name.length() > MAX_NAME_CHARS ? name.substring(0, MAX_NAME_CHARS) : name;
     }
 
@@ -261,7 +265,7 @@ public final class ChatShare {
         final NBTTagCompound display = new NBTTagCompound();
         display.setString("Name", name);
         final NBTTagList lore = new NBTTagList();
-        lore.appendTag(new NBTTagString(EnumChatFormatting.GRAY + "A plan from GTNH Planner"));
+        lore.appendTag(new NBTTagString(EnumChatFormatting.GRAY + UiText.tr("chat.paper_lore")));
         display.setTag("Lore", lore);
         stack.setTagInfo("display", display);
         return stack;

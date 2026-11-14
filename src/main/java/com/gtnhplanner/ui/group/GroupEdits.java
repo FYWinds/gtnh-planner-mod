@@ -17,6 +17,7 @@ import com.gtnhplanner.data.flowchart.Groups;
 import com.gtnhplanner.data.flowchart.Node;
 import com.gtnhplanner.data.flowchart.Note;
 import com.gtnhplanner.ui.BoardSession;
+import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.sound.Sfx;
 
 /**
@@ -83,7 +84,7 @@ public final class GroupEdits {
         if (x0 > x1) return null;
         final UUID parent = Groups.commonGroup(graph(), things);
         final BoardGroup made = new BoardGroup();
-        made.setName(Groups.newName(graph()));
+        made.setName(UiText.tr("group.new_name", graph().boardGroups.size() + 1));
         made.setColor(Groups.newColor(graph()));
         made.setParent(parent);
         final int gx = BoardSession.snap(x0 - BoardGroup.PAD - 4),

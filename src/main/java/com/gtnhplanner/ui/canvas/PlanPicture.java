@@ -383,7 +383,8 @@ public final class PlanPicture {
             long machines = 0;
             for (final BoardSession.MachineLine m : totals.machines())
                 machines += (long) Math.ceil(m.machines() - 1e-9);
-            final String count = machines + (machines == 1 ? " machine" : " machines");
+            final String count = machines == 1 ? UiText.tr("picture.one_machine")
+                : UiText.tr("picture.n_machines", machines);
             return totals.euPerTick() > 0 ? count + "  ·  " + Fmt.power(totals.euPerTick()) + " EU/t" : count;
         }
 

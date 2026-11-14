@@ -473,9 +473,9 @@ public final class NoteCard extends Widget<NoteCard>
 
     private static String kindWord(final Note n) {
         return switch (n.kind()) {
-            case Note.BOX -> "box";
-            case Note.ZONE -> "zone";
-            default -> "arrow";
+            case Note.BOX -> UiText.tr("note.kind_box");
+            case Note.ZONE -> UiText.tr("note.kind_zone");
+            default -> UiText.tr("note.kind_arrow");
         };
     }
 
@@ -609,7 +609,7 @@ public final class NoteCard extends Widget<NoteCard>
             rows.add(
                 new PickList.Entry(
                     null,
-                    "Delete " + kindWord(n),
+                    UiText.tr("note.delete_kind", kindWord(n)),
                     "",
                     Hyb.RED_INK,
                     false,

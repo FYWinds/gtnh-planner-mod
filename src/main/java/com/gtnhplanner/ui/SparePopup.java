@@ -18,7 +18,6 @@ public final class SparePopup extends Widget<SparePopup> implements Interactable
 
     private static final int SLIDER_W = 190, PAD = 6, LINK_H = 9;
     private static final float SMALL = 0.75f;
-    private static final String DRAWER = UiText.tr("audit.or_put_drawer");
 
     private final BoardSession session;
     /** The leftover, by key: the solve gives it a new object each time, so it is looked up on every draw. */
@@ -70,7 +69,7 @@ public final class SparePopup extends Widget<SparePopup> implements Interactable
     }
 
     private boolean overLink() {
-        final float w = Hyb.width(DRAWER) * SMALL;
+        final float w = Hyb.width(UiText.tr("audit.or_put_drawer")) * SMALL;
         return isHovering() && my() >= linkY && my() < linkY + LINK_H && mx() >= SLIDER_W - w;
     }
 
@@ -96,8 +95,9 @@ public final class SparePopup extends Widget<SparePopup> implements Interactable
             size(SLIDER_W, panelH - 2 * PAD);
             scheduleResize();
         }
-        final float w = Hyb.width(DRAWER) * SMALL;
-        Hyb.text(DRAWER, SLIDER_W - w, linkY + 1, SMALL, overLink() ? Hyb.GOLD : 0xFF9A9DA6);
+        final String drawer = UiText.tr("audit.or_put_drawer");
+        final float w = Hyb.width(drawer) * SMALL;
+        Hyb.text(drawer, SLIDER_W - w, linkY + 1, SMALL, overLink() ? Hyb.GOLD : 0xFF9A9DA6);
     }
 
     @Override

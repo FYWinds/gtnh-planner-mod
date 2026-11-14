@@ -17,6 +17,7 @@ import com.gtnhplanner.data.flowchart.Plan;
 import com.gtnhplanner.data.flowchart.balancer.Severity;
 import com.gtnhplanner.library.Account;
 import com.gtnhplanner.ui.BoardSession;
+import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.world.PlanSnapshot;
 
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -148,9 +149,10 @@ public final class CloudHooks {
 
         @Override
         public void shared(final String ownerName, final String planName, final String key) {
-            final String text = ownerName + " shared '" + planName + "' with you";
+            final String text = UiText.tr("cloud.shared_with_you", ownerName, planName);
             final BoardSession board = BoardSession.current();
-            if (board != null) board.flash(Severity.INFO, text, "Open", () -> board.openPlanByKey(key), 30);
+            if (board != null)
+                board.flash(Severity.INFO, text, UiText.tr("cloud.open"), () -> board.openPlanByKey(key), 30);
             else if (Minecraft.getMinecraft().thePlayer != null) Minecraft.getMinecraft().thePlayer
                 .addChatMessage(com.gtnhplanner.client.OpenPlanCommand.line(text, key));
         }

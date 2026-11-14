@@ -37,6 +37,7 @@ import com.gtnhplanner.cloud.store.CloudCache;
 import com.gtnhplanner.cloud.store.Migration;
 import com.gtnhplanner.data.flowchart.Graph;
 import com.gtnhplanner.data.flowchart.Plan;
+import com.gtnhplanner.ui.UiText;
 
 /**
  * A signed-in account's plans on this device (docs/design/cloud-live.md): the planner's plans are the account's cloud
@@ -267,8 +268,8 @@ public final class CloudSession {
         if (library != null) for (final CloudApi.Design d : library.shared()) if (d.key()
             .equals(key))
             return d.ownerName()
-                .isEmpty() ? "someone" : d.ownerName();
-        return "someone";
+                .isEmpty() ? UiText.tr("cloud.someone") : d.ownerName();
+        return UiText.tr("cloud.someone");
     }
 
     /**
@@ -383,7 +384,7 @@ public final class CloudSession {
         if (p.getGraphs()
             .isEmpty()) {
             standInHeld = true;
-            standIn = new Graph("Plan 1");
+            standIn = new Graph(UiText.tr("audit.default_plan_name", 1));
             p.getGraphs()
                 .add(standIn);
             p.setActiveIndex(0);
@@ -416,7 +417,7 @@ public final class CloudSession {
         if (fresh.isEmpty()) return null;
         if (!host.backUpWorld()) {
             GtnhPlanner.LOG.warn("The world's plans could not be backed up; they stay in the world for now");
-            host.notice("Your plans from this world could not be added to your account");
+            host.notice(UiText.data("Your plans from this world could not be added to your account"));
             return null;
         }
         for (final Graph g : fresh) g.setCloudKey(newKey());
@@ -424,7 +425,7 @@ public final class CloudSession {
             for (final Graph g : fresh) g.setCloudKey(null);
             GtnhPlanner.LOG
                 .warn("The world's plans could not be saved with their keys; they stay in the world for now");
-            host.notice("Your plans from this world could not be added to your account");
+            host.notice(UiText.data("Your plans from this world could not be added to your account"));
             return null;
         }
         for (final Graph g : fresh) {
@@ -625,15 +626,15 @@ public final class CloudSession {
         return out;
     }
 
-    /** Takes a plan off the planner that the account no longer has for this player (deleted, or unshared). */
-    private void dropped(final LiveDoc d, final String why) {
+    /** Takes a plan off the planner that the account no longer has for this player: deleted, else unshared. */
+    private void dropped(final LiveDoc d, final boolean deleted) {
         GtnhPlanner.LOG.info(
             "[cloud] {}: '{}' ({}) leaves the planner: {}",
             accountId,
             d.graph()
                 .getName(),
             d.key(),
-            why);
+            deleted ? "deleted" : "no longer shared");
         docs.remove(d.key());
         cache.forget(d.key());
         pinsKept.remove(d.key());
@@ -646,9 +647,9 @@ public final class CloudSession {
         if (plan.getGraphs()
             .size() == 1)
             plan.getGraphs()
-                .add(new Graph("Plan 1"));
+                .add(new Graph(UiText.tr("audit.default_plan_name", 1)));
         plan.removeSlot(i);
-        host.notice("'" + name + "' " + why);
+        host.notice(UiText.tr(deleted ? "cloud.plan_deleted" : "cloud.plan_unshared", name));
         keepDevice();
     }
 
@@ -920,8 +921,8 @@ public final class CloudSession {
             // Each time it is told: the player hears it once per time they are added.
             host.shared(
                 owner.username()
-                    .isEmpty() ? "Someone" : owner.username(),
-                name.isEmpty() ? "a plan" : name,
+                    .isEmpty() ? UiText.tr("cloud.someone_start") : owner.username(),
+                name.isEmpty() ? UiText.tr("cloud.a_plan") : name,
                 doc);
         }
 
@@ -933,7 +934,7 @@ public final class CloudSession {
             if (d != null && !d.creating()
                 && !d.ownerId()
                     .equals(accountId))
-                dropped(d, "is no longer shared with you");
+                dropped(d, false);
         }
 
         @Override
@@ -941,8 +942,8 @@ public final class CloudSession {
             final LiveDoc d = docs.get(doc);
             if (d == null || d.creating()) return;
             switch (reason) {
-                case "unshared" -> dropped(d, "is no longer shared with you");
-                case "deleted" -> dropped(d, "was deleted");
+                case "unshared" -> dropped(d, false);
+                case "deleted" -> dropped(d, true);
                 default -> {
                     // A join refused ("forbidden", "not_found"): not joined again, and never dropped on that alone;
                     // the account's list, asked now, says whether the plan is still the player's.
@@ -1138,7 +1139,7 @@ public final class CloudSession {
             dropped(
                 d,
                 d.ownerId()
-                    .equals(accountId) ? "was deleted" : "is no longer shared with you");
+                    .equals(accountId));
         }
         keepDevice();
     }
@@ -1198,7 +1199,7 @@ public final class CloudSession {
             return;
         }
         madeLocal.put(d.key(), d.boardVersion());
-        if (makeTold.add(d.key())) host.notice("This plan could not be saved to your account");
+        if (makeTold.add(d.key())) host.notice(UiText.data("This plan could not be saved to your account"));
     }
 
     /** Creates a plan made here in the account, with the body it started as; its edits since follow once joined. */
@@ -1234,7 +1235,7 @@ public final class CloudSession {
             makeRefusals.remove(d.key());
             keepDevice();
             if (broughtOver.remove(d.key()) && broughtOver.isEmpty())
-                host.notice("Your plans from this world are now in your account");
+                host.notice(UiText.data("Your plans from this world are now in your account"));
         }, e -> { if (refusal(e)) createRefused(d, e); });
     }
 
@@ -1352,7 +1353,7 @@ public final class CloudSession {
                 GtnhPlanner.LOG.warn("'{}' did not go to the account yet: {}", f.name(), f.reason());
             if (arrived > 0) {
                 replaceStandIn(local, items);
-                host.notice("Your plans from this world are now in your account");
+                host.notice(UiText.data("Your plans from this world are now in your account"));
             }
             releaseStandIn();
             listAt = -LIST_EVERY_MS;

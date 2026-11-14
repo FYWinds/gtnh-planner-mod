@@ -80,7 +80,7 @@ public final class CrashOffer extends Widget<CrashOffer> implements Interactable
             my = isHovering() ? getContext().getAbsMouseY() - getArea().y : -1;
         Hyb.text(UiText.tr("crash.the_game_crashed_last_time"), PAD, PAD, Hyb.INK);
         Hyb.text(UiText.tr("crash.gtnh_planner_was_part_of_it"), PAD, PAD + 14, Hyb.MUTED);
-        Hyb.text(Hyb.fit(crash.summary(), W - 2 * PAD), PAD, PAD + 26, Hyb.AMBER_INK);
+        Hyb.text(Hyb.fit(UiText.data(crash.summary()), W - 2 * PAD), PAD, PAD + 26, Hyb.AMBER_INK);
         Hyb.text(
             Hyb.fit(UiText.tr("crash.send_the_crash_report_so_it_can_be_fixed"), W - 2 * PAD),
             PAD,

@@ -16,6 +16,7 @@ import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
+import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.theme.Hyb;
 
 /**
@@ -144,7 +145,7 @@ public final class PickList extends Widget<PickList> implements Interactable {
         if (filterable) {
             final TextFieldWidget field = new TextFieldWidget()
                 .value(new StringValue.Dynamic(() -> list.filter, list::setFilter));
-            field.hintText("Filter...")
+            field.hintText(UiText.tr("picklist.filter"))
                 .pos(4, y)
                 .size(width - 8, 14);
             list.field = field;

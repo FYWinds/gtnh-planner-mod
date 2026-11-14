@@ -30,6 +30,7 @@ import com.gtnhplanner.importer.game.FactoryFlowImport;
 import com.gtnhplanner.library.CommunityApi;
 import com.gtnhplanner.library.LibraryFeed;
 import com.gtnhplanner.ui.BoardSession;
+import com.gtnhplanner.ui.TextWrap;
 import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.popup.PickList;
 import com.gtnhplanner.ui.popup.Popup;
@@ -383,14 +384,14 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
             hover) - 4;
         right = key(
             right,
-            q.maxTierIndex() < 0 ? tr("library.any_tier") : UiText.tr("librarytail.up_to") + TIERS[q.maxTierIndex()],
+            q.maxTierIndex() < 0 ? tr("library.any_tier") : UiText.tr("library.up_to_tier", TIERS[q.maxTierIndex()]),
             Kind.TIER,
             hover) - 4;
         right = key(right, sortLabel(q.sort()), Kind.SORT, hover) - 8;
         // The search takes the room left between them, less a filter chip's when one shows.
         final int chipRoom = q.mine() ? Hyb.width(tr("library.my_posts")) + 24
             : makingLabel != null && !q.makes()
-                .isEmpty() ? Math.min(160, Hyb.width(UiText.tr("librarytail.makes") + makingLabel) + 24) : 0;
+                .isEmpty() ? Math.min(160, Hyb.width(UiText.tr("library.makes_item", makingLabel)) + 24) : 0;
         final int fieldW = Math.max(80, Math.min(300, right - x - chipRoom));
         searchField.pos(x, 5)
             .size(fieldW, 14);
@@ -404,7 +405,7 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
             hits.add(new Hit(Kind.MINE_CLEAR, cx, 5, cx + chipW, 19, null));
         } else if (makingLabel != null && !q.makes()
             .isEmpty()) {
-                final String chip = Hyb.fit(UiText.tr("librarytail.makes") + makingLabel, right - x - fieldW - 26);
+                final String chip = Hyb.fit(UiText.tr("library.makes_item", makingLabel), right - x - fieldW - 26);
                 final int cx = x + fieldW + 6, chipW = Hyb.width(chip) + 16;
                 final boolean hot = hover != null && hover.kind() == Kind.MAKES_CLEAR;
                 Hyb.rect(cx, 5, chipW, 14, hot ? 0xFF3A4A52 : 0xFF2C3036);
@@ -459,7 +460,8 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
         final int cols = columns(), tw = tileW();
         int y = top + PAD - scroll;
         if (setups.isEmpty()) {
-            final String msg = feed.error() != null ? UiText.tr("librarytail.couldn_t_reach_community") + feed.error()
+            final String msg = feed.error() != null
+                ? UiText.tr("library.couldn_t_reach_community_why", UiText.data(feed.error()))
                 : feed.loading() || !feed.started() ? tr("library.loading_shared") : tr("library.no_matches");
             final float cx = (PAD + gridRight()) / 2f, cy = top + (h - top) / 2f - 10;
             Hyb.textCentered(msg, cx, cy, feed.error() != null ? Hyb.AMBER_INK : Hyb.MUTED);
@@ -476,7 +478,8 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
         final int rows = (setups.size() + cols - 1) / cols;
         int end = y + rows * (TILE_H + GAP);
         if (feed.loading() || feed.error() != null) {
-            final String msg = feed.error() != null ? UiText.tr("librarytail.couldn_t_load_more") + feed.error()
+            final String msg = feed.error() != null
+                ? UiText.tr("library.couldn_t_load_more_why", UiText.data(feed.error()))
                 : tr("library.loading_more");
             Hyb.textCentered(msg, (PAD + gridRight()) / 2f, end + 4, feed.error() != null ? Hyb.AMBER_INK : Hyb.MUTED);
             if (feed.error() != null) retryKey((PAD + gridRight()) / 2f, end + 18, hover);
@@ -707,13 +710,14 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
         final String size = tasks ? count + (count == 1 ? UiText.tr("librarytail.task") : UiText.tr("librarytail.tasks"))
             : cards + (cards == 1 ? UiText.tr("librarytail.card") : UiText.tr("librarytail.cards")) + " · " + drawers + (drawers == 1 ? UiText.tr("librarytail.drawer") : UiText.tr("librarytail.drawers"));
         Hyb.text(Hyb.fit(size, x + w - 6 - (x + 34)), x + 34, y + 17, 0xFF8A8C94);
-        final String when = g.getLastOpen() > 0 ? "last open " + agoMs(g.getLastOpen()) : tr("library.not_opened");
+        final String when = g.getLastOpen() > 0 ? UiText.tr("library.last_open", agoMs(g.getLastOpen()))
+            : tr("library.not_opened");
         Hyb.text(when, x + 6, y + TILE_H - 13, Hyb.MUTED);
         // A plan someone shared with the player says whose it is.
         final com.gtnhplanner.cloud.session.CloudSession cloud = com.gtnhplanner.cloud.session.CloudSession.current();
         final String by = cloud == null ? null : cloud.sharedBy(g);
         if (by != null) Hyb.textRight(
-            Hyb.fit(UiText.tr("librarytail.shared_by") + by, w / 2),
+            Hyb.fit(UiText.tr("library.shared_by_name", by), w / 2),
             x + w - 6,
             y + TILE_H - 13,
             0xFF9FD9E6);
@@ -800,7 +804,7 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
             y += 10;
         }
         final String who = s.author()
-            .isEmpty() ? "" : UiText.tr("librarytail.by") + s.author();
+            .isEmpty() ? "" : UiText.tr("library.by_author", s.author());
         if (!who.isEmpty()) {
             Hyb.text(Hyb.fit(who, tr - tx), tx, y + 1, 0xFF8A8C94);
             hits.add(new Hit(Kind.AUTHOR, tx, y, tx + Hyb.width(who), y + 10, s.author()));
@@ -1000,7 +1004,7 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
                     rows.add(
                         new PickList.Entry(
                             null,
-                            UiText.tr("librarytail.up_to") + TIERS[i],
+                            UiText.tr("library.up_to_tier", TIERS[i]),
                             "",
                             Hyb.tier(TIERS[i])
                                 .bg(),
@@ -1100,7 +1104,7 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
             feed.replace(edited);
             if (picked != null && picked.id()
                 .equals(edited.id())) picked = edited;
-            session.flash(Severity.INFO, "Saved '" + edited.name() + "'");
+            session.flash(Severity.INFO, UiText.tr("library.saved_post", edited.name()));
         });
     }
 
@@ -1113,7 +1117,7 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
             getPanel(),
             PickList.popup(
                 "gtnhplanner_delete_post",
-                "Take '" + Hyb.fit(s.name(), 150) + "' out of Community?",
+                UiText.tr("library.take_out_of_community", Hyb.fit(s.name(), 150)),
                 rows,
                 false,
                 150),
@@ -1131,10 +1135,10 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
             feed.remove(s.id());
             if (picked != null && picked.id()
                 .equals(s.id())) pick(null);
-            session.flash(Severity.INFO, "Took '" + s.name() + "' out of Community");
+            session.flash(Severity.INFO, UiText.tr("library.took_out_of_community", s.name()));
         }, why -> {
             deleting = null;
-            openError = UiText.tr("librarytail.couldn_t_delete_it") + why;
+            openError = UiText.tr("library.couldn_t_delete_it_why", UiText.data(why));
         });
     }
 
@@ -1208,19 +1212,21 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
                 showOpened.run();
                 session.flash(
                     missing == 0 ? Severity.INFO : Severity.WARN,
-                    "Opened '" + r.graph()
-                        .getName()
-                        + "' from Community: "
-                        + r.report()
-                            .summary());
+                    UiText.tr(
+                        "library.opened_from_community",
+                        r.graph()
+                            .getName(),
+                        r.report()
+                            .shownSummary()));
             } catch (final RuntimeException e) {
-                openError = UiText.tr("librarytail.couldn_t_read_that_plan") + e.getMessage();
+                openError = UiText
+                    .tr("library.couldn_t_read_that_plan_why", UiText.data(String.valueOf(e.getMessage())));
                 com.gtnhplanner.GtnhPlanner.LOG
                     .info(UiText.tr("librarytail.library_could_not_import_setup"), s.id(), e);
             }
         }, why -> {
             opening = null;
-            openError = UiText.tr("librarytail.couldn_t_download_it") + why;
+            openError = UiText.tr("library.couldn_t_download_it_why", UiText.data(why));
         });
     }
 
@@ -1257,8 +1263,8 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
             case OPEN -> List.of(tr("library.open_new_tip"));
             case EDIT -> List.of(tr("library.edit_tip"));
             case DELETE -> List.of(tr("library.delete_tip"));
-            case TAG -> List.of(UiText.tr("librarytail.show_plans_tagged") + hit.data());
-            case AUTHOR -> List.of(UiText.tr("librarytail.show_plans_by") + hit.data());
+            case TAG -> List.of(UiText.tr("library.show_plans_tagged_tag", hit.data()));
+            case AUTHOR -> List.of(UiText.tr("library.show_plans_by_author", hit.data()));
             case TIER_BADGE -> List.of(tr("library.tier_tip"));
             case CLOSE -> List.of(tr("library.back_tip"));
             case SORT -> List.of(tr("library.sort"));
@@ -1330,24 +1336,13 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
 
     /** Words onto lines no wider than {@code width}, at most {@code max} of them (the last cut short). */
     private static List<String> wrap(final String text, final int width, final int max) {
-        final List<String> lines = new ArrayList<>();
-        if (max <= 0) return lines;
-        for (final String para : text.replace("\r", "")
-            .split("\n")) {
-            StringBuilder line = new StringBuilder();
-            for (final String word : para.split(" ")) {
-                final String next = line.length() == 0 ? word : line + " " + word;
-                if (Hyb.width(next) <= width || line.length() == 0) line = new StringBuilder(next);
-                else {
-                    lines.add(line.toString());
-                    if (lines.size() == max) return cutLast(lines, width);
-                    line = new StringBuilder(word);
-                }
-            }
-            lines.add(line.toString());
-            if (lines.size() >= max) return cutLast(lines.subList(0, max), width);
-        }
-        return lines;
+        if (max <= 0) return new ArrayList<>();
+        final List<String> lines = TextWrap.wrap(
+            text.replace("\r", "")
+                .strip(),
+            width,
+            Hyb::width);
+        return lines.size() > max ? cutLast(lines.subList(0, max), width) : lines;
     }
 
     private static List<String> cutLast(final List<String> lines, final int width) {

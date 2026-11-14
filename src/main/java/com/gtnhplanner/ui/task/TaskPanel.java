@@ -427,7 +427,7 @@ public final class TaskPanel extends ParentWidget<TaskPanel> implements Interact
         net.minecraft.client.gui.GuiScreen.setClipboardString(TaskEdits.coordinates(p));
         session.flash(
             com.gtnhplanner.data.flowchart.balancer.Severity.INFO,
-            UiText.tr("task.copied") + TaskEdits.coordinates(p));
+            UiText.tr("task.copied_coordinates", TaskEdits.coordinates(p)));
     }
 
     /** Shows a placed card's machine in the world. */
@@ -1298,11 +1298,12 @@ public final class TaskPanel extends ParentWidget<TaskPanel> implements Interact
         /** "made by you 3d ago", "made by ann 5m ago": who made it and when, as a part of a line. */
         private String madeBy(final Tasks.Task t) {
             final String when = TaskLook.ago(t.createdAt());
-            final String by = TaskLook.mine(t.createdBy()) ? "you"
+            final String by = TaskLook.mine(t.createdBy()) ? UiText.tr("task.you_lower")
                 : t.createdBy() == null ? null : TaskLook.nameOf(graph(), t.createdBy());
-            String s = "made" + (by == null ? "" : " by " + by) + (when.isEmpty() ? "" : " " + when);
+            String s = by == null ? when.isEmpty() ? UiText.tr("task.made_lower") : UiText.tr("task.made_when", when)
+                : when.isEmpty() ? UiText.tr("task.made_by", by) : UiText.tr("task.made_by_when", by, when);
             if (t.status() == Tasks.Status.DONE && t.doneAt() != null)
-                s += TaskThings.SEP + "done " + TaskLook.ago(t.doneAt());
+                s += TaskThings.SEP + UiText.tr("task.done_when", TaskLook.ago(t.doneAt()));
             return s + TaskThings.SEP + TaskLook.inColumnShort(t);
         }
 
@@ -1401,7 +1402,7 @@ public final class TaskPanel extends ParentWidget<TaskPanel> implements Interact
                 at += linkRow(o, Kind.BLOCKER, hover, x, at, w, true, draw);
             }
             if (at > y) at += 3;
-            final String label = "Add";
+            final String label = UiText.tr("task.add_blocker_key");
             final int kw = Hyb.width(label) + 12 + Icons.SIZE + 3;
             if (draw) {
                 Hyb.bevel(
@@ -1456,7 +1457,7 @@ public final class TaskPanel extends ParentWidget<TaskPanel> implements Interact
             if (names) for (final String id : t.assignees()) {
                 if (draw) {
                     final int fw = TaskLook.face(graph(), id, x, at);
-                    final String name = TaskLook.mine(id) ? "You" : TaskLook.nameOf(graph(), id);
+                    final String name = TaskLook.mine(id) ? UiText.tr("tasklook.you") : TaskLook.nameOf(graph(), id);
                     final String shown = Hyb.width(name == null ? UiText.tr("task.someone") : name) <= w - fw - 4
                         ? name == null ? UiText.tr("task.someone") : name
                         : TaskLook.initials(name);
@@ -1781,7 +1782,7 @@ public final class TaskPanel extends ParentWidget<TaskPanel> implements Interact
                 new PickList.Entry(
                     null,
                     p.id()
-                        .equals(me) ? p.name() + " (you)" : p.name(),
+                        .equals(me) ? UiText.tr("task.name_you", p.name()) : p.name(),
                     on ? UiText.tr("task.on_it") : "",
                     Hyb.INK,
                     on,

@@ -3,6 +3,7 @@ package com.gtnhplanner.ui.tutorial;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gtnhplanner.ui.TextWrap;
 import com.gtnhplanner.ui.theme.Hyb;
 import com.gtnhplanner.ui.tutorial.Targets.Target;
 
@@ -385,58 +386,58 @@ final class Callout {
             }
             paraIcons.add(icon);
             final int room = TEXT_W - (icon != 0 ? ICON_COL : 0);
-            List<Word> line = new ArrayList<>();
-            int lineW = 0;
-            for (final String raw : para.split(" ")) {
-                if (raw.isEmpty()) continue;
-                final List<Bit> bits = new ArrayList<>();
-                // A word in the inputs' blue or the outputs' orange: {b:Blue}, {o:Orange}, punctuation after it kept.
-                if (raw.length() > 4 && raw.charAt(0) == '{' && raw.charAt(2) == ':' && raw.indexOf('}') > 3) {
-                    final int end = raw.indexOf('}');
-                    final int colour = raw.charAt(1) == 'b' ? Hyb.SOURCE_INK : Hyb.PRODUCT_INK;
-                    bits.add(new Bit(raw.substring(3, end), false, colour));
-                    if (end + 1 < raw.length()) bits.add(new Bit(raw.substring(end + 1), gold));
-                    final Word word = new Word(bits);
-                    final int w = word.width();
-                    if (!line.isEmpty() && lineW + SPACE + w > room) {
-                        lines.add(line);
-                        paragraphs.add(p);
-                        line = new ArrayList<>();
-                        lineW = 0;
-                    }
-                    lineW += (line.isEmpty() ? 0 : SPACE) + w;
-                    line.add(word);
-                    continue;
-                }
-                final StringBuilder run = new StringBuilder();
-                for (final char ch : raw.toCharArray()) {
-                    if (ch != '*') {
-                        run.append(ch);
+            for (final String shown : TextWrap.wrap(para, room, Callout::shownWidth)) {
+                final List<Word> line = new ArrayList<>();
+                for (final String raw : shown.split(" ")) {
+                    if (raw.isEmpty()) continue;
+                    final List<Bit> bits = new ArrayList<>();
+                    // A word in the inputs' or the outputs' colour, punctuation after it kept.
+                    if (coloured(raw)) {
+                        final int end = raw.indexOf('}');
+                        final int colour = raw.charAt(1) == 'b' ? Hyb.SOURCE_INK : Hyb.PRODUCT_INK;
+                        bits.add(new Bit(raw.substring(3, end), false, colour));
+                        if (end + 1 < raw.length()) bits.add(new Bit(raw.substring(end + 1), gold));
+                        line.add(new Word(bits));
                         continue;
                     }
+                    final StringBuilder run = new StringBuilder();
+                    for (final char ch : raw.toCharArray()) {
+                        if (ch != '*') {
+                            run.append(ch);
+                            continue;
+                        }
+                        if (run.length() > 0) bits.add(new Bit(run.toString(), gold));
+                        run.setLength(0);
+                        gold = !gold;
+                    }
                     if (run.length() > 0) bits.add(new Bit(run.toString(), gold));
-                    run.setLength(0);
-                    gold = !gold;
+                    if (!bits.isEmpty()) line.add(new Word(bits));
                 }
-                if (run.length() > 0) bits.add(new Bit(run.toString(), gold));
-                if (bits.isEmpty()) continue;
-                final Word word = new Word(bits);
-                final int w = word.width();
-                if (!line.isEmpty() && lineW + SPACE + w > room) {
+                if (!line.isEmpty()) {
                     lines.add(line);
                     paragraphs.add(p);
-                    line = new ArrayList<>();
-                    lineW = 0;
                 }
-                lineW += (line.isEmpty() ? 0 : SPACE) + w;
-                line.add(word);
-            }
-            if (!line.isEmpty()) {
-                lines.add(line);
-                paragraphs.add(p);
             }
         }
         return lines;
+    }
+
+    /** Whether a word is one in the inputs' or the outputs' colour: {b:Blue} or {o:Orange}. */
+    private static boolean coloured(final String raw) {
+        return raw.length() > 4 && raw.charAt(0) == '{' && raw.charAt(2) == ':' && raw.indexOf('}') > 3;
+    }
+
+    /** How wide a line of the text is drawn: without its asterisks and its colour marks. */
+    private static int shownWidth(final String text) {
+        int w = 0, words = 0;
+        for (final String raw : text.split(" ")) {
+            if (raw.isEmpty()) continue;
+            if (words++ > 0) w += SPACE;
+            w += Hyb.width(
+                coloured(raw) ? raw.substring(3, raw.indexOf('}')) + raw.substring(raw.indexOf('}') + 1)
+                    : raw.replace("*", ""));
+        }
+        return w;
     }
 
     /**

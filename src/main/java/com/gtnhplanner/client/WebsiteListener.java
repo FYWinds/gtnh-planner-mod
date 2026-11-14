@@ -24,6 +24,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.gtnhplanner.importer.FfPlanCode;
+import com.gtnhplanner.ui.UiText;
 
 /**
  * The website's "Open in the mod": a page on the website hands the running game a plan code over a tiny HTTP server on
@@ -285,7 +286,7 @@ public final class WebsiteListener implements Closeable {
         }
         final String out = b.toString()
             .trim();
-        return out.isEmpty() ? "Untitled plan" : out;
+        return out.isEmpty() ? UiText.data("Untitled plan") : out;
     }
 
     /** The request line and headers, up to the blank line; null when there is none within the limit. */

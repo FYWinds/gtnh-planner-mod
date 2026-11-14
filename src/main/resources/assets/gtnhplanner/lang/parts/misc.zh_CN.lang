@@ -1,0 +1,214 @@
+## GTNH Planner (MiscText): UI, chat, library, import and tour texts
+
+## Pin list (ui/BoardSession)
+gtnhplanner.ui.pins.drawer_at_least=%s，至少 *%s*
+gtnhplanner.ui.pins.drawer_at_most=%s，至多 *%s*
+gtnhplanner.ui.pins.drawer_rate=%s，*%s*
+## Rate boxes (ui/canvas/BoardCanvas, ui/drawer/DrawerCard)
+gtnhplanner.ui.canvas.port_rate_title=%s 速率（%s，留空由方案决定）
+gtnhplanner.ui.drawer.rate_title=速率（%s，留空为无规则）
+## Machine counts (ui/group/GroupPaint, ui/canvas/PlanPicture)
+gtnhplanner.ui.group.one_machine=1 台机器
+gtnhplanner.ui.group.n_machines=%d 台机器
+gtnhplanner.ui.group.no_machines=没有机器
+gtnhplanner.ui.picture.one_machine=1 台机器
+gtnhplanner.ui.picture.n_machines=%d 台机器
+## Account (ui/library/AccountForms)
+gtnhplanner.ui.account.by_user=作者：%s
+gtnhplanner.ui.account.not_you_sign_out=不是 %s？退出登录
+gtnhplanner.ui.account.signed_out_of=已退出 %s 的登录
+## Library (ui/library/LibraryView)
+gtnhplanner.ui.library.last_open=上次打开：%s
+gtnhplanner.ui.library.saved_post=已保存“%s”
+gtnhplanner.ui.library.take_out_of_community=要把“%s”从社区撤下吗？
+gtnhplanner.ui.library.took_out_of_community=已把“%s”从社区撤下
+gtnhplanner.ui.library.opened_from_community=已从社区打开“%s”：%s
+## Import summary (importer/ImportReport)
+gtnhplanner.ui.import.one_card=1 张卡片
+gtnhplanner.ui.import.n_cards=%d 张卡片
+gtnhplanner.ui.import.one_wire=1 条连线
+gtnhplanner.ui.import.n_wires=%d 条连线
+gtnhplanner.ui.import.one_drawer=1 个抽屉
+gtnhplanner.ui.import.n_drawers=%d 个抽屉
+gtnhplanner.ui.import.one_note=1 张便签
+gtnhplanner.ui.import.n_notes=%d 张便签
+gtnhplanner.ui.import.summary=%s，%s，%s
+gtnhplanner.ui.import.summary_notes=%s，%s，%s，%s
+gtnhplanner.ui.import.summary_left_out=%s；%d 张未导入（游戏中没有该配方）
+gtnhplanner.ui.import.summary_different=%s；%d 张数值不同
+## Drawings (ui/note/NoteCard)
+gtnhplanner.ui.note.kind_box=方框
+gtnhplanner.ui.note.kind_zone=区域
+gtnhplanner.ui.note.kind_arrow=箭头
+gtnhplanner.ui.note.delete_kind=删除%s
+## Overview (ui/OverviewRail)
+gtnhplanner.ui.overview.tier_too_low_flag=电压低!
+## Feedback (ui/popup/FeedbackPanel)
+gtnhplanner.ui.feedback.the_open_plan=当前方案“%s”
+gtnhplanner.ui.feedback.sent_with_one=随附：%s。
+gtnhplanner.ui.feedback.sent_with_two=随附：%s和%s。
+gtnhplanner.ui.feedback.sent_with_three=随附：%s、%s和%s。
+## Screenshot (ui/popup/ScreenshotPanel)
+gtnhplanner.ui.screenshot.saved_as=已保存为 %s
+gtnhplanner.ui.screenshot.size_pixels=%s × %s 像素
+## People (ui/popup/SharePanel, ui/task/TaskPanel)
+gtnhplanner.ui.share.name_you=%s（你）
+gtnhplanner.ui.task.name_you=%s（你）
+gtnhplanner.ui.task.you_lower=你
+gtnhplanner.ui.task.made_lower=已创建
+gtnhplanner.ui.task.made_when=创建于 %s
+gtnhplanner.ui.task.made_by=由 %s 创建
+gtnhplanner.ui.task.made_by_when=由 %s 创建于 %s
+gtnhplanner.ui.task.done_when=完成于 %s
+gtnhplanner.ui.task.add_blocker_key=添加
+## Task pictures and things (ui/task)
+gtnhplanner.ui.task.taken_ago=拍摄于 %s
+gtnhplanner.ui.task.full_shot_elsewhere=%s。完整截图在拍摄它的电脑上
+gtnhplanner.ui.taskthings.placed_where=已放置（%s）
+gtnhplanner.ui.taskactions.n_machines=%d 台机器
+gtnhplanner.ui.taskactions.added_to_task=已把 %s 加入“%s”
+gtnhplanner.ui.taskactions.build_one=建造%s
+gtnhplanner.ui.taskactions.build_two=建造%s和%s
+gtnhplanner.ui.taskactions.build_more=建造%s等 %d 项
+gtnhplanner.ui.taskchain.chain_n=链 %d
+## Placing machines in the world (ui/world/LinkPicker)
+gtnhplanner.ui.linkpicker.placed_at=已放置 %s，位于 %s, %s, %s
+gtnhplanner.ui.linkpicker.placed_n_at=已放置 %s（%s/%s），位于 %s, %s, %s
+gtnhplanner.ui.linkpicker.taken_from=%s。已从 %s 移来
+gtnhplanner.ui.linkpicker.place=放置 %s
+gtnhplanner.ui.linkpicker.place_n=放置 %s：%s/%s
+gtnhplanner.ui.linkpicker.move=移动 %s
+gtnhplanner.ui.linkpicker.move_n=移动 %s：%s/%s
+## World (ui/world)
+gtnhplanner.ui.minimap.changed_open_planner=已更改：打开规划器以更新
+gtnhplanner.ui.keys.none=（无）
+gtnhplanner.ui.world.plan_over_world_on=世界中的方案：开
+gtnhplanner.ui.world.plan_over_world_off=世界中的方案：关
+gtnhplanner.ui.overlay.wire=连线
+gtnhplanner.ui.world.machine=机器
+## Selection bar (ui/SelectionBar)
+gtnhplanner.ui.selection.group=分组
+## Hint lines read as mouse actions (ui/popup/Tip): the word before a colon, as the hints say it
+gtnhplanner.ui.tip.input_click=点击
+gtnhplanner.ui.tip.input_left_click=左键
+gtnhplanner.ui.tip.input_right_click=右键
+gtnhplanner.ui.tip.input_middle_click=中键
+gtnhplanner.ui.tip.input_wheel=滚轮
+gtnhplanner.ui.tip.input_drag=拖动
+gtnhplanner.ui.tip.input_double_click=双击
+gtnhplanner.ui.tip.double_click_label=%s（双击）
+## Board extras (ui/BoardScreen): whole sentences instead of prefix keys
+gtnhplanner.ui.boardextra.place_card_at_block=把卡片放到 %s, %s, %s
+gtnhplanner.ui.boardextra.place_card_at_block_by=把卡片放到 %s, %s, %s，%s
+gtnhplanner.ui.boardextra.forced_output_of=强制输出：%s
+gtnhplanner.ui.boardextra.forced_input_of=强制输入：%s
+gtnhplanner.ui.boardextra.list_join=%s、%s
+gtnhplanner.ui.boardextra.could_also_ship_out_as_list=也可以作为%s送出。
+gtnhplanner.ui.boardextra.could_also_come_in_as_list=也可以作为%s送入。
+gtnhplanner.ui.canvas.nothing_uses_it=没有配方使用 %s
+gtnhplanner.ui.canvas.nothing_makes_it=没有配方产出 %s
+gtnhplanner.ui.task.copied_coordinates=已复制 %s
+gtnhplanner.ui.feedback.couldn_t_send_it_why=发送失败：%s
+## Library (ui/library/LibraryView): whole sentences instead of prefix keys
+gtnhplanner.ui.library.up_to_tier=至多 %s
+gtnhplanner.ui.library.makes_item=产出 %s
+gtnhplanner.ui.library.couldn_t_reach_community_why=无法连接社区：%s
+gtnhplanner.ui.library.couldn_t_load_more_why=无法加载更多：%s
+gtnhplanner.ui.library.shared_by_name=由 %s 分享
+gtnhplanner.ui.library.by_author=作者：%s
+gtnhplanner.ui.library.couldn_t_delete_it_why=删除失败：%s
+gtnhplanner.ui.library.couldn_t_read_that_plan_why=无法读取该方案：%s
+gtnhplanner.ui.library.couldn_t_download_it_why=下载失败：%s
+gtnhplanner.ui.library.show_plans_tagged_tag=显示标签为 #%s 的方案
+gtnhplanner.ui.library.show_plans_by_author=显示 %s 的方案
+gtnhplanner.ui.import.opened_plan=已打开“%s”：%s
+## Plans in chat (client/ChatShare, ImportCommand, OpenPlanCommand)
+gtnhplanner.ui.chat.join_a_world_to_share=进入世界后才能在聊天中分享方案
+gtnhplanner.ui.chat.server_cannot_pass_plans=此服务器无法通过聊天传递方案
+gtnhplanner.ui.chat.plan_too_big_for_chat=方案太大，无法在聊天中分享：请改为复制方案代码
+gtnhplanner.ui.chat.nei_cannot_pass_plans=当前 NEI 版本无法通过聊天传递方案
+gtnhplanner.ui.chat.click_to_open_in_planner=点击在规划器中打开
+gtnhplanner.ui.chat.shared_the_plan=%s 分享了方案 %s
+gtnhplanner.ui.chat.plan_gone_ask_again=该方案已失效：请让对方重新分享
+gtnhplanner.ui.chat.plan_could_not_be_read=无法读取该方案
+gtnhplanner.ui.chat.shared_plan_name=分享的方案
+gtnhplanner.ui.chat.paper_lore=来自 GTNH Planner 的方案
+gtnhplanner.ui.chat.open=打开
+gtnhplanner.ui.chat.plan_not_arrived_yet=该方案尚未同步：请稍后打开方案库
+gtnhplanner.ui.chat.plan_gone=该方案已不存在
+## Plans from the website (client/WebsiteInbox)
+gtnhplanner.ui.website.sent_the_plan=网站发来了方案 %s
+gtnhplanner.ui.website.add_and_open=加入你的方案并打开
+gtnhplanner.ui.website.not_now=以后再说
+gtnhplanner.ui.website.leave_it=不理会
+gtnhplanner.ui.website.plan_gone_send_again=该方案已失效：请重新发送
+## Data texts shown where they are drawn (zh_CN only; the key is made from the English)
+gtnhplanner.data.the_game_crashed=游戏崩溃了
+## Posting to Community (library/Posting, library/Reports)
+gtnhplanner.ui.posting.sign_in_first=请先登录
+gtnhplanner.ui.posting.couldn_t_write_plan_out=无法导出方案：%s
+gtnhplanner.ui.posting.post_is_another_accounts=该发布属于其他账号
+gtnhplanner.ui.posting.post_gone=该发布已从方案库中删除
+gtnhplanner.ui.posting.sign_in_ran_out=登录已过期：请重新登录
+gtnhplanner.ui.reports.couldn_t_write_report_out=无法生成报告：%s
+## The tour (ui/tutorial/Tutorial)
+gtnhplanner.ui.tour.english_only=教程只能在英文下运行：它按英文名称查找规划器的菜单和 NEI 物品。请将游戏语言切换为英文后再开始教程。
+gtnhplanner.data.that_is_a_link_to_a_shared_post_not_a_plan_link=这是分享帖子的链接，不是方案链接。
+gtnhplanner.data.that_is_not_a_plan_link_or_code=这不是方案链接或方案代码。
+gtnhplanner.data.that_plan_is_too_big_to_import=方案太大，无法导入。
+gtnhplanner.data.that_copied_plan_is_cut_short_or_damaged_copy_it_cb9db5b5=复制的方案不完整或已损坏。请重新完整复制。
+gtnhplanner.data.that_is_not_a_plan_the_json_does_not_read=这不是方案：JSON 无法解析。
+gtnhplanner.data.that_is_not_a_plan_it_is_empty=这不是方案：内容为空。
+gtnhplanner.data.that_is_not_a_plan_it_has_no_recipes_or_cards=这不是方案：没有配方或卡片。
+gtnhplanner.data.that_picture_does_not_read=无法读取该图片
+gtnhplanner.data.that_picture_has_no_plan_in_it=该图片中没有方案
+gtnhplanner.data.not_signed_in=未登录
+gtnhplanner.data.that_isn_t_yours=这不属于你
+gtnhplanner.data.not_found=找不到
+gtnhplanner.data.too_many_tries_wait_a_little=尝试次数过多，请稍等
+## NEI plan button and its menu (nei/PlanMenu, nei/OpenFlowchartButton)
+gtnhplanner.ui.planmenu.new_plan=+ 新建方案
+gtnhplanner.ui.planmenu.current=当前
+gtnhplanner.ui.planmenu.which_plan=加入哪个方案？
+gtnhplanner.ui.planmenu.which_machine=使用哪台机器？
+gtnhplanner.ui.planmenu.add_to_a_plan=加入方案
+gtnhplanner.ui.planmenu.click_choose_plan=点击：选择方案（或新建方案）
+gtnhplanner.ui.planmenu.click_choose_plan_and_machine=点击：选择方案（或新建方案）和机器
+gtnhplanner.ui.planmenu.shift_click_add_to=Shift+点击：加入%s
+gtnhplanner.ui.planmenu.shift_click_add_to_using=Shift+点击：加入%s，使用%s
+gtnhplanner.ui.planmenu.machine_and_detail=%s（%s）
+gtnhplanner.ui.neibutton.click_open_or_close=点击：打开或关闭规划器
+## Cloud plans (cloud/session/CloudSession, cloud/session/game/CloudHooks)
+gtnhplanner.ui.cloud.someone=某人
+gtnhplanner.ui.cloud.someone_start=有人
+gtnhplanner.ui.cloud.a_plan=一个方案
+gtnhplanner.ui.cloud.shared_with_you=%s 与你分享了“%s”
+gtnhplanner.ui.cloud.open=打开
+gtnhplanner.ui.cloud.plan_deleted=“%s”已被删除
+gtnhplanner.ui.cloud.plan_unshared=“%s”已不再与你共享
+## Groups, lists (ui/group/GroupEdits, ui/popup/PickList)
+gtnhplanner.ui.group.new_name=分组 %d
+gtnhplanner.ui.picklist.filter=筛选...
+## How far a spot is (ui/task/TaskThings; the English is TaskEdits.howFar's)
+gtnhplanner.ui.taskthings.placed_here=已放置在此处
+gtnhplanner.ui.taskthings.far_m=%2$s %1$d 米
+gtnhplanner.ui.taskthings.far_km=%2$s %1$d 公里
+gtnhplanner.ui.taskthings.way_east=东
+gtnhplanner.ui.taskthings.way_north_east=东北
+gtnhplanner.ui.taskthings.way_north=北
+gtnhplanner.ui.taskthings.way_north_west=西北
+gtnhplanner.ui.taskthings.way_west=西
+gtnhplanner.ui.taskthings.way_south_west=西南
+gtnhplanner.ui.taskthings.way_south=南
+gtnhplanner.ui.taskthings.way_south_east=东南
+## Data texts shown where they are drawn: cloud notices, refusals, machine choices (zh_CN only)
+gtnhplanner.data.your_plans_from_this_world_could_not_be_added_to_02d9fe71=此世界的方案未能加入你的账号
+gtnhplanner.data.this_plan_could_not_be_saved_to_your_account=此方案未能保存到你的账号
+gtnhplanner.data.your_plans_from_this_world_are_now_in_your_accou_c4937828=此世界的方案已加入你的账号
+gtnhplanner.data.a_card_is_too_big_to_share_and_stays_on_this_dev_c8075911=有张卡片太大，无法共享，只保留在此设备上
+gtnhplanner.data.an_edit_could_not_be_saved=有一处编辑未能保存
+gtnhplanner.data.untitled_plan=未命名方案
+gtnhplanner.data.someone_is_editing_it_right_now=有人正在编辑它
+gtnhplanner.data.that_plan_is_too_big=方案太大
+gtnhplanner.data.steam=蒸汽
+gtnhplanner.data.multiblock=多方块

@@ -10,7 +10,6 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.gtnhplanner.ui.canvas.BoardCanvas;
 import com.gtnhplanner.ui.card.CardFace;
 import com.gtnhplanner.ui.card.CardPaint;
-import com.gtnhplanner.ui.note.NoteText;
 import com.gtnhplanner.ui.theme.Hyb;
 
 /**
@@ -114,12 +113,11 @@ final class NoticeBar extends Widget<NoticeBar> implements Interactable {
                 Hyb.rect(0, y, rw, rh - 1, 0xE0181A1F);
                 Hyb.rect(0, y, 3, rh - 1, stripe(n.severity()));
             }
-            final NoteText text = r.text();
-            for (int l = 0; l < text.lines()
+            for (int l = 0; l < r.lines()
                 .size(); l++)
                 Hyb.text(
-                    text.shown(l)
-                        .strip(),
+                    r.lines()
+                        .get(l),
                     r.textX(),
                     y + r.textY() + l * LINE,
                     Hyb.INK);

@@ -22,6 +22,7 @@ import com.gtnhplanner.data.flowchart.Plan;
 import com.gtnhplanner.data.flowchart.Port;
 import com.gtnhplanner.importer.game.FactoryFlowImport;
 import com.gtnhplanner.ui.Resources;
+import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.card.CardDefaults;
 import com.gtnhplanner.ui.card.CardModel;
 
@@ -79,7 +80,7 @@ public final class Posting {
         final Runnable done, final Consumer<String> failed) {
         final String token = Account.token();
         if (token == null) {
-            failed.accept("Sign in first");
+            failed.accept(UiText.tr("posting.sign_in_first"));
             return;
         }
         final String postId = update ? g.getPostId() : null;
@@ -94,7 +95,7 @@ public final class Posting {
             plan = PlanExport.project(g, face.title(), new GameWorld(machines));
         } catch (final RuntimeException e) {
             GtnhPlanner.LOG.warn("Could not write the plan out for posting", e);
-            failed.accept("Couldn't write the plan out: " + reason(e));
+            failed.accept(UiText.tr("posting.couldn_t_write_plan_out", UiText.data(reason(e))));
             return;
         } finally {
             g.setDescription(oldDescription);
@@ -128,7 +129,7 @@ public final class Posting {
                     if (e instanceof final CommunityApi.Refused r && r.postGone()) {
                         unlink(postId);
                         failed.accept(
-                            r.status == 403 ? "That post is another account's" : "That post is gone from the library");
+                            UiText.tr(r.status == 403 ? "posting.post_is_another_accounts" : "posting.post_gone"));
                     } else failed.accept(refused(e));
                 });
             }
@@ -143,7 +144,7 @@ public final class Posting {
         final Consumer<String> failed) {
         final String token = Account.token();
         if (token == null) {
-            failed.accept("Sign in first");
+            failed.accept(UiText.tr("posting.sign_in_first"));
             return;
         }
         final String version = packVersion();
@@ -169,7 +170,7 @@ public final class Posting {
     public static void delete(final CommunityApi.Setup s, final Runnable done, final Consumer<String> failed) {
         final String token = Account.token();
         if (token == null) {
-            failed.accept("Sign in first");
+            failed.accept(UiText.tr("posting.sign_in_first"));
             return;
         }
         NET.execute(() -> {
@@ -268,9 +269,9 @@ public final class Posting {
     private static String refused(final Exception e) {
         if (e instanceof final CommunityApi.Refused r && r.status == 401) {
             Account.signOut();
-            return "Your sign-in ran out: sign in again";
+            return UiText.tr("posting.sign_in_ran_out");
         }
-        return reason(e);
+        return UiText.data(reason(e));
     }
 
     private static String reason(final Exception e) {

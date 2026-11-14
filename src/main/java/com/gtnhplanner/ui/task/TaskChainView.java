@@ -437,7 +437,7 @@ final class TaskChainView {
         for (final TaskChain.Chain c : layout.chains()) {
             chainNo++;
             final List<String> ids = c.ids();
-            y = heading("Chain " + chainNo, ids.size(), y);
+            y = heading(UiText.tr("taskchain.chain_n", chainNo), ids.size(), y);
             for (final String id : ids) y = row(g, id, layers.getOrDefault(id, 0), y, bodyTop, bodyH, hover);
             y += 4;
         }

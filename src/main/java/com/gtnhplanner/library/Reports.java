@@ -104,7 +104,7 @@ public final class Reports {
             body = json(report);
         } catch (final RuntimeException e) {
             GtnhPlanner.LOG.warn("Could not write the report out", e);
-            failed.accept("Couldn't write the report out: " + e.getMessage());
+            failed.accept(com.gtnhplanner.ui.UiText.tr("reports.couldn_t_write_report_out", e.getMessage()));
             return;
         }
         final BufferedImage picture = report.picture();

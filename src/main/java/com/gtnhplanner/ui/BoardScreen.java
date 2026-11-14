@@ -1078,13 +1078,13 @@ public final class BoardScreen extends ModularScreen {
     private void drawLinkBanner() {
         final com.gtnhplanner.ui.world.LinkTarget.Block b = com.gtnhplanner.ui.world.LinkTarget.target();
         if (b == null) return;
-        final String what = tr("boardextra.place_a_card_at") + b.x()
-            + ", "
-            + b.y()
-            + ", "
-            + b.z()
-            + (b.item() == null ? ""
-                : ", " + String.format(
+        final String what = b.item() == null ? UiText.tr("boardextra.place_card_at_block", b.x(), b.y(), b.z())
+            : UiText.tr(
+                "boardextra.place_card_at_block_by",
+                b.x(),
+                b.y(),
+                b.z(),
+                String.format(
                     UiText.tr("audit.link_in_front"),
                     b.item()
                         .getDisplayName()));
@@ -1205,7 +1205,7 @@ public final class BoardScreen extends ModularScreen {
             found.bearers()
                 .size() > 1);
         final Tip tip = Tip
-            .of((view.output() ? tr("boardextra.forced_output") : tr("boardextra.forced_input")) + view.name())
+            .of(UiText.tr(view.output() ? "boardextra.forced_output_of" : "boardextra.forced_input_of", view.name()))
             .row(
                 view.output() ? tr("boardextra.ships_out_here") : tr("boardextra.comes_in_here"),
                 Fmt.rate(view.extra(), session.rateUnit(), view.isFluid()));
@@ -1214,15 +1214,17 @@ public final class BoardScreen extends ModularScreen {
             return tip.muted(
                 view.output() ? tr("boardextra.only_this_machine_can_ship_it_out")
                     : tr("boardextra.only_this_machine_can_take_it_in"));
-        final StringBuilder others = new StringBuilder();
+        String others = null;
         for (final BoardSession.SpareBearer b : found.bearers()) {
             if (b == here) continue;
-            if (others.length() > 0) others.append(", ");
-            others.append(String.format(UiText.tr("audit.also_at"), b.name(), b.machine()));
+            final String at = String.format(UiText.tr("audit.also_at"), b.name(), b.machine());
+            others = others == null ? at : UiText.tr("boardextra.list_join", others, at);
         }
-        return tip.muted(
-            (view.output() ? tr("boardextra.could_also_ship_out_as") : tr("boardextra.could_also_come_in_as")) + others
-                + ".")
+        return tip
+            .muted(
+                UiText.tr(
+                    view.output() ? "boardextra.could_also_ship_out_as_list" : "boardextra.could_also_come_in_as_list",
+                    others))
             .action(Tip.Input.LEFT, tr("boardextra.choose_who_takes_it"))
             .action(Tip.Input.DRAG, tr("boardextra.hand_it_to_another_card"));
     }

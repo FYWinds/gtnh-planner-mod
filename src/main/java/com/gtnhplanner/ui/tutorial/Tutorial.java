@@ -90,6 +90,18 @@ public final class Tutorial {
         begin(() -> new Tutorial(Rebuild.beats(plan, seed, nei)), 0);
     }
 
+    /**
+     * Whether the tour can play in the game's language: it finds the menus' rows, the settings and NEI's items by their
+     * English words, so it plays in English only.
+     */
+    public static boolean supported() {
+        return Minecraft.getMinecraft()
+            .getLanguageManager()
+            .getCurrentLanguage()
+            .getLanguageCode()
+            .startsWith("en_");
+    }
+
     /** Starts the tour at a beat (the dev harness), or goes there when it is running. */
     public static void startAt(final int beat) {
         final Minecraft mc = Minecraft.getMinecraft();
@@ -99,6 +111,14 @@ public final class Tutorial {
             return;
         }
         com.gtnhplanner.ui.PlannerSettings.setTourOffered(true);
+        if (!supported()) {
+            final String why = com.gtnhplanner.ui.UiText.tr("tour.english_only");
+            if (com.gtnhplanner.ui.Planner.screenOf(mc.currentScreen) instanceof final com.gtnhplanner.ui.BoardScreen b)
+                b.session()
+                    .flash(com.gtnhplanner.data.flowchart.balancer.Severity.WARN, why);
+            else if (mc.thePlayer != null) mc.thePlayer.addChatMessage(new net.minecraft.util.ChatComponentText(why));
+            return;
+        }
         begin(Tutorial::new, beat);
     }
 

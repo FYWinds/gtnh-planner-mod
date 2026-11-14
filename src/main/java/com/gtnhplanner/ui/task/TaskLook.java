@@ -15,6 +15,7 @@ import com.gtnhplanner.cloud.session.LiveDoc;
 import com.gtnhplanner.data.flowchart.Graph;
 import com.gtnhplanner.data.flowchart.Tasks;
 import com.gtnhplanner.library.Account;
+import com.gtnhplanner.ui.TextWrap;
 import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.live.Peers;
 import com.gtnhplanner.ui.theme.Hyb;
@@ -48,19 +49,13 @@ public final class TaskLook {
     }
 
     /**
-     * Words cut to fit a width at a word, ending in "..." when it had to; a first word too long for it is cut where it
-     * must be.
+     * Words cut to fit a width where a line may end ({@link TextWrap}), ending in "..." when it had to; a first word
+     * too long for it is cut where it must be.
      */
     public static String fitWords(final String s, final int maxWidth) {
         if (Hyb.width(s) <= maxWidth) return s;
-        String out = "";
-        for (final String w : s.split(" ")) {
-            if (w.isEmpty()) continue;
-            final String next = out.isEmpty() ? w : out + " " + w;
-            if (Hyb.width(next + "...") > maxWidth) break;
-            out = next;
-        }
-        return out.isEmpty() ? Hyb.fit(s, maxWidth) : out + "...";
+        return TextWrap.wrap(s, maxWidth - Hyb.width("..."), Hyb::width)
+            .get(0) + "...";
     }
 
     /** A disc {@code d} across, in whole steps of the space it is drawn in. */
@@ -178,8 +173,8 @@ public final class TaskLook {
 
     // region People
 
-    /** What a signed-out player writes as, and is called. */
-    public static final String LOCAL = "local", YOU = UiText.tr("tasklook.you");
+    /** What a signed-out player writes as. */
+    public static final String LOCAL = "local";
 
     /** The signed-in account's id, or {@link #LOCAL} signed out. */
     public static String me() {
@@ -187,10 +182,10 @@ public final class TaskLook {
         return id == null ? LOCAL : id;
     }
 
-    /** The signed-in account's name, or UiText.tr("tasklook.you") signed out. */
+    /** The signed-in account's name, or "You" signed out. */
     public static String myName() {
         final String name = Account.username();
-        return name == null ? YOU : name;
+        return name == null ? UiText.tr("tasklook.you") : name;
     }
 
     /** Whether a comment or task is the player's own: their account's, or written on this computer signed out. */
@@ -205,7 +200,7 @@ public final class TaskLook {
     @Nullable
     public static String nameOf(final Graph g, final String id) {
         if (id.equals(Account.userId())) return Account.username();
-        if (id.equals(LOCAL)) return YOU;
+        if (id.equals(LOCAL)) return UiText.tr("tasklook.you");
         for (final Person p : people(g)) if (p.id()
             .equals(id)) return p.name();
         final LiveDoc d = live(g);

@@ -18,7 +18,14 @@ import com.gtnhplanner.ui.theme.Hyb;
 public final class IncomingOffer extends Widget<IncomingOffer> implements Interactable {
 
     private static final int W = 280, H = 70, PAD = 10, KEY_H = 18;
-    private static final String OPEN = UiText.tr("audit.open_plan"), LATER = UiText.tr("audit.not_now");
+
+    private static String open() {
+        return UiText.tr("audit.open_plan");
+    }
+
+    private static String later() {
+        return UiText.tr("audit.not_now");
+    }
 
     private final WebsiteInbox.Pending pending;
 
@@ -51,12 +58,12 @@ public final class IncomingOffer extends Widget<IncomingOffer> implements Intera
     }
 
     private int[] openRect() {
-        final int w = Hyb.width(OPEN) + 24;
+        final int w = Hyb.width(open()) + 24;
         return new int[] { W - PAD - w, H - PAD - KEY_H, w, KEY_H };
     }
 
     private int[] laterRect() {
-        final int w = Hyb.width(LATER) + 16;
+        final int w = Hyb.width(later()) + 16;
         return new int[] { openRect()[0] - 6 - w, H - PAD - KEY_H, w, KEY_H };
     }
 
@@ -89,11 +96,11 @@ public final class IncomingOffer extends Widget<IncomingOffer> implements Intera
             Hyb.KEY_LO,
             0,
             1);
-        Hyb.textCentered(LATER, later[0] + later[2] / 2f, later[1] + 5, Hyb.INK);
+        Hyb.textCentered(later(), later[0] + later[2] / 2f, later[1] + 5, Hyb.INK);
         Hyb.rect(open[0], open[1], open[2], open[3], openHot ? 0xFF38E1F5 : 0xFF22D3EE);
         Hyb.rect(open[0], open[1], open[2], 1, 0x66FFFFFF);
         com.cleanroommc.modularui.drawable.GuiDraw
-            .drawText(OPEN, open[0] + (open[2] - Hyb.width(OPEN)) / 2f, open[1] + 5, 1f, 0xFF0B1A1E, false);
+            .drawText(open(), open[0] + (open[2] - Hyb.width(open())) / 2f, open[1] + 5, 1f, 0xFF0B1A1E, false);
     }
 
     @Override

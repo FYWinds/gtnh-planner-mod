@@ -1270,7 +1270,7 @@ final class OverviewRail extends ParentWidget<OverviewRail>
                 // What it draws, grey beside the tier (the unit dropped when there is no room for it).
                 // A steam machine burns steam at no voltage: its steam, L/s.
                 final boolean steam = !m.tooLow() && !(m.madeEuPerTick() > 0) && !Double.isNaN(m.steamPerSecond());
-                final String eu = m.tooLow() ? "TIER!"
+                final String eu = m.tooLow() ? UiText.tr("overview.tier_too_low_flag")
                     : m.madeEuPerTick() > 0 ? "+" + Fmt.power(m.madeEuPerTick())
                         : steam ? Fmt.compact(m.steamPerSecond()) : Fmt.power(m.euPerTick());
                 final int euInk = m.tooLow() ? Hyb.RED_INK : m.madeEuPerTick() > 0 ? 0xFFE0B04A : Hyb.MUTED;

@@ -10,6 +10,7 @@ import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.IChatComponent;
 
 import com.gtnhplanner.data.flowchart.Plan;
+import com.gtnhplanner.ui.UiText;
 
 /**
  * The client command a chat line about a plan shared with the player runs when its [Open] is clicked: opens the planner
@@ -27,7 +28,7 @@ public class OpenPlanCommand extends CommandBase {
     /** "Owner shared Plan with you [Open]": the chat line, its [Open] clickable. */
     public static IChatComponent line(final String text, final String key) {
         final IChatComponent out = new ChatComponentText(text + " ");
-        final IChatComponent open = new ChatComponentText("[Open]");
+        final IChatComponent open = new ChatComponentText("[" + UiText.tr("chat.open") + "]");
         open.getChatStyle()
             .setColor(EnumChatFormatting.AQUA)
             .setUnderlined(true)
@@ -48,7 +49,7 @@ public class OpenPlanCommand extends CommandBase {
             com.gtnhplanner.ui.Planner.open();
             return null;
         }
-        return "That plan has not arrived yet: open Plans in a moment";
+        return UiText.tr("chat.plan_not_arrived_yet");
     }
 
     @Override
@@ -63,7 +64,7 @@ public class OpenPlanCommand extends CommandBase {
 
     @Override
     public void processCommand(final ICommandSender sender, final String[] args) {
-        final String problem = args.length == 1 ? open(args[0]) : "That plan is gone";
+        final String problem = args.length == 1 ? open(args[0]) : UiText.tr("chat.plan_gone");
         if (problem != null) sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + problem));
     }
 

@@ -666,7 +666,7 @@ final class Rebuild {
             () -> DRAWERS.get(d.getId()) != null,
             Steps.seq(
                 Steps.clickOpens(drawerPart(d.getId(), DrawerCard.Part.RULE), 0),
-                Steps.click(Targets.popupRow(DrawerCard.TO_TRASH)),
+                Steps.click(Targets.popupRow(DrawerCard.toTrash())),
                 Steps.pause(250)));
         b.pause(150 + rnd.nextInt(350));
     }

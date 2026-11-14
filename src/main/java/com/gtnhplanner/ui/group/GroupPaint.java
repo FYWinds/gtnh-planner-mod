@@ -56,7 +56,7 @@ public final class GroupPaint {
 
     /** "N machines", "1 machine"; empty at 0. */
     public static String machinesText(final int count) {
-        return count <= 0 ? "" : count == 1 ? "1 machine" : count + " machines";
+        return count <= 0 ? "" : count == 1 ? UiText.tr("group.one_machine") : UiText.tr("group.n_machines", count);
     }
 
     /**
@@ -103,7 +103,7 @@ public final class GroupPaint {
         final int h = summaryHeight(s.rows());
         Hyb.rect(0, 0, SUM_W, h, CardPaint.SURFACE);
         strip(g, SUM_W, machinesText(s.machines()), false, false, keyHot, editing);
-        final String line = (s.machines() > 0 ? machinesText(s.machines()) : "No machines")
+        final String line = (s.machines() > 0 ? machinesText(s.machines()) : UiText.tr("group.no_machines"))
             + (s.euPerTick() > 0 ? "  " + Fmt.power(s.euPerTick()) + " EU/t" : "");
         Hyb.text(line, TEXT, STRIP + 1 + (LINE - 6) / 2f, 0.75f, Hyb.MUTED);
         final int top = STRIP + 1 + LINE;

@@ -20,6 +20,7 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.Widget;
 import com.gtnhplanner.ui.PlannerScale;
 import com.gtnhplanner.ui.PlannerSettings;
+import com.gtnhplanner.ui.TextWrap;
 import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.card.CardPaint;
 import com.gtnhplanner.ui.sound.Sfx;
@@ -486,17 +487,7 @@ public final class SettingsPanel extends Widget<SettingsPanel> implements Intera
 
     /** Words in lines no wider than {@code room}. */
     private static List<String> wrap(final String text, final float room) {
-        final List<String> lines = new ArrayList<>();
-        String line = "";
-        for (final String word : text.split(" ")) {
-            final String next = line.isEmpty() ? word : line + " " + word;
-            if (!line.isEmpty() && Hyb.width(next) > room) {
-                lines.add(line);
-                line = word;
-            } else line = next;
-        }
-        if (!line.isEmpty()) lines.add(line);
-        return lines;
+        return TextWrap.wrap(text, room, Hyb::width);
     }
 
     private static int[] sideRect(final int i) {

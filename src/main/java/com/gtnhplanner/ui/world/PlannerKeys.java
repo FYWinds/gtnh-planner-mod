@@ -152,7 +152,7 @@ public final class PlannerKeys {
             case Keyboard.KEY_COMMA -> ",";
             case Keyboard.KEY_PERIOD -> ".";
             case Keyboard.KEY_SLASH -> "/";
-            case Keyboard.KEY_NONE -> "(none)";
+            case Keyboard.KEY_NONE -> UiText.tr("keys.none");
             default -> PlacementKeys.keyName(code);
         };
     }
@@ -177,7 +177,9 @@ public final class PlannerKeys {
             PlannerSettings.setArLens(!PlannerSettings.arLens());
             (PlannerSettings.arLens() ? com.gtnhplanner.ui.sound.Sfx.TOGGLE_ON
                 : com.gtnhplanner.ui.sound.Sfx.TOGGLE_OFF).play();
-            WorldView.say(PlannerSettings.arLens() ? "Plan over the world: on" : "Plan over the world: off");
+            WorldView.say(
+                PlannerSettings.arLens() ? UiText.tr("world.plan_over_world_on")
+                    : UiText.tr("world.plan_over_world_off"));
         }
         while (LINK.isPressed()) LinkTarget.beginForCrosshair();
         while (PIN_LIST.isPressed()) {

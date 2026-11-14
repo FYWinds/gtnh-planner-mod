@@ -8,6 +8,8 @@ import net.minecraftforge.fluids.FluidStack;
 
 import org.lwjgl.opengl.GL11;
 
+import com.gtnhplanner.ui.TextWrap;
+import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.theme.Hyb;
 
 /**
@@ -143,9 +145,12 @@ public final class Tip {
         return tip;
     }
 
-    private static final String[][] ACTION_PREFIXES = { { "Click: ", "LEFT" }, { "Left click: ", "LEFT" },
-        { "Right click: ", "RIGHT" }, { "Middle click: ", "MIDDLE" }, { "Wheel: ", "WHEEL" }, { "Drag: ", "DRAG" },
-        { "Double-click: ", "LEFT" }, { "R, U: ", "KEY" } };
+    /** A hint part's English start, its input, and the lang key of the input's word in the player's language. */
+    private static final String[][] ACTION_PREFIXES = { { "Click: ", "LEFT", "tip.input_click" },
+        { "Left click: ", "LEFT", "tip.input_left_click" }, { "Right click: ", "RIGHT", "tip.input_right_click" },
+        { "Middle click: ", "MIDDLE", "tip.input_middle_click" }, { "Wheel: ", "WHEEL", "tip.input_wheel" },
+        { "Drag: ", "DRAG", "tip.input_drag" }, { "Double-click: ", "LEFT", "tip.input_double_click" },
+        { "R, U: ", "KEY", null } };
 
     /**
      * Reads a hint line such as "Click: pick Wheel: next" (parts two spaces apart) as actions. False, adding nothing,
@@ -156,9 +161,10 @@ public final class Tip {
         for (final String part : line.split(" {2,}")) {
             Action action = null;
             for (final String[] p : ACTION_PREFIXES) {
-                if (!part.startsWith(p[0])) continue;
-                String label = part.substring(p[0].length());
-                if (p[0].startsWith("Double")) label += " (double-click)";
+                final int start = actionStart(part, p);
+                if (start < 0) continue;
+                String label = part.substring(start);
+                if (p[0].startsWith("Double")) label = UiText.tr("tip.double_click_label", label);
                 if (p[1].equals("KEY")) label = "R, U: " + label;
                 label = label.isEmpty() ? label : Character.toUpperCase(label.charAt(0)) + label.substring(1);
                 action = new Action(Input.valueOf(p[1]), label);
@@ -169,6 +175,22 @@ public final class Tip {
         }
         for (final Action a : found) if (offered(a.input())) actions.add(a);
         return !found.isEmpty();
+    }
+
+    /**
+     * Where a hint part's words start after its input ("Click: ", or the player's word for it and a colon); -1 when
+     * the part does not start with that input.
+     */
+    private static int actionStart(final String part, final String[] prefix) {
+        if (part.startsWith(prefix[0])) return prefix[0].length();
+        if (prefix[2] == null) return -1;
+        final String word = UiText.tr(prefix[2]);
+        if (word.isEmpty() || !part.startsWith(word) || part.length() <= word.length()) return -1;
+        final char colon = part.charAt(word.length());
+        if (colon != ':' && colon != '：') return -1;
+        int at = word.length() + 1;
+        while (at < part.length() && part.charAt(at) == ' ') at++;
+        return at;
     }
 
     public Tip sub(final String text) {
@@ -216,24 +238,12 @@ public final class Tip {
     }
 
     public Tip say(final String text, final int color) {
-        final List<String> line = new ArrayList<>();
-        int lineW = 0;
-        boolean gold = false, lineGold = false;
-        final int space = Hyb.width(" ");
-        for (final String word : text.split(" ")) {
-            if (word.isEmpty()) continue;
-            final int w = richWidth(word);
-            if (!line.isEmpty() && lineW + space + w > MAX_W) {
-                notes.add(new Note(String.join(" ", line), color, true, lineGold, null, null, false));
-                line.clear();
-                lineW = 0;
-                lineGold = gold;
-            }
-            lineW += (line.isEmpty() ? 0 : space) + w;
-            line.add(word);
-            for (final char ch : word.toCharArray()) if (ch == '*') gold = !gold;
+        boolean gold = false;
+        for (final String line : TextWrap.wrap(text, MAX_W, Tip::richWidth)) {
+            if (line.isEmpty()) continue;
+            notes.add(new Note(line, color, true, gold, null, null, false));
+            for (final char ch : line.toCharArray()) if (ch == '*') gold = !gold;
         }
-        if (!line.isEmpty()) notes.add(new Note(String.join(" ", line), color, true, lineGold, null, null, false));
         return this;
     }
 

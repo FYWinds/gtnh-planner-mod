@@ -61,13 +61,9 @@ final class PictureView extends Widget<PictureView> implements Interactable {
         final TaskPictures.Texture full = TaskPictures.full(picture);
         TaskPictures.draw(full != null ? full : TaskPictures.thumb(picture), EDGE, EDGE, pw, ph);
         final String ago = TaskLook.ago(picture.takenAt());
-        final String said = (ago.isEmpty() ? "Screenshot" : "Taken " + ago)
-            + (full == null ? ". The full shot is on the computer that took it" : "");
-        Hyb.text(
-            Hyb.width(said) <= pw - 70 ? said : ago.isEmpty() ? "Screenshot" : "Taken " + ago,
-            EDGE + 2,
-            EDGE + ph + 5,
-            Hyb.MUTED);
+        final String shot = ago.isEmpty() ? UiText.tr("taskthings.screenshot") : UiText.tr("task.taken_ago", ago);
+        final String said = full == null ? UiText.tr("task.full_shot_elsewhere", shot) : shot;
+        Hyb.text(Hyb.width(said) <= pw - 70 ? said : shot, EDGE + 2, EDGE + ph + 5, Hyb.MUTED);
         Hyb.textRight(UiText.tr("audit.click_to_close"), EDGE + pw - 2, EDGE + ph + 5, 0xFF6A6C74);
     }
 

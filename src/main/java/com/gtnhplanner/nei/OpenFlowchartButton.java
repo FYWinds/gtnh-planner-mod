@@ -14,6 +14,7 @@ import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.gtnhplanner.GtnhPlanner;
+import com.gtnhplanner.ui.UiText;
 
 import codechicken.nei.Button;
 
@@ -88,6 +89,6 @@ public class OpenFlowchartButton extends Button {
     @Override
     public void addTooltips(final List<String> tooltip) {
         tooltip.add("GTNH Planner");
-        tooltip.add("§7Click: open the planner, or close it");
+        tooltip.add("§7" + UiText.tr("neibutton.click_open_or_close"));
     }
 }

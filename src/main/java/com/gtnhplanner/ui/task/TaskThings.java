@@ -122,10 +122,7 @@ public final class TaskThings {
         return new Shown(i, Tasks.MACHINE, words, detail, icon, false, on, node);
     }
 
-    /**
-     * Where a card is placed in this world: "placed 40 m north-east", or
-     * UiText.tr("taskthings.placed_in_another_dimension"); else null.
-     */
+    /** Where a card is placed in this world: "placed 40 m north-east", or "placed in another dimension"; else null. */
     @Nullable
     private static String placed(final Node node) {
         if (node.worldLinks.isEmpty()) return null;
@@ -143,7 +140,22 @@ public final class TaskThings {
             }
         }
         if (nearest == null) return UiText.tr("taskthings.placed_in_another_dimension");
-        return "placed " + TaskEdits.howFar(nearest[1] + 0.5 - me.posX, nearest[3] + 0.5 - me.posZ);
+        final String far = howFar(nearest[1] + 0.5 - me.posX, nearest[3] + 0.5 - me.posZ);
+        return far != null ? UiText.tr("taskthings.placed_where", far) : UiText.tr("taskthings.placed_here");
+    }
+
+    /**
+     * {@link TaskEdits#howFar} in the player's language, from the same numbers: "40 m north-east"; null when the spot
+     * is where the player stands.
+     */
+    @Nullable
+    private static String howFar(final double dx, final double dz) {
+        final long d = Math.round(Math.sqrt(dx * dx + dz * dz));
+        final String way = TaskEdits.compass(dx, dz);
+        if (d < 1 || way.isEmpty()) return null;
+        final String shown = UiText.tr("taskthings.way_" + way.replace('-', '_'));
+        return d >= 10_000 ? UiText.tr("taskthings.far_km", Math.round(d / 1000.0), shown)
+            : UiText.tr("taskthings.far_m", d, shown);
     }
 
     /**
@@ -187,8 +199,7 @@ public final class TaskThings {
     }
 
     /**
-     * How far and which way a spot is from the player ("40 m north-east", UiText.tr("taskthings.where_you_stand")),
-     * UiText.tr("taskthings.in_another_world") when
+     * How far and which way a spot is from the player ("40 m north-east", "where you stand"), "in another world" when
      * it is not in this one; "" when it is in another dimension of it (its name says which).
      */
     public static String where(final Tasks.Place p) {
@@ -199,8 +210,8 @@ public final class TaskThings {
                 .equals(worldKey()))
             return UiText.tr("taskthings.in_another_world");
         if (me.dimension != p.dim()) return "";
-        final String far = TaskEdits.howFar(p.x() + 0.5 - me.posX, p.z() + 0.5 - me.posZ);
-        return far.equals("here") ? UiText.tr("taskthings.where_you_stand") : far;
+        final String far = howFar(p.x() + 0.5 - me.posX, p.z() + 0.5 - me.posZ);
+        return far != null ? far : UiText.tr("taskthings.where_you_stand");
     }
 
     /** Whether a spot is in the world being played (any dimension of it). */
@@ -211,7 +222,7 @@ public final class TaskThings {
 
     private static String taken(@Nullable final Tasks.Picture p) {
         final String ago = p == null ? "" : TaskLook.ago(p.takenAt());
-        return ago.isEmpty() ? "" : "Taken " + ago;
+        return ago.isEmpty() ? "" : UiText.tr("task.taken_ago", ago);
     }
 
     // region Where the player stands

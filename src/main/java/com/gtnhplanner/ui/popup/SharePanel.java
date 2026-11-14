@@ -224,7 +224,8 @@ public final class SharePanel extends ParentWidget<SharePanel> implements Intera
         final String said = r.getMessage();
         if (said == null || said.isBlank() || said.startsWith("the site answered"))
             return UiText.tr("share.that_did_not_work");
-        final String line = Character.toUpperCase(said.charAt(0)) + said.substring(1);
+        final String shown = UiText.data(said);
+        final String line = Character.toUpperCase(shown.charAt(0)) + shown.substring(1);
         return line.endsWith(".") ? line.substring(0, line.length() - 1) : line;
     }
 
@@ -433,7 +434,7 @@ public final class SharePanel extends ParentWidget<SharePanel> implements Intera
             final boolean isOwner = owner != null && owner.id()
                 .equals(m.id()), mine = m.id()
                     .equals(me);
-            person(m.username() + (mine ? " (you)" : ""), m.username(), m.id(), y, mx, my);
+            person(mine ? UiText.tr("share.name_you", m.username()) : m.username(), m.username(), m.id(), y, mx, my);
             if (isOwner) Hyb.textRight(UiText.tr("share.owner"), boxW - PAD, y + 4, Hyb.MUTED);
             else if (busy.contains(m.id())) Hyb.textRight("...", boxW - PAD, y + 4, Hyb.MUTED);
             else if (owns) key(UiText.tr("share.remove"), Kind.REMOVE, m.id(), y, mx, my);

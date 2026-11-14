@@ -13,14 +13,26 @@ import com.gtnhplanner.ui.theme.Hyb;
  */
 final class TourOffer extends Widget<TourOffer> implements Interactable {
 
-    private static final String[] LINES = { UiText.tr("audit.tour_new"), UiText.tr("audit.tour_intro"),
-        UiText.tr("audit.tour_duration") };
-    private static final String TAKE = UiText.tr("audit.tour_take"), SKIP = UiText.tr("audit.tour_skip");
+    /** The note's lines, the first its heading; read as it draws, in the game's language then. */
+    private static String[] lines() {
+        return new String[] { UiText.tr("audit.tour_new"), UiText.tr("audit.tour_intro"),
+            UiText.tr("audit.tour_duration") };
+    }
+
+    private static String take() {
+        return UiText.tr("audit.tour_take");
+    }
+
+    private static String skip() {
+        return UiText.tr("audit.tour_skip");
+    }
+
     /** The tour's note: its fill and gold. */
     private static final int FILL = 0xFF222327, GOLD = 0xFFFFD257, PAD = 9, LINE = 11, KEY_H = 15;
 
     private static boolean wanted() {
-        return !PlannerSettings.tourOffered() && !com.gtnhplanner.ui.tutorial.Tutorial.active();
+        return !PlannerSettings.tourOffered() && !com.gtnhplanner.ui.tutorial.Tutorial.active()
+            && com.gtnhplanner.ui.tutorial.Tutorial.supported();
     }
 
     @Override
@@ -38,13 +50,13 @@ final class TourOffer extends Widget<TourOffer> implements Interactable {
     // region Geometry: the note centred in the widget, the board under it
 
     private int noteW() {
-        int w = Hyb.width(TAKE) + Hyb.width(SKIP) + 28 + 6;
-        for (final String l : LINES) w = Math.max(w, Hyb.width(l));
+        int w = Hyb.width(take()) + Hyb.width(skip()) + 28 + 6;
+        for (final String l : lines()) w = Math.max(w, Hyb.width(l));
         return w + 2 * PAD;
     }
 
     private int noteH() {
-        return PAD + LINES.length * LINE + 6 + KEY_H + PAD;
+        return PAD + lines().length * LINE + 6 + KEY_H + PAD;
     }
 
     private int noteX() {
@@ -57,7 +69,7 @@ final class TourOffer extends Widget<TourOffer> implements Interactable {
 
     /** {x, y, w, h} of a key, local. */
     private int[] key(final boolean take) {
-        final int skipW = Hyb.width(SKIP) + 14, takeW = Hyb.width(TAKE) + 14;
+        final int skipW = Hyb.width(skip()) + 14, takeW = Hyb.width(take()) + 14;
         final int y = noteY() + noteH() - PAD - KEY_H, right = noteX() + noteW() - PAD;
         return take ? new int[] { right - skipW - 6 - takeW, y, takeW, KEY_H }
             : new int[] { right - skipW, y, skipW, KEY_H };
@@ -73,10 +85,11 @@ final class TourOffer extends Widget<TourOffer> implements Interactable {
         Hyb.rect(x + 3, y + 4, w, h, 0x66000000);
         Hyb.rect(x, y, w, h, GOLD);
         Hyb.rect(x + 1, y + 1, w - 2, h - 2, FILL);
-        for (int i = 0; i < LINES.length; i++)
-            Hyb.text(LINES[i], x + PAD, y + PAD + i * LINE, 1f, i == 0 ? GOLD : Hyb.INK, false);
-        drawKey(TAKE, key(true), mx, my, true);
-        drawKey(SKIP, key(false), mx, my, false);
+        final String[] lines = lines();
+        for (int i = 0; i < lines.length; i++)
+            Hyb.text(lines[i], x + PAD, y + PAD + i * LINE, 1f, i == 0 ? GOLD : Hyb.INK, false);
+        drawKey(take(), key(true), mx, my, true);
+        drawKey(skip(), key(false), mx, my, false);
     }
 
     private static void drawKey(final String label, final int[] r, final int mx, final int my, final boolean main) {

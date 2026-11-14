@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.gtnhplanner.ui.UiText;
+
 /**
  * Everything an import could not carry over as it was, for the player to read: cards left out and why, recipes taken
  * with differences, features dropped or turned into something else, wires that found no port.
@@ -99,6 +101,24 @@ public final class ImportReport {
             .append(fuzzy)
             .append(" with different numbers");
         return s.toString();
+    }
+
+    /** {@link #summary()} in the player's language, for the notice an import shows. */
+    public String shownSummary() {
+        final int unmatched = entries(Kind.UNMATCHED).size(), fuzzy = entries(Kind.FUZZY).size();
+        final String c = count(cards, "import.one_card", "import.n_cards"),
+            w = count(wires, "import.one_wire", "import.n_wires"),
+            d = count(drawers, "import.one_drawer", "import.n_drawers");
+        String s = notes > 0
+            ? UiText.tr("import.summary_notes", c, w, d, count(notes, "import.one_note", "import.n_notes"))
+            : UiText.tr("import.summary", c, w, d);
+        if (unmatched > 0) s = UiText.tr("import.summary_left_out", s, unmatched);
+        if (fuzzy > 0) s = UiText.tr("import.summary_different", s, fuzzy);
+        return s;
+    }
+
+    private static String count(final int n, final String one, final String many) {
+        return n == 1 ? UiText.tr(one) : UiText.tr(many, n);
     }
 
     @Override

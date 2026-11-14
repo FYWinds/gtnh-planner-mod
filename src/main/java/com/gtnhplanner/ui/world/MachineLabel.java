@@ -6,6 +6,7 @@ import javax.annotation.Nullable;
 
 import org.lwjgl.opengl.GL11;
 
+import com.gtnhplanner.ui.TextWrap;
 import com.gtnhplanner.ui.theme.Fmt;
 import com.gtnhplanner.ui.theme.Hyb;
 
@@ -157,14 +158,14 @@ public final class MachineLabel {
         return p != null;
     }
 
-    /** A name on one line, or two broken where its language allows (TextWrap), each cut to fit. */
+    /** A name on one line, or two split where a line may end ({@link TextWrap}) when it is wider than {@code room}. */
     private static List<String> wrap(final String s, final int room) {
         if (Hyb.width(s) <= room) return List.of(s);
-        final List<String> lines = com.gtnhplanner.ui.TextWrap.wrap(s, room, Hyb::width);
-        if (lines.size() < 2) return List.of(Hyb.fit(s, room));
-        final String first = lines.get(0);
-        final String rest = s.substring(s.indexOf(first) + first.length())
+        final String first = TextWrap.wrap(s, room, Hyb::width)
+            .get(0);
+        final String rest = s.stripLeading()
+            .substring(first.length())
             .strip();
-        return List.of(Hyb.fit(first, room), Hyb.fit(rest, room));
+        return rest.isEmpty() ? List.of(Hyb.fit(first, room)) : List.of(first, Hyb.fit(rest, room));
     }
 }

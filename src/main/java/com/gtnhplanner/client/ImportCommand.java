@@ -5,6 +5,8 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.EnumChatFormatting;
 
+import com.gtnhplanner.ui.UiText;
+
 /** The client command a plan's chat line runs when clicked ({@link ChatShare}): opens that plan. */
 public class ImportCommand extends CommandBase {
 
@@ -27,7 +29,7 @@ public class ImportCommand extends CommandBase {
 
     @Override
     public void processCommand(final ICommandSender sender, final String[] args) {
-        final String problem = args.length == 1 ? ChatShare.open(args[0]) : "That plan is gone: ask for it again";
+        final String problem = args.length == 1 ? ChatShare.open(args[0]) : UiText.tr("chat.plan_gone_ask_again");
         if (problem != null) sender.addChatMessage(new ChatComponentText(EnumChatFormatting.RED + problem));
     }
 
