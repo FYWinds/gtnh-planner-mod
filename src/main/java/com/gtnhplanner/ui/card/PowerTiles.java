@@ -10,6 +10,8 @@ import com.gtnhplanner.power.PowerModel;
 import com.gtnhplanner.power.PowerSetting;
 import com.gtnhplanner.power.PowerSource;
 import com.gtnhplanner.power.sources.Helpers;
+import com.gtnhplanner.ui.UiText;
+import com.gtnhplanner.ui.power.PowerText;
 
 /**
  * A power card's tiles, the website's PowerConfigPanel: every setting on a tile (a select is a ladder, a number a
@@ -57,23 +59,24 @@ public final class PowerTiles {
         };
     }
 
-    /** What a setting's tile shows: the option's label, the number, or On and Off. */
+    /** What a setting's tile shows, in the player's language: the option's label, the number, or On and Off. */
     public static String shown(final PowerSetting setting, final Map<String, String> values) {
         final String raw = values.get(setting.id());
         return switch (setting) {
             case PowerSetting.Select s -> {
                 final PowerSetting.Option option = s.option(s.value(raw));
-                yield option == null ? s.value(raw) : option.label();
+                yield option == null ? s.value(raw) : PowerText.option(option);
             }
-            case PowerSetting.Toggle t -> t.value(raw) ? "On" : "Off";
+            // The words the settings sheet's switch reads as on (SettingControls' own toggles use them too).
+            case PowerSetting.Toggle t -> t.value(raw) ? UiText.tr("settingcontrols.on")
+                : UiText.tr("settingcontrols.off");
             case PowerSetting.Number n -> Helpers.number(n.value(raw));
         };
     }
 
-    /** A setting's caption: its label, with its unit for a number. */
+    /** A setting's caption in the player's language: its label, with its unit for a number. */
     public static String caption(final PowerSetting setting) {
-        return setting instanceof final PowerSetting.Number n && n.unit() != null ? setting.label() + " (" + n.unit()
-            + ")" : setting.label();
+        return PowerText.caption(setting);
     }
 
     /** Whether a setting means anything at the others' values: grayed out when not. */

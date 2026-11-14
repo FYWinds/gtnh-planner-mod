@@ -143,8 +143,9 @@ final class PowerPanel {
             "@" + f.tier(),
             "= " + Fmt.power(f.volt() * f.amps()) + " EU/t");
         final int hatchAmps = f.amps() == 1 ? 1 : 2;
-        final String hatches = Fmt.compact((double) f.amps() / hatchAmps), each = "(" + hatchAmps + "A each)";
-        final String noun = f.amps() <= hatchAmps ? "hatch" : "hatches";
+        final String hatches = Fmt.compact((double) f.amps() / hatchAmps),
+            each = UiText.tr("power.panel_each_hatch", hatchAmps);
+        final String noun = f.amps() <= hatchAmps ? UiText.tr("power.panel_hatch") : UiText.tr("power.panel_hatches");
         final int hw = sentenceWidth(hatches, "@" + f.tier(), noun) + 3 + Hyb.width(each);
         final float hx = sentence(right - hw, ty, Tip.TEXT, hatches, "@" + f.tier(), noun);
         Hyb.text(each, hx, ty, Tip.SUBTLE);
@@ -186,7 +187,7 @@ final class PowerPanel {
                 ty,
                 boxW,
                 UiText.tr("power.output"),
-                "recipes/s",
+                UiText.tr("power.panel_recipes_per_second"),
                 Fmt.compact(now.runsPerSecond()),
                 Fmt.compact(next.runsPerSecond()));
             box(
@@ -223,9 +224,9 @@ final class PowerPanel {
     }
 
     private static String overclockText(final Facts f) {
-        if (f.overclocks() == 0) return "none";
+        if (f.overclocks() == 0) return UiText.tr("power.panel_no_overclocks");
         if (f.perfect() == 0) return Integer.toString(f.overclocks());
-        return f.perfect() + " perfect, " + (f.overclocks() - f.perfect());
+        return UiText.tr("power.panel_perfect_overclocks", f.perfect(), f.overclocks() - f.perfect());
     }
 
     /** A before-and-after box: what it is, then "a -> b". */
@@ -260,10 +261,10 @@ final class PowerPanel {
             .eut() / f.volt() : 0;
         final float ps = (float) Math.min(1, supplied / next), pd = (float) Math.min(1, draw / next);
         Hyb.text("0A", x, y, Tip.SUBTLE);
-        final String nextLabel = amps(next) + " next";
+        final String nextLabel = UiText.tr("power.panel_next", amps(next));
         Hyb.textRight(nextLabel, x + w, y, Tip.TITLE);
         final int barY = y + 22;
-        label(amps(supplied) + " supplied", x, w, ps, y + 11, barY);
+        label(UiText.tr("power.panel_supplied", amps(supplied)), x, w, ps, y + 11, barY);
         // The bar: a dark well, filled to the supply.
         Hyb.rect(x, barY, w, 7, 0xFF111317);
         Hyb.rect(x + 1, barY + 1, w - 2, 5, Hyb.SHADOW);
@@ -272,7 +273,7 @@ final class PowerPanel {
         tick(x + 1 + (w - 2) * ps, barY - 2, 11);
         tick(x + 1 + (w - 2) * pd, barY + 1, 8);
         tick(x + w - 2, barY - 2, 11);
-        final String drawLabel = amps(draw) + " draw";
+        final String drawLabel = UiText.tr("power.panel_draw", amps(draw));
         final float dx = x + pd * w - pd * Hyb.width(drawLabel);
         Hyb.rect(x + 1 + (w - 2) * pd, barY + 8, 1, 3, Hyb.MUTED);
         Hyb.text(drawLabel, dx, barY + 12, Tip.TEXT);

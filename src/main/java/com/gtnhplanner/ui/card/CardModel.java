@@ -314,7 +314,8 @@ public final class CardModel {
         }
         return new CardModel(
             node,
-            source != null ? source.name() : node.machineName,
+            // The name as the player reads it; the node keeps the source's English name.
+            com.gtnhplanner.ui.UiText.data(source != null ? source.name() : node.machineName),
             Collections.emptyList(),
             PowerPorts.machineStack(node.powerSource),
             false,

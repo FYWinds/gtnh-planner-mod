@@ -1951,7 +1951,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
                 session.panel(),
                 NumberPopup.create(
                     PowerTiles.caption(number),
-                    PowerTiles.plain(number.min()) + " to " + PowerTiles.plain(number.max()),
+                    UiText.tr("power.range", PowerTiles.plain(number.min()), PowerTiles.plain(number.max())),
                     number.value(values.get(setting.id())),
                     number.min(),
                     number.max(),
@@ -1978,7 +1978,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
         for (final com.gtnhplanner.power.PowerSetting.Option option : select.options()) rows.add(
             new PickList.Entry(
                 null,
-                option.label(),
+                com.gtnhplanner.ui.power.PowerText.option(option),
                 "",
                 Hyb.INK,
                 option.key()
@@ -1988,7 +1988,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
             session.panel(),
             PickList.popup(
                 "gtnhplanner_power_setting",
-                select.label()
+                com.gtnhplanner.ui.power.PowerText.label(select)
                     .toUpperCase(java.util.Locale.ROOT),
                 rows,
                 rows.size() > 10,
@@ -2159,11 +2159,10 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
         final String rate = com.gtnhplanner.power.sources.Helpers.formatAmount(com.gtnhplanner.power.CustomRate.rate(n))
             + " "
             + com.gtnhplanner.power.CustomRate.unit(key);
-        return (com.gtnhplanner.power.CustomRate.supply(n) ? tip.sub(UiText.tr("card.supplies") + " " + name)
-            .muted(UiText.tr("card.makes") + " " + name + UiText.tr("card.at_the_dialed_rate_for_anything_that_asks"))
-            : tip.sub(UiText.tr("card.requests") + " " + name)
-                .muted(UiText.tr("card.constantly_drains") + " " + name + UiText.tr("card.at_the_dialed_rate")))
-                    .row(UiText.tr("card.dialed_rate"), rate)
+        return (com.gtnhplanner.power.CustomRate.supply(n) ? tip.sub(UiText.tr("power.custom_supplies", name))
+            .muted(UiText.tr("power.custom_supplies_note", name))
+            : tip.sub(UiText.tr("power.custom_requests", name))
+                .muted(UiText.tr("power.custom_requests_note", name))).row(UiText.tr("card.dialed_rate"), rate)
                     .row(
                         pinned() ? UiText.tr("card.exactly") : UiText.tr("card.calculated"),
                         "×" + Fmt.machines(machinesTotal()));
@@ -2186,14 +2185,16 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
             .muted(UiText.tr("card.wire_a_cell_or_a_fluid_to_it_it_empties_cells_or_fills_them_free_and_instant"));
         final String cell = p.cell()
             .getDisplayName();
-        return (com.gtnhplanner.power.FluidTank.emptying(n) ? tip.sub(UiText.tr("card.empties") + " " + cell)
-            : tip.sub(UiText.tr("card.fills") + " " + cell))
+        return (com.gtnhplanner.power.FluidTank.emptying(n) ? tip.sub(UiText.tr("power.tank_empties", cell))
+            : tip.sub(UiText.tr("power.tank_fills", cell)))
                 .muted(UiText.tr("card.free_and_instant_as_much_as_the_plan_needs"))
                 .row(
                     UiText.tr("card.holds"),
-                    Fmt.compact(p.fluid().amount) + " L of "
-                        + p.fluid()
-                            .getLocalizedName());
+                    UiText.tr(
+                        "power.tank_holds",
+                        Fmt.compact(p.fluid().amount),
+                        p.fluid()
+                            .getLocalizedName()));
     }
 
     private Tip powerTip(final Part part) {
@@ -2215,9 +2216,14 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
                 if (com.gtnhplanner.power.FluidTank.is(m.node)) yield tankTip();
                 final Tip tip = Tip.of(m.machineName)
                     .sub(
-                        UiText.tr("card.non_recipe_machine")
-                            + (source != null ? ", " + source.group().title.toLowerCase(java.util.Locale.ROOT) : ""));
-                if (source != null) tip.muted(source.blurb());
+                        source != null
+                            ? UiText
+                                .tr(
+                                    "power.non_recipe_kind",
+                                    com.gtnhplanner.ui.power.PowerText.group(source.group())
+                                        .toLowerCase(java.util.Locale.ROOT))
+                            : UiText.tr("card.non_recipe_machine"));
+                if (source != null) tip.muted(com.gtnhplanner.ui.power.PowerText.blurb(source));
                 if (source == null) tip
                     .note(UiText.tr("card.unknown_machine_this_version_of_gtnh_planner_doesn_t_have_it"), Hyb.RED_INK);
                 tip.row(
@@ -2286,7 +2292,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
                 tip.muted(
                     String.format(
                         UiText.tr("audit.only_used_when"),
-                        other == null ? when.settingId() : other.label(),
+                        other == null ? when.settingId() : com.gtnhplanner.ui.power.PowerText.label(other),
                         optionLabel(other, when.equals())));
             }
         } else if (c.type() != SettingControls.Type.READING) {
@@ -2308,9 +2314,10 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
     private static String optionLabel(final com.gtnhplanner.power.PowerSetting setting, final String key) {
         if (setting instanceof final com.gtnhplanner.power.PowerSetting.Select select) {
             final com.gtnhplanner.power.PowerSetting.Option option = select.option(key);
-            if (option != null) return option.label();
+            if (option != null) return com.gtnhplanner.ui.power.PowerText.option(option);
         }
-        if (setting instanceof com.gtnhplanner.power.PowerSetting.Toggle) return "1".equals(key) ? "on" : "off";
+        if (setting instanceof com.gtnhplanner.power.PowerSetting.Toggle)
+            return "1".equals(key) ? UiText.tr("power.toggle_on") : UiText.tr("power.toggle_off");
         return key;
     }
 

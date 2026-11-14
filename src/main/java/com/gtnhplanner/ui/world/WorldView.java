@@ -312,7 +312,7 @@ public final class WorldView {
         if (node.isPower()) {
             // Its source's name ("Fluid Tank"), never its id.
             final com.gtnhplanner.power.PowerSource source = com.gtnhplanner.power.PowerRegistry.get(node.powerSource);
-            return source != null ? source.name() : node.powerSource;
+            return source != null ? com.gtnhplanner.ui.UiText.data(source.name()) : node.powerSource;
         }
         // A card of a plan not open since: its machine is saved as an item key.
         if (node.machineName != null && node.machineName.startsWith("item:")) {

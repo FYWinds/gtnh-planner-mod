@@ -206,9 +206,11 @@ public final class SettingControls {
         for (final PowerTiles.Tile t : PowerTiles.of(m)) {
             if (t.isSetting()) {
                 final PowerSetting s = t.setting();
-                final String caption = custom && s == com.gtnhplanner.power.CustomRate.RATE_SETTING ? s.label() + " ("
-                    + com.gtnhplanner.power.CustomRate.unit(com.gtnhplanner.power.CustomRate.resource(m.node))
-                    + ")" : PowerTiles.caption(s);
+                final String caption = custom && s == com.gtnhplanner.power.CustomRate.RATE_SETTING
+                    ? com.gtnhplanner.ui.power.PowerText.withUnit(
+                        s.label(),
+                        com.gtnhplanner.power.CustomRate.unit(com.gtnhplanner.power.CustomRate.resource(m.node)))
+                    : PowerTiles.caption(s);
                 final Type type = s instanceof PowerSetting.Toggle ? Type.TOGGLE
                     : s instanceof PowerSetting.Number ? Type.NUMBER : Type.CHOICE;
                 out.add(
@@ -227,10 +229,12 @@ public final class SettingControls {
                     "reading:" + t.stat()
                         .label(),
                     UiText.tr("settingcontrols.readings"),
-                    t.stat()
-                        .label(),
-                    t.stat()
-                        .value(),
+                    com.gtnhplanner.ui.power.PowerText.stat(
+                        t.stat()
+                            .label()),
+                    com.gtnhplanner.ui.power.PowerText.reading(
+                        t.stat()
+                            .value()),
                     null,
                     false,
                     true,

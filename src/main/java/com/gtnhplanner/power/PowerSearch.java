@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 
 import javax.annotation.Nullable;
 
@@ -205,6 +206,14 @@ public final class PowerSearch {
      * returns every source.
      */
     public static List<Hit> search(final String query) {
+        return search(query, UnaryOperator.identity());
+    }
+
+    /**
+     * {@link #search(String)} that also matches a machine's or a flow's name as the player reads it: {@code shown}
+     * turns an English name into the shown one (the same text where there is no translation).
+     */
+    public static List<Hit> search(final String query, final UnaryOperator<String> shown) {
         final List<SourceIndex> index = index();
         final String trimmed = lower(query.strip());
         final List<Hit> hits = new ArrayList<>();
@@ -215,7 +224,7 @@ public final class PowerSearch {
 
         final List<Hit> flowHits = new ArrayList<>();
         for (final SourceIndex entry : index) {
-            if (entry.nameText.contains(trimmed)) {
+            if (entry.nameText.contains(trimmed) || lower(shown.apply(entry.source.name())).contains(trimmed)) {
                 hits.add(new Hit(entry.source, null));
                 continue;
             }
@@ -224,11 +233,11 @@ public final class PowerSearch {
             Match best = null;
             for (final Map.Entry<String, Match> flow : entry.flows.entrySet()) {
                 final String key = flow.getKey();
+                final Match match = flow.getValue();
                 if (!key.substring(key.indexOf(':') + 1)
-                    .contains(trimmed)) {
+                    .contains(trimmed) && !lower(shown.apply(match.name())).contains(trimmed)) {
                     continue;
                 }
-                final Match match = flow.getValue();
                 if (best == null || (best.settingId() != null && match.settingId() == null)
                     || (best.takes() && !match.takes() && (best.settingId() == null) == (match.settingId() == null))) {
                     best = match;

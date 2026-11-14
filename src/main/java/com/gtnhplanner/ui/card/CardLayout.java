@@ -178,8 +178,8 @@ public final class CardLayout {
             for (final String warning : first.power.model()
                 .warnings())
                 warningLines.addAll(
-                    Hyb.font()
-                        .listFormattedStringToWidth(warning, W - 2 * PAD - 4));
+                    com.gtnhplanner.ui.TextWrap
+                        .wrap(com.gtnhplanner.ui.power.PowerText.warning(warning), W - 2 * PAD - 4, Hyb::width));
         }
         warningsY = stripEnd + 2;
         final int end = warningsY + (warningLines.isEmpty() ? 0 : warningLines.size() * 9 + 4);

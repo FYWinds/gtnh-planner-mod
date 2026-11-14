@@ -24,6 +24,7 @@ import com.gtnhplanner.power.PowerSearch;
 import com.gtnhplanner.power.PowerSource;
 import com.gtnhplanner.power.game.PowerPorts;
 import com.gtnhplanner.ui.BoardSession;
+import com.gtnhplanner.ui.TextWrap;
 import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.card.StructureArt;
 import com.gtnhplanner.ui.popup.PickList;
@@ -108,6 +109,8 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
         groupFilter = null;
         tierFilter = null;
         scroll = 0;
+        // The language may have changed since it last showed.
+        foundQuery = null;
     }
 
     @Override
@@ -200,7 +203,7 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
         right = key(
             right,
             y + 4,
-            groupFilter == null ? UiText.tr("powerpicker.all_types") : groupFilter.title,
+            groupFilter == null ? UiText.tr("powerpicker.all_types") : PowerText.group(groupFilter),
             Kind.GROUP,
             hover) - 8;
         final int left = x + 20 + Hyb.width(UiText.tr("powerpicker.non_recipe_machines")) + 12;
@@ -237,7 +240,10 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
                 Hyb.rect(cx, y, colW, TITLE_H, BRASS);
                 final String count = Integer.toString(list.size());
                 Hyb.text(
-                    Hyb.fit(group.title.toUpperCase(Locale.ROOT), colW - 14 - Hyb.width(count)),
+                    Hyb.fit(
+                        PowerText.group(group)
+                            .toUpperCase(Locale.ROOT),
+                        colW - 14 - Hyb.width(count)),
                     cx + 4,
                     y + 3,
                     BRASS_INK);
@@ -286,30 +292,23 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
         final int badgeW = tier == null ? 0 : Hyb.tierTagWidth(tier, null);
         final int tx = x + PIC_W + 5, room = w - PIC_W - 8;
         // The name on two lines when it needs them; the badge on the line it leaves room on.
-        final List<String> lines = Hyb.font()
-            .listFormattedStringToWidth(source.name(), room);
+        final String name = PowerText.name(source);
+        final List<String> lines = TextWrap.wrap(name, room, Hyb::width);
         if (lines.size() == 1 && Hyb.width(lines.get(0)) + 4 + badgeW <= room) {
             Hyb.text(lines.get(0), tx, y + 11, Hyb.INK);
             if (tier != null) badge(tier, x + w - 3 - badgeW, y + 10, badgeW);
         } else {
             Hyb.text(Hyb.fit(lines.get(0), room), tx, y + 5, Hyb.INK);
-            final String rest = lines.size() > 1 ? source.name()
-                .substring(
-                    Math.min(
-                        source.name()
-                            .length(),
-                        lines.get(0)
-                            .length()))
+            final String rest = lines.size() > 1 ? name.substring(
+                Math.min(
+                    name.length(),
+                    lines.get(0)
+                        .length()))
                 .trim() : "";
             Hyb.text(Hyb.fit(rest, room - 4 - badgeW), tx, y + 16, Hyb.INK);
             if (tier != null) badge(tier, x + w - 3 - badgeW, y + 16, badgeW);
         }
-        if (hit.via() != null) {
-            final String via = (hit.via()
-                .takes() ? UiText.tr("powerpicker.takes_prefix") : UiText.tr("powerpicker.makes_prefix")) + hit.via()
-                    .name();
-            Hyb.text(Hyb.fit(via, w - 8), x + 4, y + ROW_H + 1, CYAN);
-        }
+        if (hit.via() != null) Hyb.text(Hyb.fit(via(hit.via()), w - 8), x + 4, y + ROW_H + 1, CYAN);
         // Only what is in view takes a click.
         hits.add(new Hit(Kind.TILE, x, y, x + w, y + h, hit));
         return y + h + ROW_GAP;
@@ -354,8 +353,7 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
     private void drawPreview(final PowerSearch.Hit hit, final Hit row) {
         final PowerSource s = hit.source();
         final StructureArt.Art art = StructureArt.forMachine(s.id());
-        final List<String> blurb = Hyb.font()
-            .listFormattedStringToWidth(s.blurb(), PREVIEW_W - 12);
+        final List<String> blurb = TextWrap.wrap(PowerText.blurb(s), PREVIEW_W - 12, Hyb::width);
         final int h = 6 + PREVIEW_ART + 6 + 10 + 10 + blurb.size() * 9 + (hit.via() != null ? 10 : 0) + 6;
         final int w = getArea().width, areaH = getArea().height;
         int x = row.x1() + 6;
@@ -372,24 +370,26 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
             else bolt(x + PREVIEW_W / 2f - 3, y + 6 + PREVIEW_ART / 2f - 5, AMBER);
         }
         int ty = y + 6 + PREVIEW_ART + 6;
-        Hyb.text(Hyb.fit(s.name(), PREVIEW_W - 12), x + 6, ty, Hyb.INK);
+        Hyb.text(Hyb.fit(PowerText.name(s), PREVIEW_W - 12), x + 6, ty, Hyb.INK);
         ty += 10;
-        Hyb.text(s.group().title + (s.unlock() != null ? ", unlocks at " + s.unlock() : ""), x + 6, ty, Hyb.MUTED);
+        Hyb.text(Hyb.fit(kind(s), PREVIEW_W - 12), x + 6, ty, Hyb.MUTED);
         ty += 10;
         for (final String line : blurb) {
             Hyb.text(line, x + 6, ty, 0xFFB8BAC2);
             ty += 9;
         }
-        if (hit.via() != null) Hyb.text(
-            Hyb.fit(
-                (hit.via()
-                    .takes() ? UiText.tr("powerpicker.takes_prefix") : UiText.tr("powerpicker.makes_prefix"))
-                    + hit.via()
-                        .name(),
-                PREVIEW_W - 12),
-            x + 6,
-            ty,
-            CYAN);
+        if (hit.via() != null) Hyb.text(Hyb.fit(via(hit.via()), PREVIEW_W - 12), x + 6, ty, CYAN);
+    }
+
+    /** A machine's kind and the tier that unlocks it: "Turbines, unlocks at EV". */
+    private static String kind(final PowerSource s) {
+        return s.unlock() != null ? UiText.tr("power.picker_kind_unlocks", PowerText.group(s.group()), s.unlock())
+            : PowerText.group(s.group());
+    }
+
+    /** What a search matched on a machine: "Takes Benzene", "Makes Steam". */
+    private static String via(final PowerSearch.Match via) {
+        return UiText.tr(via.takes() ? "power.picker_takes" : "power.picker_makes", UiText.data(via.name()));
     }
 
     /** The unlock tier as a tier tag, its top at {@code y}. */
@@ -436,8 +436,21 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
             .isEmpty();
     }
 
-    /** The machines the search and filters leave, in the catalog's order. */
+    /** The last search and filters and what they left: the list is worked out again only when one of them changes. */
+    private String foundQuery;
+    @Nullable
+    private PowerGroup foundGroup;
+    @Nullable
+    private String foundTier;
+    private List<PowerSearch.Hit> foundHits = List.of();
+
+    /**
+     * The machines the search and filters leave, in the catalog's order. A search matches the names as the game's
+     * language shows them as well as the English ones.
+     */
     private List<PowerSearch.Hit> found() {
+        if (query.equals(foundQuery) && groupFilter == foundGroup && java.util.Objects.equals(tierFilter, foundTier))
+            return foundHits;
         final List<PowerSearch.Hit> out = new ArrayList<>();
         // The planning cards first, by name or what they do; they have no tier.
         final String q = query.trim()
@@ -447,15 +460,12 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
                 // The crop farm plants CropsNH's crops: a game without them has none to pick.
                 if (com.gtnhplanner.power.CropFarm.ID.equals(other.id()) && !com.gtnhplanner.Compat.CROPSNH.isLoaded)
                     continue;
-                if (q.isEmpty() || other.name()
-                    .toLowerCase(Locale.ROOT)
-                    .contains(q)
-                    || other.blurb()
-                        .toLowerCase(Locale.ROOT)
-                        .contains(q))
-                    out.add(new PowerSearch.Hit(other, null));
+                if (q.isEmpty() || matches(other.name(), q)
+                    || matches(other.blurb(), q)
+                    || matches(PowerText.name(other), q)
+                    || matches(PowerText.blurb(other), q)) out.add(new PowerSearch.Hit(other, null));
             }
-        for (final PowerSearch.Hit hit : PowerSearch.search(query)) {
+        for (final PowerSearch.Hit hit : PowerSearch.search(query, UiText::data)) {
             if (groupFilter != null && hit.source()
                 .group() != groupFilter) continue;
             if (tierFilter != null && !tierFilter.equals(
@@ -464,7 +474,16 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
                 continue;
             out.add(hit);
         }
+        foundQuery = query;
+        foundGroup = groupFilter;
+        foundTier = tierFilter;
+        foundHits = out;
         return out;
+    }
+
+    private static boolean matches(final String text, final String lowerQuery) {
+        return text.toLowerCase(Locale.ROOT)
+            .contains(lowerQuery);
     }
 
     private static List<PowerSearch.Hit> inGroup(final List<PowerSearch.Hit> found, final PowerGroup group) {
@@ -601,7 +620,7 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
         for (final PowerGroup group : PowerGroup.values()) rows.add(
             new PickList.Entry(
                 null,
-                group.title,
+                PowerText.group(group),
                 Integer.toString(
                     PowerRegistry.inGroup(group)
                         .size()),
@@ -669,14 +688,15 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
             case TILE -> {
                 final PowerSearch.Hit h = (PowerSearch.Hit) hit.data();
                 final PowerSource s = h.source();
-                final Tip tip = Tip.of(s.name())
-                    .sub(s.group().title + (s.unlock() != null ? ", unlocks at " + s.unlock() : ""))
-                    .muted(s.blurb());
+                final Tip tip = Tip.of(PowerText.name(s))
+                    .sub(kind(s))
+                    .muted(PowerText.blurb(s));
                 if (h.via() != null) tip.row(
                     h.via()
                         .takes() ? UiText.tr("powerpicker.takes") : UiText.tr("powerpicker.makes"),
-                    h.via()
-                        .name());
+                    UiText.data(
+                        h.via()
+                            .name()));
                 yield tip.action(Tip.Input.LEFT, UiText.tr("powerpicker.add_to_the_plan"));
             }
             case GROUP -> Tip.of(UiText.tr("powerpicker.filter_by_type"));
