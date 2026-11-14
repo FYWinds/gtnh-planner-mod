@@ -130,7 +130,8 @@ class LibraryRoundTripTest {
                 r.getAsJsonObject("source")
                     .get("recipeMap")
                     .getAsString());
-            assertEquals(map.handlersOnRecipes, r.has("machineHandlers"), map.id);
+            // A map whose website recipes list no machine lists them once the pack adds its own (machines/eto).
+            assertEquals(map.handlersOnRecipes || map.packHandlers != null, r.has("machineHandlers"), map.id);
             assertTrue(r.has("runtimeCalculation"));
             assertTrue(
                 r.getAsJsonObject("nei")

@@ -42,6 +42,9 @@ public final class HandlerData {
         public boolean coilFromSpecialValue;
         @Nullable
         public List<AppHandler> app;
+        /** The pack's own machines merged into a map the website has (EXTRA_FILES), also at the end of handlers. */
+        @Nullable
+        public transient List<Template> packHandlers;
     }
 
     /** A machine template (instantiateRecipeMachineHandlers in the dataset pipeline). */
@@ -176,14 +179,20 @@ public final class HandlerData {
     /**
      * The recipe's machine handlers, from the map's templates; null where the website's recipes carry none (it then
      * falls back to a machine named for the map). The minimum tier is the higher of the template's and the recipe's.
+     * On such a map the pack's own machines follow the one the website names for it ({@link RecipeRules#mapMachine}).
      */
     @Nullable
     public static List<Web.Handler> handlers(final MapEntry entry, final String recipeMinimumTier,
         final double durationTicks, final double eut, final List<Web.Control> recipeControls) {
-        if (!entry.handlersOnRecipes || entry.handlers == null) return null;
-        final int recipeTier = tierIndex(recipeMinimumTier);
         final List<Web.Handler> out = new ArrayList<>();
-        for (final Template t : entry.handlers) {
+        final List<Template> templates;
+        if (entry.handlersOnRecipes && entry.handlers != null) templates = entry.handlers;
+        else if (entry.packHandlers != null) {
+            out.add(RecipeRules.mapMachine(entry.name, recipeMinimumTier));
+            templates = entry.packHandlers;
+        } else return null;
+        final int recipeTier = tierIndex(recipeMinimumTier);
+        for (final Template t : templates) {
             final int index = Math.max(tierIndex(t.minimumTier), recipeTier);
             final Web.Handler h = new Web.Handler();
             h.id = t.id;
@@ -270,6 +279,7 @@ public final class HandlerData {
         } catch (final Exception ignored) {
             // Without the file every recipe falls back to a machine named for its map, as the website's would.
         }
+        for (final String file : EXTRA_FILES) merge(file, byId, byRef);
         tierNames = names.isEmpty() ? List.of(Tiers.NAMES) : names;
         if (recipeNames.isEmpty()) for (int i = 0; i < Tiers.NAMES.length - 1; i++) {
             recipeNames.add(Tiers.NAMES[i]);
@@ -280,6 +290,42 @@ public final class HandlerData {
         coils = coilList;
         controls = byRef;
         maps = byId;
+    }
+
+    /**
+     * Machine data this pack adds beside the website's, in handlers.json's shape (controls and maps): maps the
+     * website's data lacks, and more machines for maps it has. Kept out of handlers.json, which stays the website's.
+     */
+    private static final List<String> EXTRA_FILES = List.of("/assets/gtnhplanner/machines/eto-tst.json");
+
+    /** One extra file merged in: its controls, its new maps, and its machines after a known map's own. */
+    private static void merge(final String file, final Map<String, MapEntry> byId,
+        final Map<String, Web.Control> byRef) {
+        try (InputStream in = HandlerData.class.getResourceAsStream(file)) {
+            if (in == null) return;
+            final Gson gson = new Gson();
+            final JsonObject root = new JsonParser().parse(new InputStreamReader(in, StandardCharsets.UTF_8))
+                .getAsJsonObject();
+            if (root.has("controls")) for (final Map.Entry<String, JsonElement> e : root.getAsJsonObject("controls")
+                .entrySet()) byRef.put(e.getKey(), control(gson.fromJson(e.getValue(), CompactControl.class)));
+            if (root.has("maps")) for (final JsonElement e : root.getAsJsonArray("maps")) {
+                final MapEntry m = gson.fromJson(e, MapEntry.class);
+                final MapEntry known = byId.get(m.id);
+                if (known == null) byId.put(m.id, m);
+                else if (m.handlers != null) {
+                    final List<Template> handlers = known.handlers != null ? new ArrayList<>(known.handlers)
+                        : new ArrayList<>();
+                    handlers.addAll(m.handlers);
+                    known.handlers = handlers;
+                    final List<Template> pack = known.packHandlers != null ? new ArrayList<>(known.packHandlers)
+                        : new ArrayList<>();
+                    pack.addAll(m.handlers);
+                    known.packHandlers = pack;
+                }
+            }
+        } catch (final Exception ignored) {
+            // Without it the pack's own machines run as their map's first machine, as before.
+        }
     }
 
     private static Web.Control control(final CompactControl c) {

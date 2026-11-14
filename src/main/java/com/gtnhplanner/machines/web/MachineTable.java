@@ -84,7 +84,8 @@ public final class MachineTable {
     /**
      * MachineContext: a setting's position on its full ladder ({@code tier}), the count behind a count setting
      * ({@code value}), the voltage-tier ordinal of the summed hatches, the recipe's own voltage tier and special value,
-     * its recipe map, and the raw recipe and settings.
+     * its recipe map, and the raw recipe and settings. {@code poolEuT} (the hatches' voltage times their working amps,
+     * NaN where unknown) is the mod's own: the pack's own machines (machines/eto) read their total input EU from it.
      */
     public static final class Context {
 
@@ -101,11 +102,28 @@ public final class MachineTable {
         public final Web.Recipe recipe;
         @Nullable
         public final Map<String, String> settings;
+        public final double poolEuT;
 
         public Context(final ToIntFunction<String> tier, final ToDoubleFunction<String> value, final int voltageTier,
             @Nullable final Integer recipeVoltageTier, @Nullable final Integer recipeSpecialValue,
             @Nullable final String recipeMap, @Nullable final Web.Recipe recipe,
             @Nullable final Map<String, String> settings) {
+            this(
+                tier,
+                value,
+                voltageTier,
+                recipeVoltageTier,
+                recipeSpecialValue,
+                recipeMap,
+                recipe,
+                settings,
+                Double.NaN);
+        }
+
+        public Context(final ToIntFunction<String> tier, final ToDoubleFunction<String> value, final int voltageTier,
+            @Nullable final Integer recipeVoltageTier, @Nullable final Integer recipeSpecialValue,
+            @Nullable final String recipeMap, @Nullable final Web.Recipe recipe,
+            @Nullable final Map<String, String> settings, final double poolEuT) {
             this.tier = tier;
             this.value = value;
             this.voltageTier = voltageTier;
@@ -114,6 +132,7 @@ public final class MachineTable {
             this.recipeMap = recipeMap;
             this.recipe = recipe;
             this.settings = settings;
+            this.poolEuT = poolEuT;
         }
 
         public int tier(final String controlId) {
@@ -327,6 +346,8 @@ public final class MachineTable {
 
     private static final Map<String, Behaviour> MACHINES = new LinkedHashMap<>();
     private static final Map<String, Behaviour> BY_NAME = new HashMap<>();
+    /** The pack's own machines beside the website's table (machines/eto): found by name, never in {@link #names()}. */
+    private static final Map<String, Behaviour> EXTRA = new LinkedHashMap<>();
 
     static {
         MachineTableEntries.register(MACHINES);
@@ -335,6 +356,10 @@ public final class MachineTable {
             if (e.getValue().aliases != null)
                 for (final String alias : e.getValue().aliases) BY_NAME.put(normalizeMachineName(alias), e.getValue());
         }
+        com.gtnhplanner.machines.eto.TstMachines.register(EXTRA);
+        // A name the website's table already answers to stays the website's.
+        for (final Map.Entry<String, Behaviour> e : EXTRA.entrySet())
+            BY_NAME.putIfAbsent(normalizeMachineName(e.getKey()), e.getValue());
     }
 
     /** getMachineBehaviour: the entry for a machine's name or alias; null when the table does not cover it. */

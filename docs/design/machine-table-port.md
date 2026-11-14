@@ -76,6 +76,9 @@ Added that the website lacks (issue 495): the Dangote Distillus's height (`Dango
 default is the website's assumed 12, so the goldens hold; `MachineGoldensTest` leaves the control out of its settings
 check. The card also reads out the mode, which is the recipe's map. Once the website has the setting, drop this note.
 
+Added for the ETO pack: TwistSpaceTechnology's machines (`machines/eto/`, `machines/eto-tst.json` merged by
+`HandlerData`, table entries beside the website's in `MachineTable`), described in `tst-machines.md`.
+
 ## A card's settings, as the website's node fields
 
 Stored in the card's settings map under these keys, so plans go both ways unchanged:

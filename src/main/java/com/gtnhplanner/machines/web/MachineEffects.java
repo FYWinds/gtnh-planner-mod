@@ -25,6 +25,7 @@ public final class MachineEffects {
             RecipeRules.configTierControls(recipe, node.machineConfigTiers));
         final RecipeRules.TierControl coil = RecipeRules.coilTierControl(recipe, node.coilTier);
         if (coil != null) controls.add(coil);
+        final String runTier = Power.runTier(recipe, node);
         return new MachineTable.Context(id -> {
             final RecipeRules.TierControl c = find(controls, id);
             if (c == null) return 0;
@@ -41,12 +42,13 @@ public final class MachineEffects {
             if (m.find()) return Double.parseDouble(m.group(1));
             return Math.max(0, indexOf(c.tiers(), key));
         },
-            Power.effectiveVoltageOrdinal(recipe, node, Power.runTier(recipe, node)),
+            Power.effectiveVoltageOrdinal(recipe, node, runTier),
             Tiers.index(Tiers.forEuT(Math.abs(recipe.eut))),
             RecipeRules.specialValue(recipe),
             recipe.source != null && recipe.source.recipeMap != null ? recipe.source.recipeMap : recipe.machineType,
             recipe,
-            node.machineConfigTiers);
+            node.machineConfigTiers,
+            Power.poolEuT(recipe, node, runTier));
     }
 
     @Nullable

@@ -60,6 +60,22 @@ public final class RecipeRules {
         return List.of(Fusion.normalizeHandler(fallback, recipe));
     }
 
+    /**
+     * The machine this fallback names for a map whose recipes list none, as a listed handler beside the pack's own
+     * machines (HandlerData's EXTRA_FILES): a multiblock where the table says so, as the website runs it unlisted.
+     */
+    public static Web.Handler mapMachine(final String recipeMap, @Nullable final String minimumTier) {
+        final String base = familyLabel(recipeMap);
+        final MachineTable.Behaviour behaviour = MachineTable.behaviour(base);
+        final Web.Handler h = new Web.Handler();
+        h.id = slug(base);
+        h.label = base;
+        h.machineType = base;
+        h.minimumTier = minimumTier;
+        h.kind = behaviour != null && !behaviour.single ? "multiblock" : "single";
+        return h;
+    }
+
     /** isHandCraftingRecipeMap. */
     public static boolean isHandCraftingRecipeMap(final Web.Recipe recipe) {
         return isHandCraftingMap(recipeMapName(recipe));
