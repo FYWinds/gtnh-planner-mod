@@ -569,8 +569,7 @@ final class OverviewRail extends ParentWidget<OverviewRail>
     private boolean matches(final String label) {
         final String f = filter.trim()
             .toLowerCase();
-        return f.isEmpty() || label.toLowerCase()
-            .contains(f);
+        return f.isEmpty() || com.gtnhplanner.TextMatch.contains(label.toLowerCase(), f);
     }
 
     /** Where the last section bar's title and count end: what comes after them on the bar gives way first. */

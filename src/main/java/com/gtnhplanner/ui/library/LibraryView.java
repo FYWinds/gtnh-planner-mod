@@ -642,10 +642,11 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
         for (final int i : plan.byRecency()) {
             final boolean theirs = cloud != null && cloud.shared(graphs.get(i));
             if (theirs != sharedShelf) continue;
-            if (f.isEmpty() || graphs.get(i)
-                .getName()
-                .toLowerCase(Locale.ROOT)
-                .contains(f)) shown.add(i);
+            if (f.isEmpty() || com.gtnhplanner.TextMatch.contains(
+                graphs.get(i)
+                    .getName()
+                    .toLowerCase(Locale.ROOT),
+                f)) shown.add(i);
         }
         final int cols = columns(), tw = tileW(), y0 = top + PAD - scroll;
         int n = 0;

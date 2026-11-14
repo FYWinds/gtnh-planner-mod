@@ -482,8 +482,7 @@ public final class PowerPicker extends ParentWidget<PowerPicker> implements Inte
     }
 
     private static boolean matches(final String text, final String lowerQuery) {
-        return text.toLowerCase(Locale.ROOT)
-            .contains(lowerQuery);
+        return com.gtnhplanner.TextMatch.contains(text.toLowerCase(Locale.ROOT), lowerQuery);
     }
 
     private static List<PowerSearch.Hit> inGroup(final List<PowerSearch.Hit> found, final PowerGroup group) {

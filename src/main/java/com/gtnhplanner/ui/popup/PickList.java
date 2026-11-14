@@ -194,11 +194,8 @@ public final class PickList extends Widget<PickList> implements Interactable {
         else {
             shown = new ArrayList<>();
             for (final Entry e : entries) {
-                if (e.label.toLowerCase(Locale.ROOT)
-                    .contains(f)
-                    || e.search.toLowerCase(Locale.ROOT)
-                        .contains(f))
-                    shown.add(e);
+                if (com.gtnhplanner.TextMatch.contains(e.label.toLowerCase(Locale.ROOT), f)
+                    || com.gtnhplanner.TextMatch.contains(e.search.toLowerCase(Locale.ROOT), f)) shown.add(e);
             }
         }
         scroll = 0;

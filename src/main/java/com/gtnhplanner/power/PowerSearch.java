@@ -224,7 +224,8 @@ public final class PowerSearch {
 
         final List<Hit> flowHits = new ArrayList<>();
         for (final SourceIndex entry : index) {
-            if (entry.nameText.contains(trimmed) || lower(shown.apply(entry.source.name())).contains(trimmed)) {
+            if (entry.nameText.contains(trimmed)
+                || com.gtnhplanner.TextMatch.contains(lower(shown.apply(entry.source.name())), trimmed)) {
                 hits.add(new Hit(entry.source, null));
                 continue;
             }
@@ -235,7 +236,8 @@ public final class PowerSearch {
                 final String key = flow.getKey();
                 final Match match = flow.getValue();
                 if (!key.substring(key.indexOf(':') + 1)
-                    .contains(trimmed) && !lower(shown.apply(match.name())).contains(trimmed)) {
+                    .contains(trimmed)
+                    && !com.gtnhplanner.TextMatch.contains(lower(shown.apply(match.name())), trimmed)) {
                     continue;
                 }
                 if (best == null || (best.settingId() != null && match.settingId() == null)

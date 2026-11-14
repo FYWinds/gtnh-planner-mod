@@ -20,6 +20,10 @@ package and the save format are upstream's, so plans and the gtnhplanner.com acc
 - **Text input.** The planner's own editors (rate and count boxes, notes, text areas, the password box) turn the
   game's text input on while they are written in (`ui/TextInput`), so the numpad and an IME type into them under
   lwjgl3ify.
+- **Pinyin search.** With NeverEnoughCharacters in the pack (mod id `nech`), the planner's own search boxes (the
+  overview filter, the non-recipe machine picker, pick lists, the plan library) also match Chinese text by its pinyin,
+  as NEI's search does there (`TextMatch`, which calls nech's matcher by reflection and is a plain substring test
+  without it).
 - **Wire trunks.** Wires from one output port to several cards leave as one line and fork near the cards; wires from
   several cards into one input port join near those cards and come in as one line (`layout/WireTrunks`,
   `docs/design/routing-and-arrange.md`); Settings, Board, "Shared wire trunks" turns both off.

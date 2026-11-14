@@ -1,6 +1,7 @@
 ## New
 
 - **Simplified Chinese.** The whole planner reads in Chinese when the game does. Machine and material names are the ones the GTNH Chinese pack uses.
+- **Pinyin search.** In a pack with NeverEnoughCharacters, the planner's search boxes find Chinese names by their pinyin too, as NEI's search does.
 - **Wires share a trunk.** When one output feeds several cards its wires leave as one line and fork near the cards. Settings has a switch for it.
 - **Wires into one input share a trunk too.** When several cards feed one input their wires join near those cards and come in as one line. The same switch turns it off.
 - The Extreme Industrial Greenhouse, the Integrated Ore Factory and the Large Essentia Smeltery are among the non-recipe machines, under Other. Pick the seed, or the ore and its mode, or wire in what to smelt, and the card shows what the machine makes and uses, worked out the way the machine does it. Essentia shows on the card but cannot be wired.
