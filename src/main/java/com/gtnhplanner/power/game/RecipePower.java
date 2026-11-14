@@ -6,7 +6,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -18,7 +17,6 @@ import com.gtnhplanner.data.flowchart.Node;
 import com.gtnhplanner.data.flowchart.Port;
 import com.gtnhplanner.importer.game.GameIds;
 import com.gtnhplanner.machines.game.WebCards;
-import com.gtnhplanner.machines.web.Web;
 import com.gtnhplanner.power.PowerRegistry;
 import com.gtnhplanner.power.PowerResources;
 import com.gtnhplanner.power.PowerSetting;
@@ -33,10 +31,10 @@ import com.gtnhplanner.power.sources.Reactors;
  * The reactor runs none of that: it takes the finished TRISO fuel and gives back the burned fuel, as the HTGR card does
  * (power/sources/Reactors, the website's HTGR). So a card from that page is the HTGR card, burning the page's fuel.
  * <p>
- * A fuel page's generator the machine data has no handler for (the SOFCs on the gas turbine fuels, GT++'s Large
- * Semifluid Generator, TST's generators): a card on it would run as the map's first machine. When that generator is a
- * power source's machine and the source burns the recipe's fuel, the card is that source's, burning it
- * ({@link #fuelCard(Node, ItemStack)}).
+ * A fuel page's generator that is a power source here (the SOFCs and the Large Gas Turbine on the gas turbine fuels,
+ * GT++'s Large Semifluid Generator, TST's generators): a recipe card on it is a stub (the fuel in, no EU out), or runs
+ * as the map's first machine where the machine data has no handler for it. When the source burns the recipe's fuel,
+ * the card is that source's, burning it ({@link #fuelCard(Node, ItemStack)}).
  */
 public final class RecipePower {
 
@@ -59,36 +57,35 @@ public final class RecipePower {
     }
 
     /**
-     * The power card a recipe card on {@code machine} is ({@link #fuelCard(String, Collection, List, Function,
-     * BooleanSupplier)}), or null when it stays a recipe card.
+     * The power card a recipe card on {@code machine}, one of the recipe's NEI catalysts, is ({@link #fuelCard(String,
+     * boolean, Collection, List, Function)}), or null when it stays a recipe card.
      */
     @Nullable
     public static Card fuelCard(final Node node, @Nullable final ItemStack machine) {
         if (node.isPower() || machine == null || machine.getItem() == null) return null;
-        return fuelCard(
+        final com.gtnhplanner.ui.gt.GtMachines.Kind kind = com.gtnhplanner.ui.gt.GtMachines.of(machine);
+        final Card card = fuelCard(
             GameIds.itemId(machine),
+            kind != null && !kind.multiblock(),
             inputs(node),
             PowerRegistry.sources(),
-            RecipePower::machineId,
-            () -> handled(node, machine));
+            RecipePower::machineId);
+        return card != null && catalyst(node, machine) ? card : null;
     }
 
     /**
      * A fuel recipe on a generator that is a power source here: the first source (in {@code sources}' order) whose
-     * machine ({@code machineOf}, a source id to its item's website id) is {@code machine}, when none of the recipe's
-     * handlers is that machine ({@code handled} false), and one of whose Select settings has an option that resolves
-     * ({@link PowerResources#resolve}) to one of the recipe's {@code inputs} (keys of {@link #key(boolean, String)}).
-     * The card is that source at that option. Null otherwise: the recipe card stays as it is.
+     * machine ({@code machineOf}, a source id to its item's website id) is {@code machine} and one of whose Select
+     * settings has an option that resolves ({@link PowerResources#resolve}) to one of the recipe's {@code inputs} (keys
+     * of {@link #key(boolean, String)}). The card is that source at that option. Null otherwise, and always for a
+     * GregTech single block ({@code singleBlock}): the recipe card stays as it is.
      */
     @Nullable
-    static Card fuelCard(final String machine, final Collection<String> inputs, final List<PowerSource> sources,
-        final Function<String, String> machineOf, final BooleanSupplier handled) {
-        Boolean free = null;
+    static Card fuelCard(final String machine, final boolean singleBlock, final Collection<String> inputs,
+        final List<PowerSource> sources, final Function<String, String> machineOf) {
+        if (singleBlock) return null;
         for (final PowerSource source : sources) {
             if (!machine.equals(machineOf.apply(source.id()))) continue;
-            // Asked once, and only of a machine some source is: reading the recipe's handlers is the costly part.
-            if (free == null) free = !handled.getAsBoolean();
-            if (!free) return null;
             for (final PowerSetting setting : source.settings()) {
                 if (!(setting instanceof final PowerSetting.Select select)) continue;
                 for (final PowerSetting.Option option : select.options()) {
@@ -128,18 +125,12 @@ public final class RecipePower {
         return stack == null || stack.getItem() == null ? null : GameIds.itemId(stack);
     }
 
-    /**
-     * Whether one of the recipe's handlers is {@code machine} itself: the one {@link WebCards#handlerId} finds for it,
-     * listing it among its blocks (or listing none). Not when it finds none (the card would run as the map's first
-     * machine) or falls by name to another machine's.
-     */
-    private static boolean handled(final Node node, final ItemStack machine) {
-        final Web.Recipe recipe = WebCards.recipe(node);
-        if (recipe == null) return false;
-        final String id = WebCards.handlerId(node, recipe, machine);
-        if (id == null) return false;
-        final List<String> items = WebCards.handlerItems(node, id);
-        return items.isEmpty() || items.contains(GameIds.itemId(machine));
+    /** Whether {@code machine} is one of the recipe's NEI catalysts (same item and meta). */
+    private static boolean catalyst(final Node node, final ItemStack machine) {
+        for (final ItemStack s : com.gtnhplanner.ui.card.CardModel.catalystsOf(node))
+            if (s != null && s.getItem() == machine.getItem() && s.getItemDamage() == machine.getItemDamage())
+                return true;
+        return false;
     }
 
     private RecipePower() {}

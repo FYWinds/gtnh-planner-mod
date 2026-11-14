@@ -248,12 +248,7 @@ public final class WebCards {
      */
     @Nullable
     public static String handlerId(final Node node, final Web.Recipe recipe) {
-        return handlerId(node, recipe, machineStack(node));
-    }
-
-    /** {@link #handlerId(Node, Web.Recipe)} with {@code machine} as the card's machine, whichever it runs on now. */
-    @Nullable
-    public static String handlerId(final Node node, final Web.Recipe recipe, @Nullable final ItemStack machine) {
+        final ItemStack machine = machineStack(node);
         final List<Web.Handler> handlers = RecipeRules.machineHandlers(recipe);
         // A crafting card: the Auto Workbench, else the crafting table's hand craft (the website's second handler).
         if (RecipeRules.isHandCraftingRecipeMap(recipe) && handlers.size() > 1)

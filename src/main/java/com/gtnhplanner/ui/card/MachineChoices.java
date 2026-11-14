@@ -54,8 +54,8 @@ public final class MachineChoices {
                 : null;
             if (housing != null) node.machineConfig.setString(com.gtnhplanner.machines.Bees.HOUSING, housing.key());
             else {
-                // A fuel on a generator the machine data has no handler for, that is a non-recipe machine here: that
-                // machine's card burning the fuel, at the settings it was last left at.
+                // A fuel on a generator that is a non-recipe machine here, which lists it: that machine's card
+                // burning the fuel, at the settings it was last left at.
                 final com.gtnhplanner.power.game.RecipePower.Card fuel = com.gtnhplanner.power.game.RecipePower
                     .fuelCard(node, use.machine());
                 if (fuel != null)
