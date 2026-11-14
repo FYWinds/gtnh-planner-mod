@@ -62,7 +62,8 @@ public final class PowerResources {
     /** The game resource a workbook flow name stands for; null when the map does not know it (shown as a stat). */
     @Nullable
     public static Ref resolve(final String name) {
-        return resources().get(name);
+        final Ref ref = resources().get(name);
+        return ref != null ? ref : com.gtnhplanner.power.sources.NrResources.resolve(name);
     }
 
     /** The machine item a source is drawn as; null for none. Its {@code kind} is unset. */

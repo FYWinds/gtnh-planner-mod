@@ -9,6 +9,7 @@
 - TwistSpaceTechnology's Tower of Abstraction (with Solar: pick its pieces and eggs) and Mega Naquadah Reactor (with Endgame: pick its fuel, coolant, booster, parallels and running time) are among the non-recipe machines, and make the power the machines make.
 - TwistSpaceTechnology's Basic Steam Generator (with the Turbines), Large Solar Boiler (with the Boilers) and Lightning Spire (with the Engines) are among the non-recipe machines too, each with the settings its output depends on: dynamos, the boiler's heat and calcification, the spire's lightning rods.
 - TwistSpaceTechnology's Dyson Sphere Ray Receiving Station and Artificial Star are among the non-recipe machines, with the Endgame ones: set the sphere, planet and controller slot, or the fuels and field blocks, and they make the wireless EU (or Critical Photons) the machines do.
+- The Void Miners I to III, the Planetary Gas Siphon and the Space Pumping Modules Mk-I to Mk-III are among the non-recipe machines, under Other: pick the dimension and noble gas, the planet, depth, energy hatch and coils, or each module's recipes and parallels, and the card shows every ore or fluid at the game's rate, read from the game's own ore tables and pumping recipes.
 
 ## Better
 

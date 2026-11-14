@@ -37,6 +37,9 @@ package and the save format are upstream's, so plans and the gtnhplanner.com acc
   a card switched to that machine from its machine menu (`BoardSession.chooseMachine`): replaced in place, one undo
   step, keeping its id, place, group, count and the wires, drawers and rates on the ports the power card has. A fuel
   the source does not list leaves the recipe card as it was.
+- **Resource multiblocks.** The Void Miners, the Planetary Gas Siphon and the Space Pumping Modules are non-recipe
+  machines under Other (`power/sources/NrMiners`, `NrPumps`, the game's tables read by `power/game/NrGameData`,
+  `docs/design/nr-sources.md`).
 - **Fixes** for reports open upstream: see `.changelogs/unreleased.md`.
 - **The tour runs in English only.** It finds interface parts and NEI items by their English text; in another
   language it says so instead of starting.
