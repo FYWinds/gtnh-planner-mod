@@ -80,6 +80,8 @@ public class ClientProxy extends CommonProxy {
         com.gtnhplanner.client.WebsiteInbox.start();
         // The tour: drives the planner while the player watches.
         com.gtnhplanner.ui.tutorial.Tutorial.register();
+        // The planner's own text boxes: text input (the numpad, an IME) under lwjgl3ify.
+        com.gtnhplanner.ui.TextInput.register();
 
         FMLCommonHandler.instance()
             .bus()

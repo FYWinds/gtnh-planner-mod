@@ -8,6 +8,7 @@ import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.utils.MathUtils;
 import com.cleanroommc.modularui.utils.ParseResult;
+import com.gtnhplanner.ui.TextInput;
 import com.gtnhplanner.ui.theme.Hyb;
 
 /**
@@ -15,7 +16,8 @@ import com.gtnhplanner.ui.theme.Hyb;
  * machine count): no popup. It starts with the number there selected, so typing replaces it; ModularUI's maths reads it
  * ("2.5k", "1M", "64/3"); Enter or a click elsewhere sets it, Escape leaves it as it was, and an empty box clears it
  * (0). The widget that owns the box holds the editor, takes the keyboard while it is editing (it is the focused
- * widget), and draws the box through {@link #drawBox}.
+ * widget), hands it the keys ({@link #keyPressed}) and the text typed ({@link #type}), and draws the box through
+ * {@link #drawBox}.
  */
 public final class InlineNumber {
 
@@ -29,6 +31,7 @@ public final class InlineNumber {
     private int caret, anchor;
     private long since;
     private DoubleConsumer commit;
+    private final TextInput input = new TextInput();
 
     /** Starts editing the box {@code key}, showing {@code current} selected; {@code commit} takes what is set. */
     public void start(final String key, final double current, final DoubleConsumer commit) {
@@ -40,6 +43,7 @@ public final class InlineNumber {
         since = System.currentTimeMillis();
         InlineNumber.current = this;
         starts++;
+        input.on();
     }
 
     /** The box being typed into now, anywhere; null for none (the tour types into it as a player would). */
@@ -76,6 +80,7 @@ public final class InlineNumber {
     public void commit() {
         if (key == null) return;
         key = null;
+        input.off();
         final String t = draft.trim();
         if (t.isEmpty()) {
             commit.accept(0);
@@ -92,6 +97,7 @@ public final class InlineNumber {
     /** Stops editing, leaving the number as it was. */
     public void cancel() {
         key = null;
+        input.off();
     }
 
     /** A key while editing; always taken, so nothing else on the board acts on it. */
@@ -118,10 +124,25 @@ public final class InlineNumber {
                 if (ctrl && code == Keyboard.KEY_A) {
                     anchor = 0;
                     caret = draft.length();
-                } else if (ctrl && code == Keyboard.KEY_V) insert(clean(GuiScreen.getClipboardString()));
-                else if (!ctrl && allowed(typed)) insert(String.valueOf(typed));
+                } else if (ctrl && code == Keyboard.KEY_V) type(GuiScreen.getClipboardString());
+                else if (!ctrl && typed != 0 && input.keyTypes()) type(String.valueOf(typed));
             }
         }
+    }
+
+    /**
+     * Text typed into the box (a key's character, the numpad's or an IME's text, a paste): what a number is written
+     * with goes in at the caret, over the selection; full-width digits and signs as their plain ones, the rest dropped.
+     */
+    public void type(final String text) {
+        if (key == null || text == null) return;
+        since = System.currentTimeMillis();
+        final StringBuilder b = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            final char c = plain(text.charAt(i));
+            if (allowed(c)) b.append(c);
+        }
+        if (b.length() > 0) insert(b.toString());
     }
 
     /** What a number may be typed with: digits, a point, SI prefixes, and the maths between them. */
@@ -129,11 +150,10 @@ public final class InlineNumber {
         return c >= '0' && c <= '9' || "., kKmMgGtTpPuUnNeE/*+-()".indexOf(c) >= 0;
     }
 
-    private static String clean(final String s) {
-        if (s == null) return "";
-        final StringBuilder b = new StringBuilder();
-        for (final char c : s.toCharArray()) if (allowed(c)) b.append(c);
-        return b.toString();
+    /** A full-width form (what a Chinese IME types) as its plain one, and the ideographic full stop as a point. */
+    private static char plain(final char c) {
+        if (c >= '\uFF01' && c <= '\uFF5E') return (char) (c - 0xFEE0);
+        return c == '\u3002' ? '.' : c;
     }
 
     private void insert(final String s) {

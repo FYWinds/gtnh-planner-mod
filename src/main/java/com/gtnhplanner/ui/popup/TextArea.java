@@ -9,14 +9,20 @@ import net.minecraft.util.ChatAllowedCharacters;
 
 import org.lwjgl.input.Keyboard;
 
+import com.cleanroommc.modularui.ModularUI;
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.widget.IFocusedWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
+import com.cleanroommc.modularui.api.widget.ModernInteractable;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.Widget;
+import com.gtnhplanner.ui.TextInput;
 import com.gtnhplanner.ui.note.NoteText;
 import com.gtnhplanner.ui.theme.Hyb;
+
+import cpw.mods.fml.common.Optional;
+import me.eigenraven.lwjgl3ify.api.InputEvents;
 
 /**
  * Text of many lines to write in, in the planner's look: wrapped at word breaks (the sticky notes' layout), a caret
@@ -24,7 +30,7 @@ import com.gtnhplanner.ui.theme.Hyb;
  * is empty, and the wheel when it runs longer than the box. It can write bigger, at a {@link #scale} (a heading), and
  * keep to one paragraph ({@link #singleLine}: Enter ends the writing).
  */
-public final class TextArea extends Widget<TextArea> implements Interactable, IFocusedWidget {
+public final class TextArea extends Widget<TextArea> implements Interactable, IFocusedWidget, ModernInteractable {
 
     private static final int PAD = 4, LINE = 10;
     private static final int SELECTION = 0x6622D3EE;
@@ -41,6 +47,7 @@ public final class TextArea extends Widget<TextArea> implements Interactable, IF
     /** One paragraph: Enter ends the writing, and pasted lines are joined. */
     private boolean single;
     private int ink = Hyb.INK;
+    private final TextInput input = new TextInput();
 
     public TextArea(final String hint) {
         this.hint = hint;
@@ -105,6 +112,7 @@ public final class TextArea extends Widget<TextArea> implements Interactable, IF
     public void lock() {
         enabled = false;
         focused = false;
+        input.off();
     }
 
     /** Takes input again (the send failed). */
@@ -196,12 +204,14 @@ public final class TextArea extends Widget<TextArea> implements Interactable, IF
     public void onFocus(final ModularGuiContext context) {
         focused = enabled;
         caretSince = System.currentTimeMillis();
+        if (focused) input.on();
     }
 
     @Override
     public void onRemoveFocus(final ModularGuiContext context) {
         final boolean was = focused;
         focused = false;
+        input.off();
         if (was && onDone != null) onDone.accept(text);
     }
 
@@ -283,9 +293,21 @@ public final class TextArea extends Widget<TextArea> implements Interactable, IF
             }
             return Result.SUCCESS;
         }
-        if (typedChar != 0 && ChatAllowedCharacters.isAllowedCharacter(typedChar)) insert(String.valueOf(typedChar));
+        if (typedChar != 0 && ChatAllowedCharacters.isAllowedCharacter(typedChar) && input.keyTypes())
+            insert(String.valueOf(typedChar));
         // Every key stays here while writing (the planner's own keys must not act on it).
         return Result.SUCCESS;
+    }
+
+    /** Text typed while writing (lwjgl3ify's text events: an IME's words, the numpad). */
+    @Override
+    @Optional.Method(modid = ModularUI.ModIds.LWJGL3IFY)
+    public boolean onTextInput(final InputEvents.TextEvent event) {
+        if (!focused) return false;
+        caretSince = System.currentTimeMillis();
+        final String typed = TextInput.printable(event.text);
+        if (!typed.isEmpty()) insert(typed);
+        return true;
     }
 
     private void insert(final String typed) {

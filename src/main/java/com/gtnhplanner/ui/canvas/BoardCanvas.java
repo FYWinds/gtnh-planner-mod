@@ -46,8 +46,8 @@ import com.gtnhplanner.ui.theme.Hyb;
  * The board: pans by dragging empty space (left or middle button), zooms with the wheel around the cursor, and holds
  * one {@link RecipeCard} per recipe in world space. Zoom moves in whole steps so the game font stays sharp.
  */
-public final class BoardCanvas extends ParentWidget<BoardCanvas>
-    implements Interactable, IViewport, IDraggable, com.cleanroommc.modularui.api.widget.IFocusedWidget {
+public final class BoardCanvas extends ParentWidget<BoardCanvas> implements Interactable, IViewport, IDraggable,
+    com.cleanroommc.modularui.api.widget.IFocusedWidget, com.cleanroommc.modularui.api.widget.ModernInteractable {
 
     /**
      * Wheel steps, as on the website: a fifth of a doubling each (2^0.2, about 15%), from a sixteenth (so a big plan
@@ -197,11 +197,14 @@ public final class BoardCanvas extends ParentWidget<BoardCanvas>
     public void onUpdate() {
         super.onUpdate();
         // The keyboard on a widget the board let go of (a note deleted, undone or left with its plan while being
-        // written in): nothing holds it any more.
+        // written in), or on one whose popup has closed: nothing holds it any more, and its text input goes off.
         final com.cleanroommc.modularui.screen.viewport.LocatedWidget held = getContext().getFocusedWidget();
         if (held != null && held.getElement() != null
-            && !held.getElement()
-                .isValid())
+            && !(held.getElement()
+                .isValid()
+                && held.getElement()
+                    .getPanel()
+                    .isOpen()))
             getContext().removeFocus();
         session.tick();
         Popup.openPending();
@@ -3464,6 +3467,15 @@ public final class BoardCanvas extends ParentWidget<BoardCanvas>
         edit.keyPressed(typedChar, keyCode);
         if (!edit.active()) getContext().removeFocus();
         return Result.SUCCESS;
+    }
+
+    /** Text typed while a box is being typed into (lwjgl3ify's text events: the numpad, an IME). */
+    @Override
+    @cpw.mods.fml.common.Optional.Method(modid = com.cleanroommc.modularui.ModularUI.ModIds.LWJGL3IFY)
+    public boolean onTextInput(final me.eigenraven.lwjgl3ify.api.InputEvents.TextEvent event) {
+        if (!edit.active()) return false;
+        edit.type(event.text);
+        return true;
     }
 
     // endregion

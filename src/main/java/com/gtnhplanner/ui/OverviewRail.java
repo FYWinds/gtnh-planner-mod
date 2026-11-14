@@ -38,7 +38,7 @@ import com.gtnhplanner.ui.theme.Hyb;
  */
 final class OverviewRail extends ParentWidget<OverviewRail>
     implements Interactable, com.cleanroommc.modularui.integration.recipeviewer.RecipeViewerIngredientProvider,
-    com.cleanroommc.modularui.api.widget.IFocusedWidget {
+    com.cleanroommc.modularui.api.widget.IFocusedWidget, com.cleanroommc.modularui.api.widget.ModernInteractable {
 
     /** The rate box or count field being typed into: one at a time. */
     private final com.gtnhplanner.ui.popup.InlineNumber edit = new com.gtnhplanner.ui.popup.InlineNumber();
@@ -63,6 +63,15 @@ final class OverviewRail extends ParentWidget<OverviewRail>
         edit.keyPressed(typedChar, keyCode);
         if (!edit.active()) getContext().removeFocus();
         return Result.SUCCESS;
+    }
+
+    /** Text typed while a box is being typed into (lwjgl3ify's text events: the numpad, an IME). */
+    @Override
+    @cpw.mods.fml.common.Optional.Method(modid = com.cleanroommc.modularui.ModularUI.ModIds.LWJGL3IFY)
+    public boolean onTextInput(final me.eigenraven.lwjgl3ify.api.InputEvents.TextEvent event) {
+        if (!edit.active()) return false;
+        edit.type(event.text);
+        return true;
     }
 
     static final int W_FOLDED = RailFit.STRIP;

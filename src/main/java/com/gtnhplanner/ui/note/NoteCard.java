@@ -11,16 +11,19 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
+import com.cleanroommc.modularui.ModularUI;
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IFocusedWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
+import com.cleanroommc.modularui.api.widget.ModernInteractable;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.gtnhplanner.data.flowchart.Note;
 import com.gtnhplanner.ui.BoardSession;
+import com.gtnhplanner.ui.TextInput;
 import com.gtnhplanner.ui.UiText;
 import com.gtnhplanner.ui.canvas.BoardCanvas;
 import com.gtnhplanner.ui.note.DrawingGrips.Grip;
@@ -28,6 +31,9 @@ import com.gtnhplanner.ui.popup.PickList;
 import com.gtnhplanner.ui.popup.Popup;
 import com.gtnhplanner.ui.popup.Tip;
 import com.gtnhplanner.ui.theme.Hyb;
+
+import cpw.mods.fml.common.Optional;
+import me.eigenraven.lwjgl3ify.api.InputEvents;
 
 /**
  * A sticky note on the board: coloured paper with its corner folded, the text wrapped on it. Drag it to move it (with
@@ -42,7 +48,8 @@ import com.gtnhplanner.ui.theme.Hyb;
  * right-click offers its colour and style. Its widget reaches {@link DrawingGrips#PAD} outside it so those can be
  * held.
  */
-public final class NoteCard extends Widget<NoteCard> implements Interactable, IDraggable, IFocusedWidget {
+public final class NoteCard extends Widget<NoteCard>
+    implements Interactable, IDraggable, IFocusedWidget, ModernInteractable {
 
     public enum Part {
         BODY,
@@ -527,6 +534,7 @@ public final class NoteCard extends Widget<NoteCard> implements Interactable, ID
                 // Let go of the keyboard first, words unsaved: the note is going.
                 if (editing) {
                     editing = false;
+                    input.off();
                     getContext().removeFocus();
                 }
                 session.deleteNote(noteId);
@@ -1000,6 +1008,7 @@ public final class NoteCard extends Widget<NoteCard> implements Interactable, ID
     private long caretSince;
     /** The last key event taken, so one offered twice is typed once. */
     private long lastKeyNanos = -1;
+    private final TextInput input = new TextInput();
 
     public boolean editing() {
         return editing;
@@ -1016,6 +1025,7 @@ public final class NoteCard extends Widget<NoteCard> implements Interactable, ID
         editW = n.getWidth();
         editH = n.getHeight();
         editing = true;
+        input.on();
         getContext().focus(this);
     }
 
@@ -1023,6 +1033,7 @@ public final class NoteCard extends Widget<NoteCard> implements Interactable, ID
     public void stopEditing() {
         if (!editing) return;
         editing = false;
+        input.off();
         final Note n = note();
         if (n == null) return;
         final int needed = neededHeight(n, draft);
@@ -1159,9 +1170,21 @@ public final class NoteCard extends Widget<NoteCard> implements Interactable, ID
             }
             return Result.SUCCESS;
         }
-        if (typedChar != 0 && ChatAllowedCharacters.isAllowedCharacter(typedChar)) insert(String.valueOf(typedChar));
+        if (typedChar != 0 && ChatAllowedCharacters.isAllowedCharacter(typedChar) && input.keyTypes())
+            insert(String.valueOf(typedChar));
         // Every key stays with the note while it is being written on (Delete must not delete the selection).
         return Result.SUCCESS;
+    }
+
+    /** Text typed while it is written on (lwjgl3ify's text events: an IME's words, the numpad). */
+    @Override
+    @Optional.Method(modid = ModularUI.ModIds.LWJGL3IFY)
+    public boolean onTextInput(final InputEvents.TextEvent event) {
+        if (!editing) return false;
+        caretSince = System.currentTimeMillis();
+        final String typed = TextInput.printable(event.text);
+        if (!typed.isEmpty()) insert(typed);
+        return true;
     }
 
     /** Types {@code s} at the caret, over the selection; the note grows to show the line the caret is on. */

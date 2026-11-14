@@ -4,18 +4,24 @@ import net.minecraft.client.gui.GuiScreen;
 
 import org.lwjgl.input.Keyboard;
 
+import com.cleanroommc.modularui.ModularUI;
 import com.cleanroommc.modularui.api.widget.IFocusedWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
+import com.cleanroommc.modularui.api.widget.ModernInteractable;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.Widget;
+import com.gtnhplanner.ui.TextInput;
 import com.gtnhplanner.ui.theme.Hyb;
+
+import cpw.mods.fml.common.Optional;
+import me.eigenraven.lwjgl3ify.api.InputEvents;
 
 /**
  * A password box: what is typed shows as dots. ModularUI's text field has no such mode. Typing adds to the end,
  * Backspace takes off the last (Ctrl: all of it), Ctrl+V pastes, Enter runs {@link #onEnter}.
  */
-final class PasswordField extends Widget<PasswordField> implements Interactable, IFocusedWidget {
+final class PasswordField extends Widget<PasswordField> implements Interactable, IFocusedWidget, ModernInteractable {
 
     private static final int MAX = 128;
 
@@ -23,6 +29,7 @@ final class PasswordField extends Widget<PasswordField> implements Interactable,
     private boolean focused;
     private Runnable onEnter = () -> {};
     private final String hint;
+    private final TextInput input = new TextInput();
 
     PasswordField(final String hint) {
         this.hint = hint;
@@ -86,10 +93,19 @@ final class PasswordField extends Widget<PasswordField> implements Interactable,
             return Result.SUCCESS;
         }
         if (typedChar >= ' ' && typedChar != 127) {
-            add(typedChar);
+            if (input.keyTypes()) add(typedChar);
             return Result.SUCCESS;
         }
         return Result.IGNORE;
+    }
+
+    /** Text typed while it has the keyboard (lwjgl3ify's text events: the numpad, an IME). */
+    @Override
+    @Optional.Method(modid = ModularUI.ModIds.LWJGL3IFY)
+    public boolean onTextInput(final InputEvents.TextEvent event) {
+        if (!focused) return false;
+        for (int i = 0; i < event.text.length(); i++) add(event.text.charAt(i));
+        return true;
     }
 
     private void add(final char c) {
@@ -104,10 +120,12 @@ final class PasswordField extends Widget<PasswordField> implements Interactable,
     @Override
     public void onFocus(final ModularGuiContext context) {
         focused = true;
+        input.on();
     }
 
     @Override
     public void onRemoveFocus(final ModularGuiContext context) {
         focused = false;
+        input.off();
     }
 }
