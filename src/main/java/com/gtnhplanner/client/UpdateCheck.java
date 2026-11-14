@@ -39,10 +39,15 @@ public final class UpdateCheck {
 
     private UpdateCheck() {}
 
-    /** Asks GitHub for the releases, once, off the game's thread. */
+    /**
+     * Asks GitHub for the releases, once, off the game's thread. A build of the ETO fork (its version has
+     * {@code -eto}) never asks: its updates come with the pack, and the releases listed are upstream's, without the
+     * fork's changes.
+     */
     public static synchronized void start() {
         if (started) return;
         started = true;
+        if (Tags.VERSION.contains("-eto")) return;
         final Thread t = new Thread(UpdateCheck::check, "GTNH Planner update check");
         t.setDaemon(true);
         t.start();

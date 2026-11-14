@@ -47,7 +47,7 @@ final class SnapshotMaker {
                 for (final CardModel.PortView p : s.outputs) outs.add(flow(p, card.why(id, true, p.index())));
             }
             final Node n = m.node;
-            final StructureArt.Art art = StructureArt.forMachine(m.isPower() ? n.powerSource : m.machineName);
+            final StructureArt.Art art = StructureArt.forMachine(m.artName);
             final int tint = art != null ? art.tint()
                 : m.machineStack != null ? com.gtnhplanner.client.IngredientColors.itemColor(m.machineStack) : -1;
             // What runs and what is set, as the board's card says them (an Up to card builds what runs).

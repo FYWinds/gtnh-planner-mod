@@ -9,6 +9,11 @@ client-side only. The planner UI is ModularUI2 in `ui/` (the Solve-mode board), 
 solved in the background (`data/flowchart/balancer/`, `SolveService`), auto-layout and wire routing are in
 `layout/`, recipe sources per mod are in `data/provider/`, and the NEI glue is in `nei/`.
 
+This checkout is the ETO fork (github.com/FYWinds/gtnh-planner-mod, branch `eto`; `upstream` here is
+jackwrichards/gtnh-planner-mod). Read `docs/eto-fork.md` first: what the fork adds, the text rules (`UiText.tr` for
+fixed copy, `UiText.data` for data text drawn translated, no trailing spaces in lang values) and the `tools/eto`
+scripts. The remotes and release steps below describe upstream's own setup.
+
 ## Remotes and branches
 
 - `origin` = github.com/jackwrichards/gtnh-planner-mod (ours; it was jackwrichards/PlanNH, a fork, until the rename),

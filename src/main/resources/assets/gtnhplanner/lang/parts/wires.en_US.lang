@@ -1,3 +1,0 @@
-gtnhplanner.ui.settings.shared_trunks=Shared wire trunks
-gtnhplanner.ui.settings.shared_trunks_tip=Wires from one port to several cards leave as one line and branch off near each card.
-gtnhplanner.ui.canvas.trunk_of_wires=§7Trunk of %d wires

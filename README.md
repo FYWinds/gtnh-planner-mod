@@ -7,6 +7,11 @@
 Plan GT New Horizons factories in game. GTNH Planner is the Minecraft side of [gtnhplanner.com](https://gtnhplanner.com):
 a flowchart planner that lives in NEI, builds its cards from NEI's own recipes, and balances itself.
 
+> This is the ETO fork (branch `eto`): Simplified Chinese, shared wire trunks, TwistSpaceTechnology machines, working
+> numpad and IME input, and fixes for reports open upstream. What differs and how to work on it:
+> [docs/eto-fork.md](docs/eto-fork.md). Upstream is
+> [jackwrichards/gtnh-planner-mod](https://github.com/jackwrichards/gtnh-planner-mod).
+
 ## What it does
 
 - **Cards from NEI.** Look an item up with R or U, then press + (or the plan button beside it) to put a recipe on
