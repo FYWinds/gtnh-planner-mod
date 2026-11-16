@@ -4015,3 +4015,11 @@ gtnhplanner.data.molten_magnetohydrodynamically_constrained_star__d6dd9504=熔�
 gtnhplanner.data.biocatalyzed_propulsion_fluid=生物催化推进剂
 gtnhplanner.data.source_upkeep_l_s=源机器维持流体（L/s）
 gtnhplanner.data.critical_photons_a_run=每次运行临界光子数
+
+## team
+gtnhplanner.ui.plans_tip_team=方案：你的队伍在本服务器上的方案，以及社区方案
+gtnhplanner.ui.share_tip_team=分享：发送此方案的副本（你的队伍已能和你一起编辑它）
+gtnhplanner.ui.team_tip=你在本服务器上的身份：这里的方案属于你的队伍
+gtnhplanner.ui.library.team=团队
+gtnhplanner.ui.library.team_tip=团队：你和队友在本服务器上的所有方案，无论是否打开
+gtnhplanner.ui.cloud.world_plans_in_team=此世界的方案已加入你的队伍

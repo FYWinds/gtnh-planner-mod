@@ -1872,3 +1872,11 @@ gtnhplanner.data.no_bath_fluid_for_this_ore_the_chemical_bath_pas_6dbbfe34=No ba
 gtnhplanner.data.the_game_has_no_such_item_or_fluid=The game has no such item or fluid.
 gtnhplanner.data.the_smeltery_needs_480_eu_t_on_these_hatches_it__25edecc4=The smeltery needs 480 EU/t: on these hatches it stops for lack of power.
 gtnhplanner.data.this_fluid_has_no_block_the_smeltery_uses_it_up__68e125d3=This fluid has no block: the smeltery uses it up and makes no essentia.
+
+## team
+gtnhplanner.ui.plans_tip_team=Plans: your team's plans on this server, and Community
+gtnhplanner.ui.share_tip_team=Share: send a copy of this plan (your team edits it with you already)
+gtnhplanner.ui.team_tip=You on this server: the plans here are your team's
+gtnhplanner.ui.library.team=TEAM
+gtnhplanner.ui.library.team_tip=Team: your plans and your team mates' on this server, open or closed
+gtnhplanner.ui.cloud.world_plans_in_team=Your plans from this world are now your team's

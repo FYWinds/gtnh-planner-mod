@@ -187,8 +187,11 @@ public final class BoardScreen extends ModularScreen {
         })), 18, 18);
         // As the website's bar: Plans (the library on My plans; Shared with me and Community are its shelves), then
         // Share (Invite people first, then the copies), then the account key. Short of room the three show only their
-        // pictures, as feedback, settings and help do (TopBar); their tips lead with their names.
-        topBar.key(0, named(parts, "plans", pictureKey(tr("plans"), Picture.PLANS, tr("plans_tip"), () -> {
+        // pictures, as feedback, settings and help do (TopBar); their tips lead with their names. On a team backend
+        // the library's plans are the team's, nobody is invited and the account key is the player.
+        final boolean team = com.gtnhplanner.library.Account.team() != null;
+        final String plansTip = tr(team ? "plans_tip_team" : "plans_tip");
+        topBar.key(0, named(parts, "plans", pictureKey(tr("plans"), Picture.PLANS, plansTip, () -> {
             if (library.open) {
                 library.set(false);
                 return;
@@ -204,7 +207,7 @@ public final class BoardScreen extends ModularScreen {
                 pictureKey(
                     tr("share"),
                     Picture.SHARE,
-                    tr("share_tip"),
+                    tr(team ? "share_tip_team" : "share_tip"),
                     () -> openShare(panel, session, canvas, parts.get("share")))),
             () -> fit(tr("share")),
             () -> TopBar.PICTURE_W);
@@ -343,23 +346,27 @@ public final class BoardScreen extends ModularScreen {
 
     /**
      * The account key's width: "Sign in" while signed out (its picture alone when the bar is short of room), else the
-     * face of the account.
+     * face of the account; on a team backend the player's face and name (the face alone when short of room).
      */
     private static int accountWidth(final boolean labelled) {
+        final String who = com.gtnhplanner.library.Account.username();
+        final int face = Math
+            .max(18, com.gtnhplanner.ui.task.TaskLook.faceWidth(com.gtnhplanner.ui.task.TaskLook.initials(who)) + 6);
+        if (com.gtnhplanner.library.Account.team() != null) return labelled ? face + Hyb.width(who) + 4 : face;
         if (!com.gtnhplanner.library.Account.signedIn()) return labelled ? fit(tr("sign_in")) : TopBar.PICTURE_W;
-        return Math.max(
-            18,
-            com.gtnhplanner.ui.task.TaskLook
-                .faceWidth(com.gtnhplanner.ui.task.TaskLook.initials(com.gtnhplanner.library.Account.username())) + 6);
+        return face;
     }
 
     /**
      * The account key: signed out it reads "Sign in" and opens the sign-in form; signed in it is the account's face
-     * (initials on their colour) and opens a menu with the username and Sign out.
+     * (initials on their colour) and opens a menu with the username and Sign out. On a team backend it is the player's
+     * face and name, and nothing to sign in or out of.
      */
     private static ButtonWidget<?> accountKey(final ModularPanel panel, final BoardSession session,
         final java.util.Map<String, IWidget> parts) {
-        final ButtonWidget<?> button = key(() -> "", () -> true, tr("account_tip"), 18, () -> {
+        final boolean team = com.gtnhplanner.library.Account.team() != null;
+        final ButtonWidget<?> button = key(() -> "", () -> true, tr(team ? "team_tip" : "account_tip"), 18, () -> {
+            if (com.gtnhplanner.library.Account.team() != null) return;
             if (!com.gtnhplanner.library.Account.signedIn()) {
                 com.gtnhplanner.ui.library.AccountForms.signIn(panel, () -> {});
                 return;
@@ -398,11 +405,15 @@ public final class BoardScreen extends ModularScreen {
             final String id = com.gtnhplanner.library.Account.accountId();
             final String initials = com.gtnhplanner.ui.task.TaskLook.initials(who);
             final int fw = com.gtnhplanner.ui.task.TaskLook.faceWidth(initials);
+            // A team backend's player: their name beside the face, where there is room for it.
+            final boolean named = com.gtnhplanner.library.Account.team() != null && w >= accountWidth(true);
+            final float fx = named ? x + 3 : x + (w - fw) / 2f;
             com.gtnhplanner.ui.task.TaskLook.face(
                 who,
                 com.gtnhplanner.ui.task.TaskLook.faceColour(id == null ? who : id),
-                x + (w - fw) / 2f,
+                fx,
                 y + (h - com.gtnhplanner.ui.task.TaskLook.FACE) / 2f);
+            if (named) Hyb.text(who, fx + fw + 4, y + (h - 8) / 2f, Hyb.INK);
         });
         return button;
     }
@@ -468,25 +479,28 @@ public final class BoardScreen extends ModularScreen {
      * itself), its website link and its plan code to the clipboard, a plan file the website
      * opens, the plan opened on the website in the browser, a line in the game's chat that opens it
      * (client/ChatShare), and a picture of it. The website's Share menu has the same rows. Labels only, as narrow as
-     * they are: each says what it does.
+     * they are: each says what it does. On a team backend there is nobody to invite (the team edits every plan) and
+     * nothing to publish (that needs a website account).
      */
     private static void openShare(final ModularPanel panel, final BoardSession session, final BoardCanvas canvas,
         final IWidget key) {
         final List<com.gtnhplanner.ui.popup.PickList.Entry> rows = new ArrayList<>();
         final int slot = session.activeSlot();
         // The website's Share menu, in its words: people first, then the copies; a copy posted to Community last.
-        if (session.live() != null) rows.add(
-            com.gtnhplanner.ui.popup.PickList.Entry
-                .of(tr("invite_people"), () -> com.gtnhplanner.ui.popup.SharePanel.open(panel, session)));
-        else rows.add(
-            new com.gtnhplanner.ui.popup.PickList.Entry(
-                null,
-                tr("invite_people"),
-                tr("sign_in_short"),
-                Hyb.MUTED,
-                false,
-                () -> session.flash(com.gtnhplanner.data.flowchart.balancer.Severity.INFO, tr("sign_in_invite"))));
-        rows.add(com.gtnhplanner.ui.popup.PickList.Entry.rule());
+        if (com.gtnhplanner.library.Account.team() == null) {
+            if (session.live() != null) rows.add(
+                com.gtnhplanner.ui.popup.PickList.Entry
+                    .of(tr("invite_people"), () -> com.gtnhplanner.ui.popup.SharePanel.open(panel, session)));
+            else rows.add(
+                new com.gtnhplanner.ui.popup.PickList.Entry(
+                    null,
+                    tr("invite_people"),
+                    tr("sign_in_short"),
+                    Hyb.MUTED,
+                    false,
+                    () -> session.flash(com.gtnhplanner.data.flowchart.balancer.Severity.INFO, tr("sign_in_invite"))));
+            rows.add(com.gtnhplanner.ui.popup.PickList.Entry.rule());
+        }
         rows.add(com.gtnhplanner.ui.popup.PickList.Entry.of(tr("copy_plan_link"), session::copyPlanLink));
         rows.add(com.gtnhplanner.ui.popup.PickList.Entry.of(tr("copy_plan_code"), () -> session.copyPlan(slot)));
         rows.add(com.gtnhplanner.ui.popup.PickList.Entry.of(tr("share_chat"), () -> session.shareInChat(slot)));

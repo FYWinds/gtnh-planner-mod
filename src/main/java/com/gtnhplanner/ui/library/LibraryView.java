@@ -237,9 +237,22 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
         if (!mine && !feed.started()) feed.restart();
     }
 
-    /** Whether the Shared with me shelf shows: while signed in. */
+    /** Whether the Shared with me shelf shows: while signed in, and not on a team backend (its shelf is one). */
     private static boolean hasShared() {
-        return com.gtnhplanner.library.Account.signedIn();
+        return com.gtnhplanner.library.Account.signedIn() && !team();
+    }
+
+    /**
+     * Whether the plans are a game server's team's: one shelf, Team, holds the player's and their team mates' plans,
+     * and nothing that needs the website's account shows.
+     */
+    private static boolean team() {
+        return com.gtnhplanner.library.Account.team() != null;
+    }
+
+    /** Whether a setup is the player's own post to change: never on a team backend, which has no website account. */
+    private static boolean ownPost(final CommunityApi.Setup s) {
+        return s.mine() && !team();
     }
 
     /** Shows the setups that make a resource ({@code kind:id}, as Factory Flow writes them). */
@@ -342,6 +355,8 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
     }
 
     private void drawHeader(final int w, final Hit hover) {
+        // A team backend has no Shared with me: its one shelf has them.
+        if (shelf == Shelf.SHARED && team()) shelf = Shelf.MINE;
         Hyb.rect(0, 0, w, HEAD_H, 0xFF2A2D33);
         Hyb.rect(0, HEAD_H - 1, w, 1, Hyb.RING);
         int x = PAD;
@@ -350,14 +365,15 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
             .size() - shared;
         final String publicCount = feed.total() < 0 ? "..." : Fmt.compact(feed.total());
         // The long names when the header has room for them and a search box; else the short ones.
-        final boolean roomy = PAD + shelfW(tr("library.my_plans"), Integer.toString(own))
+        final String mineLabel = team() ? tr("library.team") : tr("library.my_plans");
+        final boolean roomy = PAD + shelfW(mineLabel, Integer.toString(own))
             + 6
             + (hasShared() ? shelfW(tr("library.shared_with_me"), Integer.toString(shared)) + 6 : 0)
             + shelfW(tr("library.community"), publicCount)
             + 12
             + 100
             + 30 <= w;
-        x = shelfTab(x, tr("library.my_plans"), Integer.toString(own), Shelf.MINE, hover) + 6;
+        x = shelfTab(x, mineLabel, Integer.toString(own), Shelf.MINE, hover) + 6;
         if (hasShared()) x = shelfTab(
             x,
             roomy ? tr("library.shared_with_me") : tr("library.shared"),
@@ -374,7 +390,7 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
             return;
         }
         final CommunityApi.Query q = feed.query();
-        if (com.gtnhplanner.library.Account.signedIn() && right - x > 260)
+        if (com.gtnhplanner.library.Account.signedIn() && !team() && right - x > 260)
             right = myPostsKey(right, q.mine(), hover) - 4;
         right = key(
             right,
@@ -714,11 +730,11 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
         final String when = g.getLastOpen() > 0 ? UiText.tr("library.last_open", agoMs(g.getLastOpen()))
             : tr("library.not_opened");
         Hyb.text(when, x + 6, y + TILE_H - 13, Hyb.MUTED);
-        // A plan someone shared with the player says whose it is.
+        // A plan someone shared with the player says whose it is; a team mate's says who made it.
         final com.gtnhplanner.cloud.session.CloudSession cloud = com.gtnhplanner.cloud.session.CloudSession.current();
         final String by = cloud == null ? null : cloud.sharedBy(g);
         if (by != null) Hyb.textRight(
-            Hyb.fit(UiText.tr("library.shared_by_name", by), w / 2),
+            Hyb.fit(UiText.tr(team() ? "library.by_author" : "library.shared_by_name", by), w / 2),
             x + w - 6,
             y + TILE_H - 13,
             0xFF9FD9E6);
@@ -856,7 +872,7 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
         hits.add(new Hit(Kind.OPEN, px + 8, by, px + 8 + ow, by + 18, s));
         // The player's own post: Edit and Delete, on a row above.
         int rowTop = by;
-        if (s.mine()) {
+        if (ownPost(s)) {
             rowTop = by - 21;
             Hyb.text(tr("library.your_post"), px + 8, rowTop + 4, Hyb.MUTED);
             final boolean takingDown = s.id()
@@ -1063,7 +1079,7 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
         final int sx = getArea().x + hit.x0() + 8, sy = getArea().y + hit.y0() + 20;
         final List<PickList.Entry> rows = new ArrayList<>();
         rows.add(PickList.Entry.of(tr("library.open_new"), () -> open(s)));
-        if (s.mine()) {
+        if (ownPost(s)) {
             rows.add(
                 new PickList.Entry(
                     null,
@@ -1254,7 +1270,7 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
         return switch (hit.kind()) {
             case TILE -> {
                 final CommunityApi.Setup s = (CommunityApi.Setup) hit.data();
-                yield s.mine()
+                yield ownPost(s)
                     ? List.of(
                         s.name(),
                         UiText.tr("librarytail.7double_click_to_open_as_a_new_plan"),
@@ -1272,7 +1288,7 @@ public final class LibraryView extends ParentWidget<LibraryView> implements Inte
             case TIER -> List.of(tr("library.filter_tier"));
             case VERSION -> List.of(tr("library.filter_version"));
             case MAKES_CLEAR -> List.of(tr("library.clear_filter"));
-            case SHELF -> hit.data() == Shelf.MINE ? List.of(tr("library.mine_tip"))
+            case SHELF -> hit.data() == Shelf.MINE ? List.of(tr(team() ? "library.team_tip" : "library.mine_tip"))
                 : hit.data() == Shelf.SHARED ? List.of(tr("library.shared_tip")) : List.of(tr("library.community_tip"));
             case MY_TILE -> List.of(
                 Plan.getInstance()

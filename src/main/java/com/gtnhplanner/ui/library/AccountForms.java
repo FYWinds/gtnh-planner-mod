@@ -84,12 +84,14 @@ public final class AccountForms {
     /**
      * The menu rows that publish a plan to the library, the Share key's, a tab's and a tile's: a plan not posted yet
      * has Publish to library; one posted has Update in library (its post, votes kept) and Publish as new post. Posts
-     * are copies for everyone, never the plan itself: nothing follows the plan by itself.
+     * are copies for everyone, never the plan itself: nothing follows the plan by itself. None on a team backend:
+     * posting needs the website's account, which team mode has no way to sign in to.
      */
     public static List<PickList.Entry> shareRows(final ModularPanel parent, final BoardSession session,
         final Graph plan) {
         // A task board is never posted.
-        if (com.gtnhplanner.data.flowchart.Tasks.TASKS.equals(plan.getPrimaryView())) return List.of();
+        if (com.gtnhplanner.data.flowchart.Tasks.TASKS.equals(plan.getPrimaryView()) || Account.team() != null)
+            return List.of();
         if (plan.getPostId() == null) return List.of(
             new PickList.Entry(
                 null,

@@ -148,10 +148,13 @@ public final class SharePanel extends ParentWidget<SharePanel> implements Intera
         return people + 10 + LABEL + rows[1] * ROW + 10 + LABEL + FIELD_H + 4 + rows[2] * ROW + 24;
     }
 
-    /** Opens the box for the open plan, when it is a cloud plan: in the middle of the planner, fitted to it. */
+    /**
+     * Opens the box for the open plan, when it is a cloud plan: in the middle of the planner, fitted to it. Never on a
+     * team backend: the team is who edits its plans.
+     */
     public static void open(final ModularPanel parent, final BoardSession session) {
         final LiveDoc doc = session.live();
-        if (doc == null) return;
+        if (doc == null || Account.team() != null) return;
         final int[] room = Popup.room(parent);
         final SharePanel share = new SharePanel(session, doc, room[2] - 8, room[3] - 8);
         final int w = share.boxW, h = share.boxH;
