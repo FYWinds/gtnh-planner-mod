@@ -10,6 +10,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
@@ -25,7 +27,8 @@ import com.gtnhplanner.library.CommunityApi;
  * The REST side of cloud plans (docs/design/cloud-live.md): the account's plans and the ones shared with it, a plan's
  * body, creating, changing and deleting a plan, who may edit it, finding accounts, and who is on the same game server
  * (the live service's one HTTP route). Every call takes the session ({@code gtnh_session}) and is blocking: run it off
- * the client thread. The site is {@link CommunityApi#site()}.
+ * the client thread. The site is {@link CommunityApi#site()}, or for a session a game server's team backend gave, that
+ * backend ({@link #useTeam}): the session decides where a call goes.
  */
 public final class CloudApi {
 
@@ -33,7 +36,34 @@ public final class CloudApi {
 
     private CloudApi() {}
 
-    // region Where the live service is
+    // region Where the calls go
+
+    /** A team backend's REST base and live service. */
+    private record Backend(String site, String live) {}
+
+    /** Every session a team backend gave this game, with where it goes: there, and never anywhere else. */
+    private static final Map<String, Backend> TEAMS = new ConcurrentHashMap<>();
+
+    /**
+     * A game server's team backend gave the session {@code token}: calls with it go to {@code site} (the website's
+     * routes under it) and its live service is {@code live}, never the website's. Kept for the game's life, so a call
+     * still under way with an older session of it goes to that server as well.
+     */
+    public static void useTeam(final String token, final String site, final String live) {
+        TEAMS.put(token, new Backend(clean(site), clean(live)));
+    }
+
+    /** Where a call with {@code token} goes: the team backend that gave it, else the site. */
+    public static String site(@Nullable final String token) {
+        final Backend b = token == null ? null : TEAMS.get(token);
+        return b != null ? b.site() : CommunityApi.site();
+    }
+
+    /** The live service for {@code token}: the team backend's that gave it, else {@link #live()}. */
+    public static String live(@Nullable final String token) {
+        final Backend b = token == null ? null : TEAMS.get(token);
+        return b != null ? b.live() : live();
+    }
 
     private static volatile String liveOverride = clean(System.getProperty("gtnhplanner.live.url"));
 
@@ -73,9 +103,9 @@ public final class CloudApi {
         return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
-    /** The live service's HTTP address for a route under {@code /live}: ws is http, wss is https. */
-    static String liveHttp(final String route) {
-        final String ws = live();
+    /** The live service's HTTP address for a route under it, for {@code token}: ws is http, wss is https. */
+    static String liveHttp(final String route, final String token) {
+        final String ws = live(token);
         return (ws.startsWith("wss:") ? "https:" + ws.substring(4) : "http:" + ws.substring(3)) + route;
     }
 
@@ -254,7 +284,7 @@ public final class CloudApi {
     /** Who the session is. Null when the session has run out; throws when the site does not say which account. */
     @Nullable
     public static Account me(final String token) throws IOException {
-        final Reply r = send("GET", CommunityApi.site() + "/api/community/auth/me", null, token, 401);
+        final Reply r = send("GET", site(token) + "/api/community/auth/me", null, token, 401);
         if (r.status == 401) return null;
         final JsonElement user = json(r.body).get("user");
         if (user == null || !user.isJsonObject()) return null;
@@ -266,7 +296,7 @@ public final class CloudApi {
     /** The account's plans and the shared ones. {@code accountId} stamps the account's own as owned by it. */
     public static Library library(final String token, final String accountId) throws IOException {
         if (accountId.isBlank()) throw new IOException("the site did not say which account this is");
-        final JsonObject root = json(send("GET", CommunityApi.site() + "/api/library", null, token).body);
+        final JsonObject root = json(send("GET", site(token) + "/api/library", null, token).body);
         return new Library(read(root.get("designs"), accountId, false), read(root.get("shared"), "", true));
     }
 
@@ -275,7 +305,7 @@ public final class CloudApi {
         final JsonObject root = json(
             send(
                 "GET",
-                CommunityApi.site() + "/api/library/designs/" + enc(designId) + "?owner=" + enc(ownerId),
+                site(token) + "/api/library/designs/" + enc(designId) + "?owner=" + enc(ownerId),
                 null,
                 token).body);
         final JsonElement plan = root.get("plan");
@@ -304,9 +334,7 @@ public final class CloudApi {
         throws IOException {
         final Reply r = send(
             "PUT",
-            CommunityApi.site() + "/api/library/designs/"
-                + enc(designId)
-                + (ownerId == null ? "" : "?owner=" + enc(ownerId)),
+            site(token) + "/api/library/designs/" + enc(designId) + (ownerId == null ? "" : "?owner=" + enc(ownerId)),
             body.toJson()
                 .toString(),
             token,
@@ -325,13 +353,26 @@ public final class CloudApi {
 
     /** Deletes the account's own plan (the site keeps a tombstone). */
     public static void delete(final String token, final String designId) throws IOException {
-        send("DELETE", CommunityApi.site() + "/api/library/designs/" + enc(designId), null, token);
+        delete(token, designId, null);
+    }
+
+    /**
+     * As {@link #delete(String, String)}, on {@code ownerId}'s plan (null: the account's own): a team backend lets
+     * anyone in the team delete a plan of the team's.
+     */
+    public static void delete(final String token, final String designId, @Nullable final String ownerId)
+        throws IOException {
+        send(
+            "DELETE",
+            site(token) + "/api/library/designs/" + enc(designId) + (ownerId == null ? "" : "?owner=" + enc(ownerId)),
+            null,
+            token);
     }
 
     /** Who may edit a plan ({@code ownerId} null: the account's own). */
     public static List<LiveClient.Member> members(final String token, final String designId,
         @Nullable final String ownerId) throws IOException {
-        final String body = send("GET", membersUrl(designId, null, ownerId), null, token).body;
+        final String body = send("GET", membersUrl(token, designId, null, ownerId), null, token).body;
         return readMembers(arrayIn(body, "members"));
     }
 
@@ -341,7 +382,7 @@ public final class CloudApi {
     /** A plan's sharing as the site has it now ({@code ownerId} null: the account's own). */
     public static Sharing sharing(final String token, final String designId, @Nullable final String ownerId)
         throws IOException {
-        final JsonObject root = json(send("GET", membersUrl(designId, null, ownerId), null, token).body);
+        final JsonObject root = json(send("GET", membersUrl(token, designId, null, ownerId), null, token).body);
         return new Sharing(
             string(root, "ownerId"),
             string(root, "ownerName"),
@@ -352,7 +393,7 @@ public final class CloudApi {
     /** Lets an account edit a plan (owner only; {@code ownerId} null: the account's own). */
     public static void addMember(final String token, final String designId, final String userId,
         @Nullable final String ownerId) throws IOException {
-        send("PUT", membersUrl(designId, userId, ownerId), "{}", token);
+        send("PUT", membersUrl(token, designId, userId, ownerId), "{}", token);
     }
 
     /**
@@ -361,12 +402,12 @@ public final class CloudApi {
      */
     public static void removeMember(final String token, final String designId, final String userId,
         @Nullable final String ownerId) throws IOException {
-        send("DELETE", membersUrl(designId, userId, ownerId), null, token);
+        send("DELETE", membersUrl(token, designId, userId, ownerId), null, token);
     }
 
-    private static String membersUrl(final String designId, @Nullable final String userId,
+    private static String membersUrl(final String token, final String designId, @Nullable final String userId,
         @Nullable final String ownerId) {
-        return CommunityApi.site() + "/api/library/designs/"
+        return site(token) + "/api/library/designs/"
             + enc(designId)
             + "/members"
             + (userId == null ? "" : "/" + enc(userId))
@@ -376,9 +417,7 @@ public final class CloudApi {
     /** Up to ten accounts whose names start with {@code prefix}. */
     public static List<Account> search(final String token, final String prefix) throws IOException {
         return accounts(
-            arrayIn(
-                send("GET", CommunityApi.site() + "/api/accounts/search?q=" + enc(prefix), null, token).body,
-                "accounts"));
+            arrayIn(send("GET", site(token) + "/api/accounts/search?q=" + enc(prefix), null, token).body, "accounts"));
     }
 
     /** An account playing in this game, and the Minecraft name it plays as. */
@@ -404,7 +443,7 @@ public final class CloudApi {
         }
         if (q.length() == 0) return new ArrayList<>();
         final JsonElement found = arrayIn(
-            send("GET", liveHttp("/nearby") + "?names=" + enc(q.toString()), null, token).body,
+            send("GET", liveHttp("/nearby", token) + "?names=" + enc(q.toString()), null, token).body,
             "accounts");
         final List<Player> out = new ArrayList<>();
         if (found != null && found.isJsonArray()) for (final JsonElement e : found.getAsJsonArray()) {
@@ -420,7 +459,7 @@ public final class CloudApi {
      * game keeps the world's plans. Throws when the service could not be asked at all.
      */
     public static boolean hasLive(final String token) throws IOException {
-        final Reply r = send("GET", liveHttp("/health"), null, token, 404, 502, 503);
+        final Reply r = send("GET", liveHttp("/health", token), null, token, 404, 502, 503);
         return r.status == 200;
     }
 
@@ -503,8 +542,10 @@ public final class CloudApi {
 
     private record Reply(int status, String body) {}
 
-    private static Reply send(final String method, final String url, @Nullable final String json, final String token,
-        final int... allowed) throws IOException {
+    private static Reply send(final String method, final String url, @Nullable final String json,
+        @Nullable final String token, final int... allowed) throws IOException {
+        // No session, nothing sent: a call of a team backend's session after the player left that server goes nowhere.
+        if (token == null) throw new Refused(401, "not signed in");
         final HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setRequestMethod(method);
         c.setConnectTimeout(CONNECT_MS);

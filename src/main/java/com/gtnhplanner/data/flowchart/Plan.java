@@ -245,9 +245,10 @@ public class Plan {
         return null;
     }
 
+    /** Saves the plans in hand and lets go of them (the game left the world). None in hand, none are loaded to save. */
     public static void unloadPlan() {
         leaveSandbox();
-        PlanAPI.save();
+        if (INSTANCE != null) PlanAPI.save();
         INSTANCE = null;
     }
 

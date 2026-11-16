@@ -54,8 +54,9 @@ import com.gtnhplanner.ui.UiText;
  * <li>A world's own plans join the account once, as the planner's plans load ({@link #bringOver}; {@link Migration}
  * for one cut off on its way); its save only keeps their keys.</li>
  * </ul>
- * One per account, made when the planner first needs it and stopped on sign-out. Everything but the network calls runs
- * on the client thread; those run on a thread of the session's own and answer back through {@link #tick}.
+ * One per account (or per game server's team backend and player: {@code com.gtnhplanner.api.TeamBackend}), made when
+ * the planner first needs it and stopped on sign-out. Everything but the network calls runs on the client thread;
+ * those run on a thread of the session's own and answer back through {@link #tick}.
  */
 public final class CloudSession {
 
@@ -150,14 +151,26 @@ public final class CloudSession {
      */
     public static CloudSession start(final String accountId, final Supplier<String> token, final File gameDir,
         final Host host) {
+        // Stopped before the copy is opened: opening it clears what a write left half done.
         if (current != null) current.stop();
-        current = new CloudSession(accountId, token, CloudCache.forAccount(gameDir, accountId), host);
+        return start(accountId, token, CloudCache.forAccount(gameDir, accountId), false, host);
+    }
+
+    /**
+     * As {@link #start(String, Supplier, File, Host)}, this device's copy in {@code cache}. {@code team} is for a game
+     * server's team backend, where every plan is the team's: a team mate's is the player's to delete, never to leave.
+     */
+    public static CloudSession start(final String accountId, final Supplier<String> token, final CloudCache cache,
+        final boolean team, final Host host) {
+        if (current != null) current.stop();
+        current = new CloudSession(accountId, token, cache, team, host);
         return current;
     }
 
     private final String accountId;
     private final Supplier<String> token;
     private final CloudCache cache;
+    private final boolean team;
     private final Host host;
     private final ExecutorService net = Executors.newSingleThreadExecutor(r -> {
         final Thread t = new Thread(r, "GTNH Planner cloud");
@@ -213,10 +226,11 @@ public final class CloudSession {
     private final Set<String> announced = new HashSet<>();
 
     private CloudSession(final String accountId, final Supplier<String> token, final CloudCache cache,
-        final Host host) {
+        final boolean team, final Host host) {
         this.accountId = accountId;
         this.token = token;
         this.cache = cache;
+        this.team = team;
         this.host = host;
         final JsonElement gone = cache.device()
             .get("letGo");
@@ -226,6 +240,11 @@ public final class CloudSession {
 
     public String accountId() {
         return accountId;
+    }
+
+    /** The folder this device keeps the plans in: which account's, or which server's and player's, they are. */
+    public File folder() {
+        return cache.dir();
     }
 
     CloudCache cache() {
@@ -301,10 +320,13 @@ public final class CloudSession {
         }, e -> {});
     }
 
-    /** Whether a plan is one shared with the player (theirs to leave, not to delete). */
+    /**
+     * Whether a plan is one shared with the player (theirs to leave, not to delete). Never on a team backend: every
+     * plan there is the team's, a team mate's as much as the player's own.
+     */
     public boolean shared(final Graph graph) {
         final String key = graph.getCloudKey();
-        return key != null && !key.startsWith(accountId + ":");
+        return !team && key != null && !key.startsWith(accountId + ":");
     }
 
     // region The planner's plans
@@ -811,11 +833,11 @@ public final class CloudSession {
     /**
      * The connection, made and started on first need; made again when the game's world (what the hello says) or the
      * live
-     * service's address changed.
+     * service's address changed. The address is the session's own: a team backend's for its session.
      */
     private LiveClient connection() {
         if (hello == null) hello = host.hello();
-        final String url = CloudApi.live();
+        final String url = CloudApi.live(token.get());
         if (client != null && hello.equals(said) && url.equals(liveUrl)) return client;
         if (client != null) client.stop();
         said = hello;
@@ -1138,7 +1160,7 @@ public final class CloudSession {
             if (d.waiting()) continue;
             dropped(
                 d,
-                d.ownerId()
+                team || d.ownerId()
                     .equals(accountId));
         }
         keepDevice();
@@ -1234,16 +1256,22 @@ public final class CloudSession {
             }
             makeRefusals.remove(d.key());
             keepDevice();
-            if (broughtOver.remove(d.key()) && broughtOver.isEmpty())
-                host.notice(UiText.data("Your plans from this world are now in your account"));
+            if (broughtOver.remove(d.key()) && broughtOver.isEmpty()) host.notice(broughtOverNotice());
         }, e -> { if (refusal(e)) createRefused(d, e); });
     }
 
-    /** Tells the account a plan was let go of: an own plan deleted, a shared one left. */
+    /** What the player hears once the world's plans have gone up: into the account, or the team's plans. */
+    private String broughtOverNotice() {
+        return team ? UiText.tr("cloud.world_plans_in_team")
+            : UiText.data("Your plans from this world are now in your account");
+    }
+
+    /** Tells the account a plan was let go of: an own plan deleted, a shared one left; on a team backend, deleted. */
     private void tellLetGo(final String key) {
         final String owner = key.substring(0, key.indexOf(':')), id = key.substring(key.indexOf(':') + 1);
         call("letgo:" + key, () -> {
             if (owner.equals(accountId)) CloudApi.delete(token.get(), id);
+            else if (team) CloudApi.delete(token.get(), id, owner);
             else CloudApi.removeMember(token.get(), id, accountId, owner);
             return Boolean.TRUE;
         }, ok -> {
@@ -1353,7 +1381,7 @@ public final class CloudSession {
                 GtnhPlanner.LOG.warn("'{}' did not go to the account yet: {}", f.name(), f.reason());
             if (arrived > 0) {
                 replaceStandIn(local, items);
-                host.notice(UiText.data("Your plans from this world are now in your account"));
+                host.notice(broughtOverNotice());
             }
             releaseStandIn();
             listAt = -LIST_EVERY_MS;

@@ -26,7 +26,8 @@ import com.gtnhplanner.GtnhPlanner;
 import com.gtnhplanner.cloud.net.CloudApi;
 
 /**
- * This device's copy of one account's cloud plans, under {@code <game dir>/gtnhplanner/cloud/<accountId>/}: per doc key
+ * This device's copy of one account's cloud plans, under {@code <game dir>/gtnhplanner/cloud/<accountId>/} (a team
+ * backend's player under {@code gtnhplanner/team/<serverId>/<userId>/}): per doc key
  * the last plan the service confirmed with its seq, the batches sent or waiting to be that have not been acknowledged
  * yet, and the pins; and the plan list (names, icons, members, times). What a plan is opened from when offline, and
  * what a crash cannot take: a batch is on disk before it is sent and leaves when its echo comes.
@@ -71,11 +72,36 @@ public final class CloudCache {
      * @throws IllegalArgumentException for a blank id (it would be the folder every account shares)
      */
     public static CloudCache forAccount(final File mcDataDir, final String accountId) {
-        if (accountId == null || accountId.isBlank()
-            || safe(accountId).replace(".", "")
+        return new CloudCache(accountDir(mcDataDir, accountId));
+    }
+
+    /**
+     * Where {@link #forAccount} keeps an account's copy: {@code gtnhplanner/cloud/<accountId>/}.
+     *
+     * @throws IllegalArgumentException for a blank id
+     */
+    public static File accountDir(final File mcDataDir, final String accountId) {
+        return new File(mcDataDir, "gtnhplanner/cloud/" + part(accountId));
+    }
+
+    /**
+     * Where a game server's team backend's plans are kept for one player:
+     * {@code gtnhplanner/team/<serverId>/<userId>/},
+     * apart from every website account's and every other server's.
+     *
+     * @throws IllegalArgumentException for a blank id
+     */
+    public static File teamDir(final File mcDataDir, final String serverId, final String userId) {
+        return new File(mcDataDir, "gtnhplanner/team/" + part(serverId) + "/" + part(userId));
+    }
+
+    /** An id as a folder's name; never one every id would share. */
+    private static String part(final String id) {
+        if (id == null || id.isBlank()
+            || safe(id).replace(".", "")
                 .isEmpty())
-            throw new IllegalArgumentException("a cloud cache needs an account id");
-        return new CloudCache(new File(mcDataDir, "gtnhplanner/cloud/" + safe(accountId)));
+            throw new IllegalArgumentException("a cloud cache needs an id");
+        return safe(id);
     }
 
     public CloudCache(final File dir) {
@@ -83,6 +109,11 @@ public final class CloudCache {
         // Leftovers of a write that never finished: the real files are whole. Cleaned here, before the writer runs,
         // never later, when a .new may be one being written.
         deleteTemps(dir);
+    }
+
+    /** The folder this copy is kept in. */
+    public File dir() {
+        return dir;
     }
 
     private static void deleteTemps(final File d) {

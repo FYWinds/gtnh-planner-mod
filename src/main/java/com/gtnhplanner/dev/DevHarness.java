@@ -820,6 +820,14 @@ public final class DevHarness {
                     final com.gtnhplanner.data.flowchart.Plan p = com.gtnhplanner.data.flowchart.Plan.player();
                     r.put("signedInAs", com.gtnhplanner.library.Account.username());
                     r.put("account", com.gtnhplanner.library.Account.accountId());
+                    // A team backend in the website's place: who and where (never its session).
+                    final com.gtnhplanner.library.Account.Team team = com.gtnhplanner.library.Account.team();
+                    if (team != null) {
+                        r.put("team", team.toString());
+                        r.put("teamSite", com.gtnhplanner.cloud.net.CloudApi.site(team.token()));
+                        r.put("teamLive", com.gtnhplanner.cloud.net.CloudApi.live(team.token()));
+                        r.put("teamWorld", team.worldKey());
+                    }
                     r.put("cloudPlans", p != null && p.isCloud());
                     if (s == null) return r;
                     r.put("status", s.status());

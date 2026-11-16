@@ -227,12 +227,13 @@ public final class TaskThings {
 
     // region Where the player stands
 
-    /** The world placed machines and spots are kept under, worked out once per world. */
+    /** The world placed machines and spots are kept under, worked out once per world (a team backend's as it says). */
     private static String keyPath, key = "";
 
     static String worldKey() {
         final String path = NEIClientConfig.getWorldPath();
         if (path == null || path.isEmpty()) return "";
+        if (com.gtnhplanner.library.Account.team() != null) return GameCloud.worldKey();
         if (!path.equals(keyPath)) {
             keyPath = path;
             key = GameCloud.worldKey();

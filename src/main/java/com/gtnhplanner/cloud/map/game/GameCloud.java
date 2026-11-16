@@ -19,6 +19,7 @@ import com.gtnhplanner.importer.NodeMaker;
 import com.gtnhplanner.importer.RecipeIndex;
 import com.gtnhplanner.importer.game.GameNodeMaker;
 import com.gtnhplanner.importer.game.NeiRecipeIndex;
+import com.gtnhplanner.library.Account;
 import com.gtnhplanner.library.CommunityApi;
 import com.gtnhplanner.library.PlanExport;
 import com.gtnhplanner.library.Posting;
@@ -43,9 +44,12 @@ public final class GameCloud implements CloudGame {
     /**
      * The world placed machines are kept under: a server by its address (NEI's name for it), so everyone playing there
      * shares them; a single-player world by an id made for it the first time, kept beside its plans. Empty outside a
-     * world. Hashed: a plan shared with others never names anyone's server or save.
+     * world. Hashed: a plan shared with others never names anyone's server or save. While a team backend is attached,
+     * the key it gave for its world, whatever address the player typed.
      */
     public static String worldKey() {
+        final Account.Team team = Account.team();
+        if (team != null) return team.worldKey();
         final String path = NEIClientConfig.getWorldPath();
         if (path == null || path.isEmpty()) return "";
         if (path.startsWith("remote/")) return "server:" + LiveClient.serverHash(path)
