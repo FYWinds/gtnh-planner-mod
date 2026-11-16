@@ -84,6 +84,35 @@ final class LiveTestServer implements AutoCloseable {
     private final Map<Channel, java.util.Set<String>> in = new ConcurrentHashMap<>();
     private final AtomicInteger others = new AtomicInteger();
 
+    /**
+     * Mounted under a path, as a game server's team backend is ({@code /etotweaks/planner}): the socket is
+     * {@code <prefix>/live}, its health {@code <prefix>/live/health}, every other request under the prefix goes to
+     * {@link #rest}, anything else is 404, and every request needs a session ({@link #accounts}). Empty: any path
+     * upgrades and only the upgrade's cookie is checked, as before.
+     */
+    volatile String prefix = "";
+    /**
+     * Who each session is ({@code gtnh_session} to {id, username}). With any set (or a prefix), only these get in; each
+     * is welcomed as itself, and its batches are stamped with its id. None: everyone is u1, ada.
+     */
+    final Map<String, String[]> accounts = new ConcurrentHashMap<>();
+    /** Every HTTP request under a prefix, in order: "METHOD uri session". */
+    final List<String> requests = new CopyOnWriteArrayList<>();
+    /** The REST routes under the prefix: the method, the uri past the prefix, who asks, the body; {status, body}. */
+    volatile Rest rest;
+    /** Who each socket is (a prefix only). */
+    private final Map<Channel, String[]> who = new ConcurrentHashMap<>();
+
+    interface Rest {
+
+        String[] answer(String method, String uri, String[] who, String body);
+    }
+
+    /** The id a socket's batches are stamped with. */
+    private String by(final ChannelHandlerContext ctx) {
+        return who.getOrDefault(ctx.channel(), new String[] { "u1", "ada" })[0];
+    }
+
     private final NioEventLoopGroup group = new NioEventLoopGroup(2);
     private final Channel server;
     private final AtomicInteger seq = new AtomicInteger();
@@ -135,10 +164,15 @@ final class LiveTestServer implements AutoCloseable {
                 s.addProperty("doc", doc);
                 s.addProperty("seq", seqs.getOrDefault(doc, 0L));
                 s.add("plan", plans.getOrDefault(doc, new JsonObject()));
-                s.addProperty("role", "owner");
+                // The doc key's owner, as the accounts know them (none: u1, ada, the owner).
+                final String ownerId = accounts.isEmpty() || !doc.contains(":") ? "u1"
+                    : doc.substring(0, doc.indexOf(':'));
+                String ownerName = "ada";
+                for (final String[] a : accounts.values()) if (a[0].equals(ownerId)) ownerName = a[1];
+                s.addProperty("role", ownerId.equals(by(ctx)) ? "owner" : "editor");
                 final JsonObject owner = new JsonObject();
-                owner.addProperty("id", "u1");
-                owner.addProperty("username", "ada");
+                owner.addProperty("id", ownerId);
+                owner.addProperty("username", ownerName);
                 s.add("owner", owner);
                 s.add("members", new JsonArray());
                 s.add("present", new JsonArray());
@@ -167,14 +201,14 @@ final class LiveTestServer implements AutoCloseable {
                     o.addProperty("t", "ops");
                     o.addProperty("doc", doc);
                     o.addProperty("seq", had);
-                    o.addProperty("by", "u1");
+                    o.addProperty("by", by(ctx));
                     o.addProperty("cid", cid);
                     o.add("ops", new JsonArray());
                     ctx.writeAndFlush(new TextWebSocketFrame(o.toString()));
                     return;
                 }
                 final java.util.function.UnaryOperator<JsonArray> fix = correct;
-                apply(doc, cid, "u1", fix == null ? f.getAsJsonArray("ops") : fix.apply(f.getAsJsonArray("ops")));
+                apply(doc, cid, by(ctx), fix == null ? f.getAsJsonArray("ops") : fix.apply(f.getAsJsonArray("ops")));
             }
             default -> {}
         }
@@ -194,7 +228,7 @@ final class LiveTestServer implements AutoCloseable {
                             .addLast(new SslHandler(engine));
                     }
                     ch.pipeline()
-                        .addLast(new HttpServerCodec(), new HttpObjectAggregator(65536), new Handler());
+                        .addLast(new HttpServerCodec(), new HttpObjectAggregator(8 << 20), new Handler());
                 }
             })
             .bind(new InetSocketAddress("127.0.0.1", 0))
@@ -260,7 +294,8 @@ final class LiveTestServer implements AutoCloseable {
         protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) {
             if (msg instanceof FullHttpRequest) {
                 final FullHttpRequest req = (FullHttpRequest) msg;
-                if (req.getUri()
+                if (!prefix.isEmpty() && !mounted(ctx, req)) return;
+                if (prefix.isEmpty() && req.getUri()
                     .endsWith("/health")) {
                     // The service's health route, as the real one answers it: it runs.
                     ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK))
@@ -307,6 +342,73 @@ final class LiveTestServer implements AutoCloseable {
             }
         }
 
+        /**
+         * A request to a server mounted under {@link #prefix}: true for the socket's upgrade with a known session (it
+         * goes on as an upgrade); anything else is answered here (health, REST, 401, 404).
+         */
+        private boolean mounted(final ChannelHandlerContext ctx, final FullHttpRequest req) {
+            final String uri = req.getUri();
+            final int q = uri.indexOf('?');
+            final String path = q < 0 ? uri : uri.substring(0, q);
+            final String cookie = req.headers()
+                .get(HttpHeaders.Names.COOKIE);
+            final String session = cookie != null && cookie.startsWith("gtnh_session=")
+                ? cookie.substring("gtnh_session=".length())
+                : null;
+            requests.add(
+                req.getMethod()
+                    .name() + " "
+                    + uri
+                    + " "
+                    + (session == null ? "-" : session));
+            if (!path.startsWith(prefix + "/")) {
+                http(ctx, 404, "{\"error\":\"not found\"}");
+                return false;
+            }
+            final String[] account = session == null ? null : accounts.get(session);
+            if (account == null) {
+                http(ctx, 401, "{\"error\":\"not signed in\"}");
+                return false;
+            }
+            final String route = path.substring(prefix.length());
+            if (route.equals("/live")) {
+                who.put(ctx.channel(), account);
+                return true;
+            }
+            if (route.equals("/live/health")) {
+                http(ctx, 200, "{\"ok\":true}");
+                return false;
+            }
+            final Rest r = rest;
+            final String[] answer = r == null ? new String[] { "404", "{\"error\":\"not found\"}" }
+                : r.answer(
+                    req.getMethod()
+                        .name(),
+                    uri.substring(prefix.length()),
+                    account,
+                    req.content()
+                        .toString(java.nio.charset.StandardCharsets.UTF_8));
+            http(ctx, Integer.parseInt(answer[0]), answer[1]);
+            return false;
+        }
+
+        /** An HTTP answer, the connection closed after it. */
+        private void http(final ChannelHandlerContext ctx, final int status, final String body) {
+            final byte[] out = body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            final DefaultFullHttpResponse r = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1,
+                HttpResponseStatus.valueOf(status),
+                io.netty.buffer.Unpooled.wrappedBuffer(out));
+            r.headers()
+                .set(HttpHeaders.Names.CONTENT_TYPE, "application/json");
+            r.headers()
+                .set(HttpHeaders.Names.CONTENT_LENGTH, out.length);
+            r.headers()
+                .set(HttpHeaders.Names.CONNECTION, "close");
+            ctx.writeAndFlush(r)
+                .addListener(ChannelFutureListener.CLOSE);
+        }
+
         private void respond(final ChannelHandlerContext ctx, final JsonObject f) {
             final String t = f.get("t")
                 .getAsString();
@@ -319,9 +421,15 @@ final class LiveTestServer implements AutoCloseable {
                     pings.incrementAndGet();
                     if (answerPings) reply(ctx, "{\"t\":\"pong\"}");
                 }
-                case "hello" -> reply(
-                    ctx,
-                    "{\"t\":\"welcome\",\"v\":1,\"you\":{\"id\":\"u1\",\"username\":\"ada\",\"color\":\"#fa0\"}}");
+                case "hello" -> {
+                    final String[] me = who.getOrDefault(ctx.channel(), new String[] { "u1", "ada" });
+                    reply(
+                        ctx,
+                        "{\"t\":\"welcome\",\"v\":1,\"you\":{\"id\":\"" + me[0]
+                            + "\",\"username\":\""
+                            + me[1]
+                            + "\",\"color\":\"#fa0\"}}");
+                }
                 case "join" -> {
                     final JsonObject s = new JsonObject();
                     s.addProperty("t", "snapshot");
@@ -366,6 +474,7 @@ final class LiveTestServer implements AutoCloseable {
         public void channelInactive(final ChannelHandlerContext ctx) {
             clients.remove(ctx.channel());
             in.remove(ctx.channel());
+            who.remove(ctx.channel());
         }
 
         @Override
