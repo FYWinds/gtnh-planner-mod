@@ -8,6 +8,16 @@ test {
     systemProperty 'gtnhplanner.bench', project.findProperty('bench') ?: ''
     for (String k : ['near', 'wide', 'run', 'turn45', 'turn90', 'cross', 'nearCost', 'rounds', 'alone', 'fork', 'trunks']) if (project.hasProperty('router.' + k)) systemProperty 'gtnhplanner.router.' + k, project.property('router.' + k)
     systemProperty 'java.awt.headless', 'true'
+    // A real team backend, end to end (TeamE2ETest, skipped without them): -Pteam.site=<REST base> -Pteam.tokenA=
+    // -Pteam.tokenB= [-Pteam.tokenC=] [-Pteam.live=] (-D works too). Its steps go to the console and build/team-e2e.log.
+    for (String k : ['site', 'live', 'tokenA', 'tokenB', 'tokenC']) {
+        def v = project.findProperty('team.' + k) ?: System.getProperty('team.' + k)
+        if (v) systemProperty 'team.' + k, v
+    }
+    if (project.findProperty('team.site') ?: System.getProperty('team.site')) {
+        testLogging.showStandardStreams = true
+        outputs.upToDateWhen { false }
+    }
     // The solver's goldens (SolverGoldenTest): -PwriteGoldens writes them afresh from the solver as it is.
     if (project.hasProperty('writeGoldens')) systemProperty 'gtnhplanner.solver.writeGoldens', 'true'
     if (project.hasProperty('stages')) systemProperty 'gtnhplanner.stages', 'true'
