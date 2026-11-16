@@ -648,7 +648,10 @@ public final class CloudSession {
         return out;
     }
 
-    /** Takes a plan off the planner that the account no longer has for this player: deleted, else unshared. */
+    /**
+     * Takes a plan off the planner that the account no longer has for this player: deleted, else unshared (on a team
+     * backend: no longer among the team's plans, deleted or left with the team it belongs to).
+     */
     private void dropped(final LiveDoc d, final boolean deleted) {
         GtnhPlanner.LOG.info(
             "[cloud] {}: '{}' ({}) leaves the planner: {}",
@@ -671,7 +674,8 @@ public final class CloudSession {
             plan.getGraphs()
                 .add(new Graph(UiText.tr("audit.default_plan_name", 1)));
         plan.removeSlot(i);
-        host.notice(UiText.tr(deleted ? "cloud.plan_deleted" : "cloud.plan_unshared", name));
+        host.notice(
+            UiText.tr(deleted ? "cloud.plan_deleted" : team ? "cloud.plan_left_team" : "cloud.plan_unshared", name));
         keepDevice();
     }
 
@@ -940,6 +944,8 @@ public final class CloudSession {
             if (doc.isEmpty() || doc.startsWith(accountId + ":") || !announced.add(doc)) return;
             // Shared again after it was left: it comes back with the list.
             if (letGo.remove(doc)) keepDevice();
+            // A team's every new plan is its members' at once: it joins the library, unannounced.
+            if (team) return;
             // Each time it is told: the player hears it once per time they are added.
             host.shared(
                 owner.username()
@@ -953,9 +959,10 @@ public final class CloudSession {
             listAt = -LIST_EVERY_MS;
             announced.remove(doc);
             final LiveDoc d = docs.get(doc);
+            // A team backend takes the player's own plans too when the player leaves the team: they stay with it.
             if (d != null && !d.creating()
-                && !d.ownerId()
-                    .equals(accountId))
+                && (team || !d.ownerId()
+                    .equals(accountId)))
                 dropped(d, false);
         }
 
@@ -1160,7 +1167,7 @@ public final class CloudSession {
             if (d.waiting()) continue;
             dropped(
                 d,
-                team || d.ownerId()
+                !team && d.ownerId()
                     .equals(accountId));
         }
         keepDevice();

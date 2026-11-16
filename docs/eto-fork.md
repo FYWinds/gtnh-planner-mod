@@ -93,7 +93,9 @@ com.gtnhplanner.api.TeamBackend.detach();
   Community, the Community shelf's My posts and Edit and Delete on posts. The library has one shelf, TEAM, with the
   player's plans and the team mates' together (a team mate's says who made it), in place of My plans and Shared with
   me; Community stays. A team mate's plan is the player's to delete for the team (`DELETE ...?owner=`), never to leave.
-  Assigning tasks works as it does signed in.
+  Assigning tasks works as it does signed in. A team mate's new plan joins the library without a "shared with you"
+  notice; a plan the team no longer has (deleted, or kept by the team the player left: the backend's `unshared` for
+  every plan of it, the player's own too) leaves the planner with "no longer among your team's plans".
 - Testing without the game: `TeamBackendLiveTest` runs the planner's session against `LiveTestServer` mounted under
   the path, with a session per player. `TeamE2ETest` runs the planner's client against a real server (two players of
   one team, optionally one outside it) and prints PASS or FAIL a step (also to `build/team-e2e.log`):

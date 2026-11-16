@@ -4023,3 +4023,4 @@ gtnhplanner.ui.team_tip=你在本服务器上的身份：这里的方案属于�
 gtnhplanner.ui.library.team=团队
 gtnhplanner.ui.library.team_tip=团队：你和队友在本服务器上的所有方案，无论是否打开
 gtnhplanner.ui.cloud.world_plans_in_team=此世界的方案已加入你的队伍
+gtnhplanner.ui.cloud.plan_left_team=“%s”已不在你队伍的方案中

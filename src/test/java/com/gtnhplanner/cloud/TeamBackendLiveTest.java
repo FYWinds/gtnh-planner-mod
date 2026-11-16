@@ -110,6 +110,13 @@ class TeamBackendLiveTest {
             notices.add(text);
         }
 
+        final List<String> sharedWithMe = new CopyOnWriteArrayList<>();
+
+        @Override
+        public void shared(final String ownerName, final String planName, final String key) {
+            sharedWithMe.add(key);
+        }
+
         @Override
         @Nullable
         public Plan inHand() {
@@ -559,6 +566,42 @@ class TeamBackendLiveTest {
                 .anyMatch(r -> r.contains("/members/")),
             "nobody leaves a team's plan");
         assertTrue(websiteHeard.isEmpty(), "the website heard: " + websiteHeard);
+    }
+
+    @Test
+    void theTeamsPlansComeUnannouncedAndLeaveWithTheTeam() {
+        attach(STEVE_TOKEN, SERVER);
+        final Plan p = begin();
+        final Graph made = Boards.corpus("glass");
+        host.game.knowing(made);
+        made.setName("Glass");
+        p.getGraphs()
+            .add(made);
+        session.save(p);
+        final String key = made.getCloudKey();
+        tickUntil(
+            "made, and live",
+            () -> designs.containsKey(key) && session.status() == CloudSession.Status.LIVE
+                && !session.doc(key)
+                    .creating());
+
+        // A team mate's new plan is the player's at once: in the planner, with no "shared with you".
+        designs.put(ALEX + ":d3", design(ALEX, "d3", "Boilers"));
+        server.send(
+            "{\"t\":\"shared\",\"doc\":\"" + ALEX
+                + ":d3\",\"owner\":{\"id\":\""
+                + ALEX
+                + "\",\"username\":\"Alex\"},\"name\":\"Boilers\"}");
+        tickUntil("the team mate's plan is in the planner", () -> slot(p, ALEX + ":d3") != null);
+        assertTrue(host.sharedWithMe.isEmpty(), "announced: " + host.sharedWithMe);
+
+        // The player left the team: the backend unshares the old team's plans, the player's own too.
+        designs.remove(key);
+        designs.remove(ALEX + ":d3");
+        server.send("{\"t\":\"unshared\",\"doc\":\"" + key + "\"}");
+        tickUntil("the player's own plan stays with the team", () -> slot(p, key) == null);
+        assertTrue(host.notices.contains(UiText.tr("cloud.plan_left_team", "Glass")), "told: " + host.notices);
+        tickUntil("the list drops the team mate's", () -> slot(p, ALEX + ":d3") == null);
     }
 
     @Test

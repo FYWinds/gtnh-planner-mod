@@ -1880,3 +1880,4 @@ gtnhplanner.ui.team_tip=You on this server: the plans here are your team's
 gtnhplanner.ui.library.team=TEAM
 gtnhplanner.ui.library.team_tip=Team: your plans and your team mates' on this server, open or closed
 gtnhplanner.ui.cloud.world_plans_in_team=Your plans from this world are now your team's
+gtnhplanner.ui.cloud.plan_left_team='%s' is no longer among your team's plans
