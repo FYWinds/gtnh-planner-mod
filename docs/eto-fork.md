@@ -48,11 +48,57 @@ package and the save format are upstream's, so plans and the gtnhplanner.com acc
 - **Resource multiblocks.** The Void Miners, the Planetary Gas Siphon and the Space Pumping Modules are non-recipe
   machines under Other (`power/sources/NrMiners`, `NrPumps`, the game's tables read by `power/game/NrGameData`,
   `docs/design/nr-sources.md`).
+- **Team mode.** On a server running ETO GTNH Tweaks, cloud plans and live editing are the server's, shared with
+  the player's GTNHLib team, instead of gtnhplanner.com's (see "Team mode" below).
 - **Fixes** for reports open upstream: see `.changelogs/unreleased.md`.
 - **The tour runs in English only.** It finds interface parts and NEI items by their English text; in another
   language it says so instead of starting.
 - **No update offer.** A build whose version has `-eto` does not ask GitHub for upstream's releases: the pack delivers
   this fork's updates.
+
+## Team mode
+
+ETO GTNH Tweaks serves the planner's cloud protocol (`docs/design/cloud-live.md`: the website's REST routes, the live
+socket) on the Minecraft game port under `/etotweaks/planner`, scoped to the player's GTNHLib team, with the Minecraft
+player as the account (UUID as id, Minecraft name as username). After login the server says hello, and Tweaks' client
+side hands the connection over by reflection; on disconnect it hands it back. Neither mod needs the other.
+
+```java
+com.gtnhplanner.api.TeamBackend.attach(site, live, token, userId, username, serverId, worldKey);
+com.gtnhplanner.api.TeamBackend.detach();
+```
+
+- `site` is the REST base (`http://<host>:<port>/etotweaks/planner`), `live` the socket
+  (`ws://<host>:<port>/etotweaks/planner/live`), `token` the server's session (`<uuid>.<expires>.<hmac>`), `userId`
+  and `username` the player, `serverId` the server's plan store, `worldKey` the world's key. `attach` again with the
+  same `serverId` and `userId` only takes the new session; `detach` is safe when nothing is attached. Each call logs one
+  INFO line (`[team] attached: site=... userId=... username=... serverId=...`, `[team] detached: ...`), never the session.
+- What moves: cloud REST and the socket go to `site` and `live` (the planner asks `P/live/health`, `P/live/nearby`,
+  `P/api/community/auth/me`, `P/api/library`, `P/api/library/designs/<id>[?owner=]`, `.../members`,
+  `P/api/accounts/search?q=` and opens `P/live`), with `Cookie: gtnh_session=<token>`. The session decides the host
+  (`CloudApi.useTeam`, `site(token)`, `live(token)`): a server's session goes to that server only, even a call still
+  under way after a new one came or the player left; a session's calls stop once the server is detached
+  (`CloudHooks.session`). Who cloud plans are for (`Account.accountId`, `userId`, `username`: the top bar, tasks'
+  people, comments, presence) is the player there; nothing of it is written to `config/gtnhplanner-account.properties`.
+  This device keeps the plans under `gtnhplanner/team/<serverId>/<userId>/` (the sticky `device.json` too), apart from
+  every website account and every other server. Placed machines and task locations use `worldKey`
+  (`GameCloud.worldKey`). Entering and leaving is heard as a sign-in and sign-out (`Account.onChange`, on the client
+  thread whatever thread called): the plans in hand are saved where they belong and load from the team. The first load
+  sends the world's own plans into the team, as the first sign-in does for an account (`CloudSession.bringOver`,
+  `Migration`), each keyed to the player so it goes once per server store and player.
+- What stays: the community library (its list goes with the website's session, if any), feedback, the website listener
+  and the website's sign-in, which is the one again after `detach`.
+- What is hidden while attached: Sign in, Sign out and Create account (the top bar's account key is the player's face
+  and name, with no menu), Invite people and the share box (the team is who edits), Publish to Community and Update in
+  Community, the Community shelf's My posts and Edit and Delete on posts. The library has one shelf, TEAM, with the
+  player's plans and the team mates' together (a team mate's says who made it), in place of My plans and Shared with
+  me; Community stays. A team mate's plan is the player's to delete for the team (`DELETE ...?owner=`), never to leave.
+  Assigning tasks works as it does signed in.
+- Testing without the game: `TeamBackendLiveTest` runs the planner's session against `LiveTestServer` mounted under
+  the path, with a session per player. `TeamE2ETest` runs the planner's client against a real server (two players of
+  one team, optionally one outside it) and prints PASS or FAIL a step (also to `build/team-e2e.log`):
+  `gp-gradle.py test --tests com.gtnhplanner.cloud.TeamE2ETest -Pteam.site=http://HOST:PORT/etotweaks/planner
+  -Pteam.tokenA=... -Pteam.tokenB=... [-Pteam.tokenC=...]`.
 
 ## Working on it
 
