@@ -1476,13 +1476,14 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
 
     // region Shared machine sections
 
-    /** The keys on a recipe's rule row, from the right: take it off, move it down, move it up. */
+    /** The keys on a recipe's rule row, from the right: take it off, move it down, move it up, give it its own card. */
     private static final int SECTION_KEY = 12;
     private static final int KEY_OFF_X = RIGHT - SECTION_KEY;
     private static final int KEY_DOWN_X = KEY_OFF_X - 6 - SECTION_KEY;
     private static final int KEY_UP_X = KEY_DOWN_X - 2 - SECTION_KEY;
+    private static final int KEY_SPLIT_X = KEY_UP_X - 6 - SECTION_KEY;
 
-    /** {section, key} under a card-local point (key 0 up, 1 down, 2 off), or null. */
+    /** {section, key} under a card-local point (key 0 up, 1 down, 2 off, 3 split), or null. */
     private int[] sectionKeyAt(final float x, final float y) {
         if (layout == null || !shared() || glance()) return null;
         for (int s = 0; s < models.size(); s++) {
@@ -1491,6 +1492,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
             if (in(x, y, KEY_UP_X, ky, SECTION_KEY, SECTION_KEY)) return new int[] { s, 0 };
             if (in(x, y, KEY_DOWN_X, ky, SECTION_KEY, SECTION_KEY)) return new int[] { s, 1 };
             if (in(x, y, KEY_OFF_X, ky, SECTION_KEY, SECTION_KEY)) return new int[] { s, 2 };
+            if (in(x, y, KEY_SPLIT_X, ky, SECTION_KEY, SECTION_KEY)) return new int[] { s, 3 };
         }
         return null;
     }
@@ -1518,6 +1520,7 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
         sectionKey(KEY_UP_X, ky, 0, s > 0, hotKey == 0);
         sectionKey(KEY_DOWN_X, ky, 1, s < models.size() - 1, hotKey == 1);
         sectionKey(KEY_OFF_X, ky, 2, true, hotKey == 2);
+        sectionKey(KEY_SPLIT_X, ky, 3, true, hotKey == 3);
     }
 
     private static void sectionKey(final int x, final int y, final int kind, final boolean enabled, final boolean hot) {
@@ -1530,6 +1533,12 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
             }
             case 1 -> {
                 for (int i = 0; i < 3; i++) Hyb.rect(cx - i - 1, cy + 1 - i, 2 * i + 2, 1, ink);
+            }
+            // An arrow leaving up and to the right: off the card.
+            case 3 -> {
+                for (int i = -3; i <= 2; i++) Hyb.rect(cx + i, cy - 1 - i, 1, 1, ink);
+                Hyb.rect(cx - 1, cy - 3, 4, 1, ink);
+                Hyb.rect(cx + 2, cy - 3, 1, 4, ink);
             }
             default -> {
                 for (int i = -3; i <= 2; i++) {
@@ -2077,6 +2086,8 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
                 yield switch (key[1]) {
                     case 0 -> Tip.of(UiText.tr("card.move_this_recipe_up"));
                     case 1 -> Tip.of(UiText.tr("card.move_this_recipe_down"));
+                    case 3 -> Tip.of(UiText.tr("card.give_this_recipe_a_card_of_its_own"))
+                        .muted(UiText.tr("card.it_keeps_its_wires"));
                     default -> Tip.of(UiText.tr("card.remove_this_recipe_from_the_card"))
                         .muted(UiText.tr("card.its_wires_are_removed_too"));
                 };
@@ -2395,8 +2406,11 @@ public final class RecipeCard extends ParentWidget<RecipeCard> implements Intera
                 final int[] key = sectionKeyAt(x, y);
                 if (mouseButton == 0 && key != null) {
                     final UUID section = sectionId(key[0]);
-                    if (key[1] == 2) session.removeSection(section);
-                    else session.moveSection(section, key[1] == 0 ? -1 : 1);
+                    switch (key[1]) {
+                        case 2 -> session.removeSection(section);
+                        case 3 -> session.splitSection(section);
+                        default -> session.moveSection(section, key[1] == 0 ? -1 : 1);
+                    }
                 }
             }
             case MACHINE -> {

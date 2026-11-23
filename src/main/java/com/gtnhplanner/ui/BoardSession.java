@@ -2267,6 +2267,41 @@ public final class BoardSession {
         Sfx.REMOVE.play();
     }
 
+    /**
+     * Takes a recipe off its shared machine as a card of its own, wires and all
+     * ({@link com.gtnhplanner.data.flowchart.MachineGroup#split}): on the nearest clear spot under the machine's card
+     * and in the group that spot is in. One undo step; the board brings the card into view.
+     */
+    public void splitSection(final UUID nodeId) {
+        final com.gtnhplanner.data.flowchart.MachineGroup g = sharedOf(nodeId);
+        final Node host = graph.nodes.get(hostOf(nodeId));
+        if (g == null || host == null) return;
+        final int h = cardHeight(List.of(nodeId));
+        final int[] at = clearSpot(host.x, host.y + cardHeight(g.getSections()) + 40, h);
+        edit(() -> {
+            if (!com.gtnhplanner.data.flowchart.MachineGroup.split(graph, nodeId, at[0], at[1])) return;
+            final UUID in = com.gtnhplanner.ui.group.GroupEdits
+                .groupUnder(graph, at[0] + CardLayout.W / 2f, at[1] + h / 2f, Set.of());
+            com.gtnhplanner.data.flowchart.Groups.setGroupOf(graph, nodeId, in);
+            // Its frame grows to hold the card, as it does for one dropped in.
+            if (in != null) com.gtnhplanner.data.flowchart.Groups
+                .fit(graph, id -> id.equals(nodeId) ? new int[] { at[0], at[1], CardLayout.W, h } : null);
+        });
+        justAdded = nodeId;
+        focusAdded = false;
+        Sfx.LIFT.play();
+    }
+
+    /** How tall the card of these recipes is (one recipe, or a shared machine's in order). */
+    private int cardHeight(final List<UUID> sections) {
+        final List<CardModel> on = new ArrayList<>();
+        for (final UUID s : sections) {
+            final CardModel m = models.get(s);
+            if (m != null) on.add(m);
+        }
+        return on.isEmpty() ? 150 : new CardLayout(on, graph()).height;
+    }
+
     /** Moves a recipe up (-1) or down (+1) on its shared card; the first one is the host. */
     public void moveSection(final UUID nodeId, final int step) {
         final com.gtnhplanner.data.flowchart.MachineGroup g = sharedOf(nodeId);
@@ -2780,14 +2815,18 @@ public final class BoardSession {
         Sfx.CLONE.play();
     }
 
-    /**
-     * The clear spot nearest to just under a card (a gap below it, in line with it): on rings of grid steps round
-     * there, nearest first, clear of every card and drawer by a margin; none within reach, there itself.
-     */
+    /** The clear spot nearest to just under a card (a gap below it, in line with it). */
     private int[] clearSpotUnder(final Node node) {
-        final CardModel model = models.get(node.id);
-        final int h = model == null ? 150 : new CardLayout(model, graph()).height;
-        final int x0 = node.x, y0 = node.y + h + 40, step = 20;
+        final int h = cardHeight(List.of(node.id));
+        return clearSpot(node.x, node.y + h + 40, h);
+    }
+
+    /**
+     * The clear spot for a card {@code h} tall nearest to {@code x0}, {@code y0}: on rings of grid steps round there,
+     * nearest first, clear of every card and drawer by a margin; none within reach, there itself.
+     */
+    private int[] clearSpot(final int x0, final int y0, final int h) {
+        final int step = 20;
         if (!NewCards.overlapsAnything(graph, x0, y0, CardLayout.W, h, null)) return new int[] { x0, y0 };
         for (int r = 1; r <= 40; r++) {
             int[] best = null;

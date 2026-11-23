@@ -40,3 +40,7 @@ recipes that time-share one machine. Read from its source on 2026-10-07; FF boar
   each change. Per-recipe settings (a recipe's own heat) stay per section.
 - Adding a recipe: NEI's uses of the card's machine are exactly the recipes it runs, so the card's "+" opens that
   page and arms a lookup; the recipe picked with NEI's "+" joins the card as a section.
+- Splitting (the ETO fork's, not Factory Flow's): a fourth key on a section's rule row, left of the arrows, takes the
+  recipe off the machine as a card of its own (`MachineGroup.split`): the node leaves the group's sections and stands
+  on the nearest clear spot under the card, with its ports, wires, rates and settings; its count is Any. The group
+  keeps its count, and with one recipe left the group goes and that recipe's card takes the count and its rule.

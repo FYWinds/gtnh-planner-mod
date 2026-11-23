@@ -27,6 +27,10 @@ package and the save format are upstream's, so plans and the gtnhplanner.com acc
 - **Wire trunks.** Wires from one output port to several cards leave as one line and fork near the cards; wires from
   several cards into one input port join near those cards and come in as one line (`layout/WireTrunks`,
   `docs/design/routing-and-arrange.md`); Settings, Board, "Shared wire trunks" turns both off.
+- **Splitting a shared machine.** A recipe's rule row on a shared machine has a fourth key that gives the recipe a
+  card of its own again, under the machine's card, its wires and rates kept (`MachineGroup.split`,
+  `BoardSession.splitSection`; upstream and Factory Flow have only undo and X, which removes the recipe). The machine
+  keeps its count, also when one recipe is left and it is an ordinary card again.
 - **Processing multiblocks.** The Extreme Industrial Greenhouse, the Integrated Ore Factory and the Large Essentia
   Smeltery are non-recipe machines under Other (`power/sources/NrGreenhouse`, `NrOreFactory`, `NrEssentiaSmeltery`,
   the game's seeds, recipes and aspects read by `power/game/Nr*Game`; essentia as card readings;

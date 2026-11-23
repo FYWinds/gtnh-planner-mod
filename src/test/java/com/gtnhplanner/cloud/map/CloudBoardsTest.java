@@ -24,6 +24,7 @@ import com.gtnhplanner.data.flowchart.BoardGroup;
 import com.gtnhplanner.data.flowchart.Drawer;
 import com.gtnhplanner.data.flowchart.Graph;
 import com.gtnhplanner.data.flowchart.Groups;
+import com.gtnhplanner.data.flowchart.MachineGroup;
 import com.gtnhplanner.data.flowchart.Node;
 import com.gtnhplanner.data.flowchart.Note;
 import com.gtnhplanner.library.PlanExport;
@@ -827,6 +828,39 @@ class CloudBoardsTest {
         assertNull(o.board.drawers.get(buffer.getId()), "not on the board");
         final CloudPlans.Written w = CloudPlans.write(o.board, o.game, plan, o.basis);
         assertEquals(List.of(), CloudPlans.diff(plan, w.plan()), "and kept as it was");
+    }
+
+    @Test
+    void aRecipeSplitOffASharedMachineIsACardOfItsOwnWithItsWires() {
+        final Open o = new Open(Boards.corpus("alumina-line-shared-reactor"));
+        final MachineGroup shared = sharedMachine(o.board);
+        final List<UUID> sections = List.copyOf(shared.getSections());
+        final int wires = o.board.getEdges()
+            .size();
+        // One recipe off: the machine keeps the others.
+        assertTrue(MachineGroup.split(o.board, sections.get(1), 4000, 4000));
+        List<LiveOp> ops = o.send("a recipe split off");
+        assertEquals(0, count(ops, LiveOp.Kind.DEL, "edges") + count(ops, LiveOp.Kind.DEL, "nodes"), ops.toString());
+        assertEquals(
+            sections.size() - 1,
+            ((MachineGroup) o.board.groups.get(shared.getId())).getSections()
+                .size());
+        // Every other but one: no shared machine is left of it.
+        for (int i = 2; i < sections.size(); i++)
+            assertTrue(MachineGroup.split(o.board, sections.get(i), 4000, 4000 + 400 * i));
+        ops = o.send("the rest split off");
+        assertEquals(0, count(ops, LiveOp.Kind.DEL, "edges") + count(ops, LiveOp.Kind.DEL, "nodes"), ops.toString());
+        assertNull(o.board.groups.get(shared.getId()));
+        assertEquals(
+            wires,
+            o.board.getEdges()
+                .size());
+    }
+
+    private static MachineGroup sharedMachine(final Graph g) {
+        for (final com.gtnhplanner.data.flowchart.Group group : g.getGroups())
+            if (group instanceof final MachineGroup m && m.isShared()) return m;
+        throw new IllegalStateException("no shared machine");
     }
 
     // endregion

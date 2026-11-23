@@ -80,6 +80,31 @@ public class MachineGroup extends Group {
         getNodeIds().remove(nodeId);
     }
 
+    /**
+     * Takes a recipe off its shared machine and stands it at {@code x}, {@code y} as a card of its own. Its machine,
+     * settings, rates and wires are the recipe's already and stay; its count is the plan's to decide. The machine
+     * keeps its count: with one recipe left on it, it is that recipe's card again and the count is that card's. False
+     * when the recipe is on no shared machine (nothing changes).
+     */
+    public static boolean split(final Graph graph, final java.util.UUID nodeId, final int x, final int y) {
+        final Node node = graph.nodes.get(nodeId);
+        if (node == null) return false;
+        for (final Group group : graph.getGroups()) {
+            if (!(group instanceof final MachineGroup g) || !g.isShared() || !g.sections.contains(nodeId)) continue;
+            g.removeSection(nodeId);
+            node.x = x;
+            node.y = y;
+            PinRule.set(node, PinRule.ANY);
+            if (!g.isShared()) {
+                final Node last = graph.nodes.get(g.sections.get(0));
+                if (last != null) PinRule.set(last, PinRule.of(g), g.getMachineCapacity());
+                graph.removeGroup(g.getId());
+            }
+            return true;
+        }
+        return false;
+    }
+
     public MachineGroup() {
         // GraphData names a fresh chart element after its type, which spells this one "Machine_group".
         setHeader("Machine Group");

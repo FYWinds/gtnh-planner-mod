@@ -16,6 +16,7 @@
 - More TwistSpaceTechnology 0.8.1 machines on cards: the DTPF Prototype MK-II and Large Neutron Oscillator with their execution cores, the Industrial Magic Matrix and Alchemy Tower, the Mega Digester, the TST Processing Array and Big Bro Array, Ball Lightning's fusion mode, the Intensify Chemical Distorter's chemical plant mode, Hephaestus' Atelier's furnace mode and higher coils, and Biosphere III's bacterial vat. Every GregTech cutter's NEI recipes now open on a card.
 - TwistSpaceTechnology machines with their own NEI pages work on cards: Nether Interface, Super Water Purifier, General Ore Processing Factory, Extreme Crafting Center, Skypiercer Tower, Strange Matter Aggregator, Dyson Sphere Module Launch Site, Bottled Chaos and Eco-Sphere Simulator, each with the settings its run depends on.
 - **Plan together with your team on the server.** On a server running ETO GTNH Tweaks your plans are kept on the server and belong to your GTNH team: everyone in the team finds them on the library's Team shelf and edits them together, live, with no gtnhplanner.com account. The plans you had in that world join them the first time. Signing in, inviting people and posting to Community are not offered there; the Community shelf works as before.
+- **Split a recipe off a shared machine.** Each recipe on a shared machine has a new key beside its arrows that gives it a card of its own again, just under the machine, with its wires and rates kept. Until now the only ways back were undo, or removing the recipe and wiring it again.
 
 ## Better
 
