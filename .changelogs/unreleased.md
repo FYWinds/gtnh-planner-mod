@@ -21,6 +21,9 @@
 ## Better
 
 - Long Chinese text breaks onto new lines instead of running off the edge.
+- A board with many cards in view draws two to three times as fast, most of all on a large screen.
+- On a team server your plans are read while you join, not when you first open the planner, so that first open stalls for less long.
+- The mod's file is a third smaller: 10 MB, was 16.
 
 ## Fixed
 

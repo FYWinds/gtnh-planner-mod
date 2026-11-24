@@ -115,3 +115,44 @@ for a case few plans reach).
 
 Still slow on huge plans: an edit encodes every plan for the undo snapshot and the save (about 1 s at 19,600 cards,
 20 ms at 200), and opening builds every card's model and widget on the client thread. A 200-card plan feels neither.
+
+## In the full pack (2026-11-23)
+
+The numbers above are from the dev game. A player's report from the ETO GTNH 2.9.0 pack (343 mods, Angelica 2.2.43,
+Qz-UILib 5.0.0-beta5 drawing the game's text) said a board with many cards drops frames badly and the first open
+after joining freezes. Measured in a copy of that pack: Java 25, the window 3818x2032 at GUI scale 2, a 250-card plan
+(Factory Flow's "Early auto Baux-Ti-W" tiled 10 times) on a team backend, 35 cards and 45 drawers in view in detail
+(zoom 0.574; `board.zoomedOutAt=35` so that zoom is not the glance view).
+
+The harness runs in a shipped jar with `-Dgtnhplanner.dev=true`, so the steps are the ones under "How to reproduce"
+with `curl http://127.0.0.1:25599/...` in place of `mc.sh call`. Give the window its size before measuring: frame
+time grows with the board's area on screen.
+
+| 35 cards and 45 drawers in view | Before | After |
+| --- | --- | --- |
+| Qz-UILib draws the text (`mc.replaceVanillaFont: true`) | 15.7 fps, 63.7 ms | 27.3 fps, 36.7 ms |
+| Angelica draws the text (`false`) | 25.9 fps, 38.6 ms | 69.5 fps, 14.4 ms |
+
+Fully zoomed out (248 cards as glances) nothing changed: 38 fps with Qz-UILib's text, 64 with Angelica's.
+
+What it was, from the client thread's samples with Angelica's text (the planner's drawing was 85% of the thread):
+
+- **The dot grid, 34%.** A draw for every dot, 12,500 of them on that screen. Now a display list for each zoom and
+  board size, moved by the pan and cut at the board's edge (`BoardCanvas.drawDots`).
+- **Diagonal stripes, about 25%.** A free end's tile, a lit tile and a drawer's frame were a rectangle for every run
+  of every row, thousands of vertices a card, and a vertex costs about 40 ns through Angelica's tessellator path. Now
+  one quad of a repeated texture for each box (`Hyb.stripes`), the same pixels.
+- **A thread-local for every vertex, 10%.** ModularUI's buffer reads `Tessellator.instance` up to three times a
+  vertex, and GTNHLib turns each read into a thread-local lookup. `Hyb.endBatch` reads it once.
+
+With Qz-UILib's text the text is most of what is left: in the player's own profile its `FontRenderer` hooks were 38%
+of the client thread and 56% of the planner's drawing, a fixed cost for every string drawn (it replays GL state round
+each one) and for every width measured. That is the pack's to settle, with `mc.replaceVanillaFont` in
+`config/qz_uilib.yaml`.
+
+The first open after joining, the same plan: the two longest frames added up to about 1.8 s (1.03 + 0.85 s and
+0.96 + 0.79 s in two runs) and now to about 1.0 s (0.62 + 0.40 s, 0.60 + 0.43 s, 0.81 + 0.12 s). What went is reading
+every plan of the team into boards, which a team backend now does as the player joins. What is left is first-time
+work that grows with the open plan, none of it more than a quarter: loading the planner's classes, building 250
+cards and their widgets, the world snapshot's structure shadows and item colours (`SnapshotMaker.make`), the wires'
+first routing and draw, and NEI's item panel. A second open in the same game takes 50 to 80 ms.

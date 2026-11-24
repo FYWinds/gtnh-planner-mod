@@ -59,6 +59,15 @@ package and the save format are upstream's, so plans and the gtnhplanner.com acc
   language it says so instead of starting.
 - **No update offer.** A build whose version has `-eto` does not ask GitHub for upstream's releases: the pack delivers
   this fork's updates.
+- **Team plans load at join.** On a team backend `CloudHooks.loadTeamPlansEarly` loads the plans on the first client
+  tick the world is up and NEI has its recipes, instead of at the first open of the planner. Signed in to
+  gtnhplanner.com, or signed out, they still load at the first open.
+- **Drawing in the full pack.** The board's dot grid is a display list (`BoardCanvas.drawDots`), diagonal stripes are
+  a quad of a repeated texture (`Hyb.stripes`), and a batch goes straight to the tessellator (`Hyb.endBatch`). What
+  it was measured against is in `docs/design/performance-at-scale.md`, "In the full pack".
+- **One copy of every class in the jar.** `addon.late.gradle` turns off the copies GTNHGradle keeps as compiled
+  (`META-INF/versions/25` for ours, `versions/11` for ojAlgo's): every Java runs the Java 8 downgrade, and the jar is
+  10 MB instead of 16.
 
 ## Team mode
 
