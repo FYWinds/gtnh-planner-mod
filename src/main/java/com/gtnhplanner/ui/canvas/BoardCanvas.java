@@ -421,7 +421,7 @@ public final class BoardCanvas extends ParentWidget<BoardCanvas> implements Inte
             // A picture of the plan: the board as it is, solid whatever the see-through, nothing moving or lit.
             final Area a = getArea();
             Hyb.rect(0, 0, a.width, a.height, Hyb.CANVAS);
-            drawDots(a, Hyb.CANVAS_DOT);
+            drawDots(context, a, Hyb.CANVAS_DOT);
             return;
         }
         stepCamera();
@@ -452,19 +452,52 @@ public final class BoardCanvas extends ParentWidget<BoardCanvas> implements Inte
                 a.height / 2f + 11,
                 0xFF6A6C74);
         }
-        drawDots(a, Hyb.seeThrough(Hyb.CANVAS_DOT));
+        drawDots(context, a, Hyb.seeThrough(Hyb.CANVAS_DOT));
     }
 
-    /** The board's dot grid, a dot every grid step once they are far enough apart to read as a grid. */
-    private void drawDots(final Area a, final int dotColor) {
+    /** The dot grid as last recorded: its display list, and what it was recorded for. */
+    private int dotList, dotCols, dotRows, dotColour;
+    private float dotStep, dotSize;
+
+    /**
+     * The board's dot grid, a dot every grid step once they are far enough apart to read as a grid. Recorded once per
+     * zoom and board size and replayed where the pan puts it: a draw for every dot was a third of a frame on a large
+     * screen.
+     */
+    private void drawDots(final ModularGuiContext context, final Area a, final int dotColor) {
         final float zoom = graph().getZoom();
         final float step = GRID * zoom;
         if (step < 6) return;
-        final float ox = mod(graph().getPanX(), step), oy = mod(graph().getPanY(), step);
         final float dot = zoom >= 1 ? 2 : 1;
-        for (float x = ox; x < a.width; x += step) {
-            for (float y = oy; y < a.height; y += step) Hyb.rect(x, y, dot, dot, dotColor);
+        final int cols = (int) Math.ceil(a.width / step), rows = (int) Math.ceil(a.height / step);
+        final int colour = Hyb.faded(dotColor);
+        if (dotList == 0 || step != dotStep
+            || dot != dotSize
+            || cols != dotCols
+            || rows != dotRows
+            || colour != dotColour) {
+            dotStep = step;
+            dotSize = dot;
+            dotCols = cols;
+            dotRows = rows;
+            dotColour = colour;
+            if (dotList == 0) dotList = org.lwjgl.opengl.GL11.glGenLists(1);
+            org.lwjgl.opengl.GL11.glNewList(dotList, org.lwjgl.opengl.GL11.GL_COMPILE);
+            Hyb.beginBatch();
+            for (int i = 0; i < cols; i++)
+                for (int j = 0; j < rows; j++) Hyb.rect(i * step, j * step, dot, dot, dotColor);
+            Hyb.endBatch();
+            org.lwjgl.opengl.GL11.glEndList();
         }
+        // The last column and row can reach past the board's edge, by less than a step: cut there.
+        Stencil.applyAtZero(a, context);
+        org.lwjgl.opengl.GL11.glPushMatrix();
+        org.lwjgl.opengl.GL11.glTranslatef(mod(graph().getPanX(), step), mod(graph().getPanY(), step), 0);
+        com.cleanroommc.modularui.utils.Platform.setupDrawColor();
+        org.lwjgl.opengl.GL11.glCallList(dotList);
+        com.cleanroommc.modularui.utils.Platform.endDrawColor();
+        org.lwjgl.opengl.GL11.glPopMatrix();
+        Stencil.remove();
     }
 
     /**
@@ -1032,6 +1065,10 @@ public final class BoardCanvas extends ParentWidget<BoardCanvas> implements Inte
             super.dispose();
         } finally {
             allChildren = false;
+        }
+        if (dotList != 0) {
+            org.lwjgl.opengl.GL11.glDeleteLists(dotList, 1);
+            dotList = 0;
         }
     }
 

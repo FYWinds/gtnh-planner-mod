@@ -129,8 +129,7 @@ public final class DrawerPaint {
 
     /**
      * Diagonal stripes inside the kind's silhouette over the box (grown by {@code grow}, as {@link #shape}):
-     * {@code width}
-     * pixels of {@code colour} every {@code period}, rising to the right, drawn as rows of rectangles.
+     * {@code width} pixels of {@code colour} every {@code period}, rising to the right.
      */
     public static void stripes(final Drawer.Kind kind, final float x, final float y, final float w, final float h,
         final float grow, final int colour, final float scale, final int period, final int width) {
@@ -142,19 +141,15 @@ public final class DrawerPaint {
         final float grow, final int colour, final float scale, final int period, final int width, final int fromRow) {
         final float bx = x - grow, by = y - grow, bw = w + 2 * grow, bh = h + 2 * grow;
         final int rows = Math.max(0, Math.round(bh));
-        final boolean own = !Hyb.batching();
-        if (own) Hyb.beginBatch();
-        for (int j = Math.max(0, fromRow); j < rows; j++) {
+        // A box of stripes for each run of rows the silhouette is as wide on: a few at its corners, one between.
+        for (int j = Math.max(0, fromRow); j < rows;) {
             final int inset = in(kind, j, bh, grow, scale);
-            final float left = bx + inset, right = bx + bw - inset;
-            // Where a stripe starts on this row: one pixel further left each row down, so the stripes rise rightwards.
-            float sx = left - Math.floorMod(inset + j, period);
-            for (; sx < right; sx += period) {
-                final float a = Math.max(sx, left), b = Math.min(sx + width, right);
-                if (b > a) Hyb.rect(a, by + j, b - a, 1, colour);
-            }
+            int end = j + 1;
+            while (end < rows && in(kind, end, bh, grow, scale) == inset) end++;
+            // A stripe starts one pixel further left each row down, so the stripes rise rightwards.
+            Hyb.stripes(bx + inset, by + j, bw - 2 * inset, end - j, inset + j, colour, period, width);
+            j = end;
         }
-        if (own) Hyb.endBatch();
     }
 
     /** How far in from each side the silhouette is on row {@code j} of a box {@code bh} tall. */

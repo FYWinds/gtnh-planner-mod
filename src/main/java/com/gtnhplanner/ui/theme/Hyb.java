@@ -1,9 +1,17 @@
 package com.gtnhplanner.ui.theme;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
+
+import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.drawable.GuiDraw;
 
@@ -229,17 +237,16 @@ public final class Hyb {
         final int n = batchCount;
         if (n == 0) return;
         com.cleanroommc.modularui.utils.Platform.setupDrawColor();
-        com.cleanroommc.modularui.utils.Platform.startDrawing(
-            com.cleanroommc.modularui.utils.Platform.DrawMode.TRIANGLES,
-            com.cleanroommc.modularui.utils.Platform.VertexFormat.POS_COLOR,
-            buf -> {
-                for (int i = 0; i < n; i++) {
-                    final int c = batchColor[i];
-                    buf.pos(batchXY[2 * i], batchXY[2 * i + 1], 0)
-                        .color(c >> 16 & 0xFF, c >> 8 & 0xFF, c & 0xFF, c >>> 24)
-                        .endVertex();
-                }
-            });
+        // Straight into the tessellator ModularUI's own drawing ends in: its buffer looks the tessellator up again
+        // for every vertex (a thread-local in this pack), a tenth of a frame on a board of cards.
+        final Tessellator t = Tessellator.instance;
+        t.startDrawing(GL11.GL_TRIANGLES);
+        for (int i = 0; i < n; i++) {
+            final int c = batchColor[i];
+            t.setColorRGBA(c >> 16 & 0xFF, c >> 8 & 0xFF, c & 0xFF, c >>> 24);
+            t.addVertex(batchXY[2 * i], batchXY[2 * i + 1], 0);
+        }
+        t.draw();
     }
 
     private static void vertex(final float x, final float y, final int color) {
@@ -251,6 +258,62 @@ public final class Hyb {
         batchXY[2 * batchCount] = x;
         batchXY[2 * batchCount + 1] = y;
         batchColor[batchCount++] = argb;
+    }
+
+    // endregion
+
+    // region Stripes: a diagonal pattern from a tile of texture
+
+    /** The tile of each pattern asked for, by period and width. */
+    private static final Map<Integer, DynamicTexture> STRIPES = new HashMap<>();
+
+    /**
+     * Diagonal stripes rising to the right over a box: the pixel {@code i} across and {@code j} down from the box's
+     * corner is in {@code colour} where {@code (i + j + phase) mod period < width}. It is one quad of a tile of
+     * texture repeated; a rectangle for every run of every row was most of the vertices of a board. An open batch is
+     * drawn first, so the stripes land over what it holds so far.
+     */
+    public static void stripes(final float x, final float y, final float w, final float h, final int phase,
+        final int colour, final int period, final int width) {
+        final int c = faded(colour);
+        if (w <= 0 || h <= 0 || c >>> 24 == 0) return;
+        if (batching) {
+            endBatch();
+            beginBatch();
+        }
+        final float u0 = Math.floorMod(phase, period) / (float) period, u1 = u0 + w / period, v1 = h / period;
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_TEXTURE_BIT | GL11.GL_CURRENT_BIT);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glDisable(GL11.GL_ALPHA_TEST);
+        GL11.glEnable(GL11.GL_BLEND);
+        OpenGlHelper.glBlendFunc(770, 771, 1, 0);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, stripeTile(period, width).getGlTextureId());
+        final Tessellator t = Tessellator.instance;
+        t.startDrawingQuads();
+        t.setColorRGBA(c >> 16 & 0xFF, c >> 8 & 0xFF, c & 0xFF, c >>> 24);
+        t.addVertexWithUV(x, y + h, 0, u0, v1);
+        t.addVertexWithUV(x + w, y + h, 0, u1, v1);
+        t.addVertexWithUV(x + w, y, 0, u1, 0);
+        t.addVertexWithUV(x, y, 0, u0, 0);
+        t.draw();
+        GL11.glPopAttrib();
+    }
+
+    /** A {@code period} square of the pattern, white where a stripe is: repeated, each texel a pixel. */
+    private static DynamicTexture stripeTile(final int period, final int width) {
+        return STRIPES.computeIfAbsent(period << 16 | width, k -> {
+            final DynamicTexture tile = new DynamicTexture(period, period);
+            final int[] texels = tile.getTextureData();
+            for (int j = 0; j < period; j++)
+                for (int i = 0; i < period; i++) texels[j * period + i] = (i + j) % period < width ? 0xFFFFFFFF : 0;
+            tile.updateDynamicTexture();
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, tile.getGlTextureId());
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
+            return tile;
+        });
     }
 
     // endregion

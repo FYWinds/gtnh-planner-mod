@@ -518,22 +518,11 @@ public final class CardPaint {
     }
 
     /**
-     * Diagonal stripes rising to the right inside a box: {@code width} pixels of {@code colour} every {@code period},
-     * as rows of rectangles.
+     * Diagonal stripes rising to the right inside a box: {@code width} pixels of {@code colour} every {@code period}.
      */
     public static void stripes(final float x, final float y, final float w, final float h, final int colour,
         final int period, final int width) {
-        final int rows = Math.round(h);
-        if (w <= 0 || rows <= 0) return;
-        final boolean own = !Hyb.batching();
-        if (own) Hyb.beginBatch();
-        for (int j = 0; j < rows; j++) {
-            for (float sx = x - Math.floorMod(j + Math.round(x + y), period); sx < x + w; sx += period) {
-                final float a = Math.max(sx, x), b = Math.min(sx + width, x + w);
-                if (b > a) Hyb.rect(a, y + j, b - a, 1, colour);
-            }
-        }
-        if (own) Hyb.endBatch();
+        Hyb.stripes(x, y, w, Math.round(h), Math.round(x + y), colour, period, width);
     }
 
     /** The machine's well, {x, y, w, h}: sunk, dark at its top and left, a light line at its bottom and right. */
