@@ -1,0 +1,8 @@
+// Applied by gtnhgradle's LateAddonScriptModule, after its own modules have set up the build.
+
+// ETO fork: the jar carries every class once, as the Java 8 downgrade every Java runs. GTNHGradle also keeps each
+// class as compiled (ours under META-INF/versions/25, ojAlgo's under versions/11), which made the jar 16 MB instead
+// of 10; jvmDowngraderMultiReleaseVersions cannot say "none".
+jvmdg {
+    multiReleaseOriginal = false
+}
