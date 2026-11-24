@@ -141,6 +141,7 @@ public final class CloudHooks {
         @SubscribeEvent
         public void onTick(final TickEvent.ClientTickEvent event) {
             if (event.phase != TickEvent.Phase.END) return;
+            loadTeamPlansEarly();
             final CloudSession s = CloudSession.current();
             if (s == null) return;
             try {
@@ -149,6 +150,17 @@ public final class CloudHooks {
                 com.gtnhplanner.GtnhPlanner.LOG.error("The cloud plans' tick failed", e);
             }
         }
+    }
+
+    /**
+     * On a team backend the plans load as soon as the world is up and NEI has its recipes, not at the first open:
+     * reading every plan of the team freezes the game (a second at 250 cards), and nobody is looking at the planner
+     * yet while the world comes in.
+     */
+    private static void loadTeamPlansEarly() {
+        if (Plan.loaded() != null || Account.team() == null) return;
+        if (Minecraft.getMinecraft().theWorld == null || !codechicken.nei.NEIClientConfig.isLoaded()) return;
+        Plan.getInstance();
     }
 
     /** The game as the session sees it. */
